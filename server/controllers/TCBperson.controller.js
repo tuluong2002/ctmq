@@ -1,0 +1,733 @@
+const TCBperson = require("../models/TCBperson");
+const Customer = require("../models/Customer");
+const User = require("../models/User");
+const path = require("path");
+const ExcelJS = require("exceljs");
+
+// Helper parse ngày từ Excel
+const parseExcelDate = (val) => {
+  if (!val) return null;
+  const d = new Date(val);
+  if (!isNaN(d)) return d;
+  const parts = val.split("/");
+  if (parts.length === 3) {
+    const [dd, mm, yyyy] = parts;
+    const parsed = new Date(`${yyyy}-${mm}-${dd}`);
+    if (!isNaN(parsed)) return parsed;
+  }
+  return null;
+};
+
+// Helper parse số
+const parseNumber = (val) => {
+  const num = Number(val);
+  return isNaN(num) ? 0 : num;
+};
+
+const parseSTT = (maGD) => Number(maGD.split(".")[2]);
+const buildPrefix = (date) => {
+  const d = new Date(date);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${mm}.${yy}`;
+};
+
+const rebuildSoDuFromDate = async (date, session) => {
+  const records = await TCBperson.find(
+    { timePay: { $gte: date } },
+    {},
+    { sort: { timePay: 1, maGD: 1 }, session },
+  );
+
+  // lấy số dư trước đó
+  const prev = await TCBperson.findOne(
+    { timePay: { $lt: date } },
+    {},
+    { sort: { timePay: -1, maGD: -1 }, session },
+  );
+
+  let runningSoDu = prev?.soDu || 0;
+
+  for (const r of records) {
+    runningSoDu += r.soTien;
+    r.soDu = runningSoDu;
+    await r.save({ session });
+  }
+};
+
+// ===================
+// Thêm mới
+// ===================
+exports.create = async (req, res) => {
+  const session = await TCBperson.startSession();
+  session.startTransaction();
+
+  try {
+    const { timePay, noiDungCK, soTien, khachHang, keToan, ghiChu, maChuyen } =
+      req.body;
+
+    const date = parseExcelDate(timePay) || new Date();
+    const prefix = buildPrefix(date);
+
+    // Lấy giao dịch cuối cùng trong THÁNG
+    const lastInMonth = await TCBperson.findOne(
+      { maGD: { $regex: `^${prefix}` } },
+      {},
+      { sort: { maGD: -1 }, session },
+    );
+
+    let stt = 1;
+    let soDuTruoc = 0;
+
+    if (lastInMonth) {
+      stt = parseSTT(lastInMonth.maGD) + 1;
+      soDuTruoc = lastInMonth.soDu;
+    } else {
+      // Không có giao dịch trong tháng này
+      // Lấy giao dịch có maGD nhỏ hơn prefix hiện tại và lớn nhất
+      const lastBefore = await TCBperson.findOne(
+        { maGD: { $lt: `${prefix}.9999` } },
+        {},
+        { sort: { maGD: -1 }, session },
+      );
+
+      stt = 1;
+      soDuTruoc = lastBefore?.soDu || 0;
+    }
+
+    const newItem = await TCBperson.create(
+      [
+        {
+          timePay: date,
+          maGD: `${prefix}.${String(stt).padStart(4, "0")}`,
+          noiDungCK,
+          soTien: parseNumber(soTien),
+          soDu: soDuTruoc + parseNumber(soTien),
+          khachHang,
+          keToan,
+          ghiChu,
+          maChuyen,
+        },
+      ],
+      { session },
+    );
+
+    await rebuildSoDuFromDate(date, session);
+
+    await session.commitTransaction();
+    res.json({ success: true, data: newItem[0] });
+  } catch (err) {
+    await session.abortTransaction();
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+//Chèn giao dịch
+exports.insertAfter = async (req, res) => {
+  const session = await TCBperson.startSession();
+  session.startTransaction();
+
+  try {
+    const { anchorId } = req.params;
+    const { timePay, noiDungCK, soTien, khachHang, keToan, ghiChu, maChuyen } =
+      req.body;
+
+    const anchor = await TCBperson.findById(anchorId).session(session);
+    if (!anchor) {
+      throw new Error("Không tìm thấy giao dịch mốc");
+    }
+
+    const prefix = buildPrefix(anchor.timePay);
+    const anchorSTT = parseSTT(anchor.maGD);
+
+    /** =============================
+     * 1. ĐẨY STT +1 (CÙNG THÁNG)
+     ============================= */
+    const laterRecords = await TCBperson.find(
+      {
+        maGD: { $regex: `^${prefix}` },
+        $expr: {
+          $gt: [{ $toInt: { $substr: ["$maGD", 6, 10] } }, anchorSTT],
+        },
+      },
+      {},
+      { sort: { maGD: -1 }, session },
+    );
+
+    for (const r of laterRecords) {
+      const stt = parseSTT(r.maGD) + 1;
+      r.maGD = `${prefix}.${String(stt).padStart(4, "0")}`;
+      await r.save({ session });
+    }
+
+    /** =============================
+     * 2. TẠO GIAO DỊCH MỚI
+     ============================= */
+    const newSTT = anchorSTT + 1;
+    const newSoDu = anchor.soDu + parseNumber(soTien);
+
+    const newItem = await TCBperson.create(
+      [
+        {
+          timePay: timePay ? parseExcelDate(timePay) : anchor.timePay,
+          maGD: `${prefix}.${String(newSTT).padStart(4, "0")}`,
+          noiDungCK,
+          soTien: parseNumber(soTien),
+          soDu: newSoDu,
+          khachHang,
+          keToan,
+          ghiChu,
+          maChuyen,
+        },
+      ],
+      { session },
+    );
+
+    /** =============================
+     * 3. CẬP NHẬT LẠI SỐ DƯ PHÍA SAU
+     ============================= */
+    await rebuildSoDuFromDate(anchor.timePay, session);
+
+    await session.commitTransaction();
+    res.json({ success: true, data: newItem[0] });
+  } catch (err) {
+    await session.abortTransaction();
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+// ===================
+// Sửa
+// ===================
+exports.update = async (req, res) => {
+  const session = await TCBperson.startSession();
+  session.startTransaction();
+
+  try {
+    const { id } = req.params;
+    const { timePay, noiDungCK, soTien, khachHang, keToan, ghiChu, maChuyen } =
+      req.body;
+
+    const record = await TCBperson.findById(id).session(session);
+    if (!record) {
+      throw new Error("Không tìm thấy giao dịch");
+    }
+    if (record.isLocked) {
+      throw new Error("Giao dịch đã bị khoá, không thể sửa");
+    }
+
+    const oldSoTien = record.soTien;
+    const newSoTien = parseNumber(soTien);
+    const delta = newSoTien - oldSoTien;
+
+    /** ======================
+     * 1. UPDATE GIAO DỊCH HIỆN TẠI
+     ====================== */
+    record.timePay = timePay ? parseExcelDate(timePay) : record.timePay;
+    record.noiDungCK = noiDungCK;
+    record.soTien = newSoTien;
+    record.khachHang = khachHang;
+    record.keToan = keToan;
+    record.ghiChu = ghiChu;
+    record.maChuyen = maChuyen;
+
+    record.soDu += delta;
+    await record.save({ session });
+
+    /** ======================
+     * 2. REBUILD PHÍA SAU
+     ====================== */
+    await rebuildSoDuFromDate(record.timePay, session);
+
+    await session.commitTransaction();
+    res.json({ success: true, data: record });
+  } catch (err) {
+    await session.abortTransaction();
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+// ===================
+// Xóa 1
+// ===================
+exports.deleteOne = async (req, res) => {
+  const session = await TCBperson.startSession();
+  session.startTransaction();
+
+  try {
+    const { id } = req.params;
+
+    const record = await TCBperson.findById(id).session(session);
+    if (!record) {
+      throw new Error("Không tìm thấy bản ghi");
+    }
+    if (record.isLocked) {
+      throw new Error("Giao dịch đã bị khoá, không thể sửa");
+    }
+
+    const prefix = buildPrefix(record.timePay);
+    const curSTT = parseSTT(record.maGD);
+
+    /** ======================
+     * 1. XÓA GIAO DỊCH
+     ====================== */
+    await record.deleteOne({ session });
+
+    /** ======================
+     * 2. LẤY SỐ DƯ TRƯỚC ĐÓ
+     ====================== */
+    const laterRecords = await TCBperson.find(
+      {
+        maGD: { $regex: `^${prefix}` },
+        $expr: {
+          $gt: [{ $toInt: { $substr: ["$maGD", 6, 10] } }, curSTT],
+        },
+      },
+      {},
+      { sort: { maGD: 1 }, session },
+    );
+
+    for (const r of laterRecords) {
+      const newSTT = parseSTT(r.maGD) - 1;
+      r.maGD = `${prefix}.${String(newSTT).padStart(4, "0")}`;
+      await r.save({ session });
+    }
+
+    await rebuildSoDuFromDate(record.timePay, session);
+
+    await session.commitTransaction();
+    res.json({ success: true });
+  } catch (err) {
+    await session.abortTransaction();
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+// ===================
+// Xóa tất cả
+// ===================
+exports.deleteAll = async (req, res) => {
+  try {
+    await TCBperson.deleteMany({ isLocked: { $ne: true } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ===================
+// Lấy danh sách khách hàng duy nhất
+// ===================
+exports.getCustomers = async (req, res) => {
+  try {
+    const customers = await TCBperson.distinct("khachHang");
+    res.json({ success: true, data: customers });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ===================
+// Lấy danh sách kế toán duy nhất
+// ===================
+exports.getAccountants = async (req, res) => {
+  try {
+    const accountants = await TCBperson.distinct("keToan");
+    res.json({ success: true, data: accountants });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ===================
+// Lấy danh sách mã chuyển duy nhất
+// ===================
+exports.getMaChuyen = async (req, res) => {
+  try {
+    const maChuyen = await TCBperson.distinct("maChuyen");
+    res.json({ success: true, data: maChuyen });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ===================
+// Lấy tất cả data với lọc
+// ===================
+exports.getAll = async (req, res) => {
+  try {
+    const {
+      // ===== ARRAY (GIỮ NGUYÊN) =====
+      khachHang = [],
+      keToan = [],
+
+      // ===== STRING (LỌC ĐƠN) =====
+      noiDungCK,
+      ghiChu,
+      maGD,
+      maChuyen = [],
+
+      // ===== NUMBER (LỌC ĐƠN) =====
+      soTien,
+      soDu,
+
+      // ===== DATE RANGE =====
+      from,
+      to,
+
+      // ===== PAGINATION =====
+      page = 1,
+      sortOrder,
+    } = req.body;
+
+    const filter = {};
+
+    // ---------- ARRAY ----------
+    if (khachHang.length) {
+      filter.khachHang = { $in: khachHang };
+    }
+
+    if (keToan.length) {
+      filter.keToan = { $in: keToan };
+    }
+
+    if (maChuyen.length) {
+      filter.maChuyen = { $in: maChuyen };
+    }
+
+    // ---------- STRING (đơn) ----------
+    if (noiDungCK) {
+      filter.noiDungCK = { $regex: noiDungCK, $options: "i" };
+    }
+
+    if (ghiChu) {
+      filter.ghiChu = { $regex: ghiChu, $options: "i" };
+    }
+
+    if (maGD) {
+      filter.maGD = { $regex: maGD, $options: "i" };
+    }
+
+    // ---------- NUMBER (đơn) ----------
+    if (soTien !== undefined && soTien !== "") {
+      filter.soTien = Number(soTien);
+    }
+
+    if (soDu !== undefined && soDu !== "") {
+      filter.soDu = Number(soDu);
+    }
+
+    // ---------- DATE ----------
+    if (from || to) {
+      filter.timePay = {};
+      if (from) filter.timePay.$gte = new Date(from);
+      if (to) filter.timePay.$lte = new Date(to);
+    }
+
+    // ---------- PAGINATION ----------
+    const pageSize = 100;
+    const skip = (page - 1) * pageSize;
+
+    const total = await TCBperson.countDocuments(filter);
+
+    // ---------- SORT ----------
+    const sort = {
+      maGD: sortOrder === "asc" ? 1 : -1, // mặc định desc
+    };
+
+    const data = await TCBperson.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(pageSize);
+
+    res.json({
+      success: true,
+      page: Number(page),
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ===================
+// Import Excel
+// ===================
+exports.importExcel = async (req, res) => {
+  const session = await TCBperson.startSession();
+  session.startTransaction();
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Không có file Excel" });
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(req.file.buffer);
+    const sheet = workbook.worksheets[0];
+
+    /** ======================
+     * 1. LẤY SỐ DƯ HIỆN TẠI (DB)
+     ====================== */
+    const lastRecord = await TCBperson.findOne(
+      {},
+      {},
+      { sort: { timePay: -1 }, session },
+    );
+
+    let runningSoDu = lastRecord?.soDu || 0;
+    let currentPrefix = null;
+    let stt = 0;
+
+    const bulk = [];
+
+    /** ======================
+     * 2. DUYỆT THEO THỨ TỰ EXCEL
+     ====================== */
+    for (let i = 2; i <= sheet.rowCount; i++) {
+      const row = sheet.getRow(i);
+
+      const timePay = parseExcelDate(row.getCell(2)?.value);
+      const noiDungCK = row.getCell(3)?.value?.toString().trim() || "";
+      const soTien = parseNumber(row.getCell(4)?.value);
+      const khachHang = row.getCell(6)?.value?.toString().trim() || "";
+      const keToan = row.getCell(7)?.value?.toString().trim() || "";
+      const ghiChu = row.getCell(8)?.value?.toString().trim() || "";
+      const maChuyen = row.getCell(9)?.value?.toString().trim() || "";
+
+      if (!timePay || !noiDungCK) continue;
+
+      const prefix = buildPrefix(timePay);
+
+      /** ======================
+       * 3. RESET STT KHI SANG THÁNG
+       ====================== */
+      if (prefix !== currentPrefix) {
+        currentPrefix = prefix;
+
+        const lastInMonth = await TCBperson.findOne(
+          { maGD: { $regex: `^${prefix}` } },
+          {},
+          { sort: { maGD: -1 }, session },
+        );
+
+        stt = lastInMonth ? parseSTT(lastInMonth.maGD) : 0;
+      }
+
+      stt += 1;
+      runningSoDu += soTien;
+
+      bulk.push({
+        timePay,
+        maGD: `${prefix}.${String(stt).padStart(4, "0")}`,
+        noiDungCK,
+        soTien,
+        soDu: runningSoDu,
+        khachHang,
+        keToan,
+        ghiChu,
+        maChuyen,
+      });
+    }
+
+    /** ======================
+     * 4. INSERT
+     ====================== */
+    if (bulk.length > 0) {
+      await TCBperson.insertMany(bulk, { session });
+    }
+
+    await session.commitTransaction();
+    res.json({ success: true, inserted: bulk.length });
+  } catch (err) {
+    await session.abortTransaction();
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+// ==============================
+// EXPORT SAO KÊ TCB (FORM MẪU)
+// ==============================
+exports.exportExcel = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    // 1️⃣ LẤY DATA
+    const filter = {};
+
+    if (from || to) {
+      filter.timePay = {};
+      if (from) filter.timePay.$gte = new Date(from);
+      if (to) filter.timePay.$lte = new Date(to);
+    }
+
+    const records = await TCBperson.find(filter).sort({ maGD: 1 });
+
+    if (!records.length) {
+      return res
+        .status(400)
+        .json({ message: "Không có dữ liệu để xuất Excel" });
+    }
+
+    // 2️⃣ LOAD FORM MẪU
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(
+      path.join(__dirname, "../templates/SAO_KE_TCB.xlsx"),
+    );
+
+    const sheet = workbook.getWorksheet("Sheet1");
+    if (!sheet) {
+      return res.status(500).json({ message: "Không tìm thấy sheet" });
+    }
+
+    // 3️⃣ GHI DATA (SAU HEADER)
+    const startRow = 2;
+
+    records.forEach((r, index) => {
+      const row = sheet.getRow(startRow + index);
+
+      row.getCell("A").value = index + 1; // STT
+      row.getCell("B").value = r.timePay ? new Date(r.timePay) : null; // Ngày
+      row.getCell("C").value = r.noiDungCK || ""; // Nội dung CK
+      row.getCell("D").value = r.soTien || 0; // Số tiền
+      row.getCell("E").value = r.soDu || 0; // Số dư
+      row.getCell("F").value = r.khachHang || ""; // Khách hàng
+      row.getCell("G").value = r.keToan || ""; // Kế toán
+      row.getCell("H").value = r.ghiChu || ""; // Ghi chú
+      row.getCell("I").value = r.maChuyen || ""; // Mã chuyến
+      row.getCell("J").value = r.maGD || ""; // Mã GD
+
+      row.commit();
+    });
+
+    // 4️⃣ TRẢ FILE
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=SAO_KE_TCB.xlsx",
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+
+    // QUAN TRỌNG
+    await workbook.xlsx.write(res);
+  } catch (err) {
+    console.error("❌ Export TCB error:", err);
+    res.status(500).json({ message: "Lỗi xuất file sao kê TCB" });
+  }
+};
+
+// ===================
+// Toggle khoá / mở giao dịch
+// ===================
+exports.toggleLock = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const record = await TCBperson.findById(id);
+    if (!record) {
+      return res.status(404).json({ message: "Không tìm thấy giao dịch" });
+    }
+
+    record.isLocked = !record.isLocked;
+    await record.save();
+
+    res.json({
+      success: true,
+      isLocked: record.isLocked,
+      message: record.isLocked ? "Đã khoá giao dịch" : "Đã mở khoá giao dịch",
+    });
+  } catch (err) {
+    console.error("❌ Toggle lock error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ===================
+// Khoá giao dịch theo khoảng ngày
+// ===================
+exports.lockByDateRange = async (req, res) => {
+  try {
+    const { fromDate, toDate } = req.body;
+
+    if (!fromDate || !toDate) {
+      return res.status(400).json({ message: "Thiếu fromDate hoặc toDate" });
+    }
+
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+
+    // set full ngày
+    from.setHours(0, 0, 0, 0);
+    to.setHours(23, 59, 59, 999);
+
+    const result = await TCBperson.updateMany(
+      {
+        timePay: { $gte: from, $lte: to },
+        isLocked: { $ne: true }, // chỉ khoá những cái chưa khoá
+      },
+      {
+        $set: { isLocked: true },
+      },
+    );
+
+    res.json({
+      success: true,
+      lockedCount: result.modifiedCount,
+      message: `Đã khoá ${result.modifiedCount} giao dịch`,
+    });
+  } catch (err) {
+    console.error("❌ Lock by date range error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ===================
+// Lấy danh sách select dùng chung
+// ===================
+exports.getSelectLists = async (req, res) => {
+  try {
+    const [customerNames, keToanNames] = await Promise.all([
+      Customer.distinct("name", { name: { $ne: "" } }),
+      User.distinct("fullname", {
+        role: "keToan",
+        fullname: { $ne: "" },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        customerNames: customerNames.sort(),
+        keToanNames: keToanNames.sort(),
+      },
+    });
+  } catch (err) {
+    console.error("❌ getSelectLists error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};

@@ -1,0 +1,22 @@
+const mongoose = require("mongoose");
+
+const AddressSchema = new mongoose.Schema({
+  diaChi: {
+    type: String,
+    required: true,
+    unique: true, // ❗ không trùng
+    trim: true, // loại bỏ khoảng trắng đầu/cuối
+  },
+  diaChiMoi: {
+    type: String,
+    default: "",
+  },
+  ghiChu: {
+    type: String,
+    default: "",
+  },
+});
+
+const Address = mongoose.model("Address", AddressSchema);
+
+module.exports = Address;

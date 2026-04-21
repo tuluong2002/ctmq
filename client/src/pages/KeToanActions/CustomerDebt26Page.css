@@ -1,0 +1,20 @@
+th {
+  cursor: col-resize;
+}
+table {
+  border-collapse: collapse;
+}
+ .table-cell {
+  padding: 0 !important;     /* 🔥 bắt buộc */
+}
+
+.cell-content {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  height: 26px;              /* 🔥 khóa chiều cao */
+  line-height: 26px;         /* 🔥 */
+  padding: 0 4px;            /* padding đưa vào đây */
+}
