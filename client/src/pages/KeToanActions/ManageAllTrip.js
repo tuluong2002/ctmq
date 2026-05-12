@@ -506,8 +506,6 @@ export default function ManageTrip({ user, onLogout }) {
   const [searchMaHoaDon, setSearchMaHoaDon] = useState("");
   const [searchDebtCode, setSearchDebtCode] = useState("");
 
-  console.log(searchPlate);
-
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState(null); // 'ngayBocHang' | 'ngayGiaoHang' | 'maChuyen' | null
   const [sortOrder, setSortOrder] = useState(null); // 'asc' | 'desc' | null

@@ -1114,12 +1114,30 @@ exports.exportOddDebtByDateRange = async (req, res) => {
 
       // ===== TIỀN KH LẺ =====
       row.getCell("M").value = parseMoneyStr(t.cuocPhi);
-      row.getCell("N").value = parseMoneyStr(t.themDiem);
-      row.getCell("O").value = parseMoneyStr(t.bocXep);
-      row.getCell("P").value = parseMoneyStr(t.ve);
-      row.getCell("Q").value = parseMoneyStr(t.hangVe);
-      row.getCell("R").value = parseMoneyStr(t.luuCa);
-      row.getCell("S").value = parseMoneyStr(t.luatChiPhiKhac);
+      const mixedValue = (v) => {
+        if (v === null || v === undefined || v === "") return "";
+
+        // nếu là number
+        if (typeof v === "number") return v;
+
+        const str = String(v).trim();
+
+        // chỉ parse khi là số thật
+        const cleaned = str.replace(/,/g, "");
+        if (/^-?\d+(\.\d+)?$/.test(cleaned)) {
+          return Number(cleaned);
+        }
+
+        // còn lại giữ nguyên text
+        return str;
+      };
+
+      row.getCell("N").value = mixedValue(t.themDiem);
+      row.getCell("O").value = mixedValue(t.bocXep);
+      row.getCell("P").value = mixedValue(t.ve);
+      row.getCell("Q").value = mixedValue(t.hangVe);
+      row.getCell("R").value = mixedValue(t.luuCa);
+      row.getCell("S").value = mixedValue(t.luatChiPhiKhac);
       row.getCell("T").value = t.ghiChu || "";
       row.getCell("U").value = t.tongTien;
       row.getCell("V").value = parseMoneyStr(t.daThanhToan);

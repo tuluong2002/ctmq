@@ -2410,10 +2410,20 @@ export default function CustomerDebt26Page() {
                             : "";
                         }
                         if (MONEY_FIELDS.includes(col.key)) {
-                          const num = Number(t[col.key]);
+                          const raw = t[col.key];
+
+                          const num = Number(
+                            String(raw ?? "")
+                              .replace(/\./g, "")
+                              .replace(/,/g, ""),
+                          );
 
                           const displayValue =
-                            !num || isNaN(num) ? "" : num.toLocaleString();
+                            raw === null || raw === undefined || raw === ""
+                              ? ""
+                              : isNaN(num)
+                                ? raw
+                                : num.toLocaleString("vi-VN");
 
                           return (
                             <td
@@ -2518,15 +2528,34 @@ export default function CustomerDebt26Page() {
                           col.key === "tongTien" ||
                           col.key === "daThanhToan" ||
                           col.key === "conLai" ||
-                          col.key === "cuocPhi" ||
+                          col.key === "cuocPhi"
+                        ) {
+                          const num = Number(value ?? ""); // ép sang number
+                          value = isNaN(num) ? "" : num.toLocaleString(); // nếu NaN thì hiển thị rỗng
+                        }
+
+                        if (
+                          col.key === "themDiem" ||
                           col.key === "bocXep" ||
                           col.key === "ve" ||
                           col.key === "hangVe" ||
                           col.key === "luuCa" ||
                           col.key === "luatChiPhiKhac"
                         ) {
-                          const num = Number(value ?? ""); // ép sang number
-                          value = isNaN(num) ? "" : num.toLocaleString(); // nếu NaN thì hiển thị rỗng
+                          const raw = value;
+
+                          const num = Number(
+                            String(raw ?? "")
+                              .replace(/\./g, "")
+                              .replace(/,/g, ""),
+                          );
+
+                          value =
+                            raw === null || raw === undefined || raw === ""
+                              ? ""
+                              : isNaN(num)
+                                ? raw
+                                : num.toLocaleString("vi-VN");
                         }
 
                         if (col.key === "trangThai") {
