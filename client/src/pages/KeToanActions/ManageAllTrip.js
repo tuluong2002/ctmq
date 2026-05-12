@@ -506,6 +506,8 @@ export default function ManageTrip({ user, onLogout }) {
   const [searchMaHoaDon, setSearchMaHoaDon] = useState("");
   const [searchDebtCode, setSearchDebtCode] = useState("");
 
+  console.log(searchPlate);
+
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState(null); // 'ngayBocHang' | 'ngayGiaoHang' | 'maChuyen' | null
   const [sortOrder, setSortOrder] = useState(null); // 'asc' | 'desc' | null
@@ -1516,11 +1518,19 @@ export default function ManageTrip({ user, onLogout }) {
   })();
 
   const filteredBienSoXe = (() => {
-    const list = excelOptions.bienSoXe.filter((p) => {
+    // 🔹 remove duplicate trước
+    const uniqueList = [
+      ...new Set(excelOptions.bienSoXe.map((p) => p?.trim()).filter(Boolean)),
+    ];
+
+    // 🔹 search
+    const list = uniqueList.filter((p) => {
       if (!searchPlate) return true;
+
       return normalize(p).includes(normalize(searchPlate));
     });
 
+    // 🔹 giữ EMPTY
     if (
       excelSelected.bienSoXe.includes("__EMPTY__") &&
       !list.includes("__EMPTY__")
@@ -2473,9 +2483,9 @@ export default function ManageTrip({ user, onLogout }) {
                             </label>
 
                             <div className="max-h-40 overflow-y-auto border p-1">
-                              {filteredBienSoXe.map((p) => (
+                              {filteredBienSoXe.map((p, index) => (
                                 <label
-                                  key={p}
+                                  key={`${p}-${index}`}
                                   className="flex gap-1 items-center"
                                 >
                                   <input
