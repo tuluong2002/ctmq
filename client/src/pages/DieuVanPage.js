@@ -51,6 +51,8 @@ const extraColumns = [
   { key: "luatChiPhiKhac", label: "LUẬT CP KHÁC" },
   { key: "keToanPhuTrach", label: "KẾ TOÁN PHỤ TRÁCH" },
   { key: "ghiChu", label: "GHI CHÚ" },
+  { key: "gioNhanChuyen", label: "NHẬN CHUYẾN LÚC" },
+  { key: "gioHoanThanh", label: "HOÀN THÀNH LÚC" },
 ];
 
 const COLUMN_CONFIG_KEY = "dieuVan_table_columns_v1";
@@ -120,7 +122,7 @@ export default function DieuVanPage({ user, onLogout }) {
     } catch (err) {
       console.error(
         "Lỗi lấy danh sách điều vận:",
-        err.response?.data || err.message
+        err.response?.data || err.message,
       );
     }
   };
@@ -183,7 +185,7 @@ export default function DieuVanPage({ user, onLogout }) {
     } catch (err) {
       console.error(
         "Lỗi khi lấy tất cả chuyến:",
-        err.response?.data || err.message
+        err.response?.data || err.message,
       );
       setRides([]);
     }
@@ -409,7 +411,7 @@ export default function DieuVanPage({ user, onLogout }) {
           headers: { Authorization: `Bearer ${token}` },
         });
         setRides((prev) =>
-          prev.map((r) => (r._id === editRide ? res.data : r))
+          prev.map((r) => (r._id === editRide ? res.data : r)),
         );
       } else {
         const res = await axios.post(API_URL, payload, {
@@ -453,13 +455,13 @@ export default function DieuVanPage({ user, onLogout }) {
             headers: { Authorization: `Bearer ${token}` },
           });
           counts[r._id] = res.data.editCount;
-        })
+        }),
       );
       setEditCounts(counts);
     } catch (err) {
       console.error(
         "Lỗi lấy số lần chỉnh sửa:",
-        err.response?.data || err.message
+        err.response?.data || err.message,
       );
     }
   };
@@ -479,7 +481,7 @@ export default function DieuVanPage({ user, onLogout }) {
       setShowHistoryModal(true);
     } catch (err) {
       alert(
-        "Không lấy được lịch sử: " + (err.response?.data?.error || err.message)
+        "Không lấy được lịch sử: " + (err.response?.data?.error || err.message),
       );
     }
   };
@@ -489,7 +491,7 @@ export default function DieuVanPage({ user, onLogout }) {
 
   const defaultVisibleColumns = allColumns.reduce(
     (acc, col) => ({ ...acc, [col.key]: true }),
-    {}
+    {},
   );
 
   const [visibleColumns, setVisibleColumns] = useState(() => {
@@ -531,7 +533,7 @@ export default function DieuVanPage({ user, onLogout }) {
         columnOrder,
         columnWidths,
         visibleColumns,
-      })
+      }),
     );
   }, [columnOrder, columnWidths, visibleColumns]);
 
@@ -865,7 +867,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                 .filter((c) => {
                                   if (!searchKH) return true;
                                   return normalize(c).includes(
-                                    normalize(searchKH)
+                                    normalize(searchKH),
                                   );
                                 })
 
@@ -877,7 +879,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                     <input
                                       type="checkbox"
                                       checked={excelSelected.khachHang.includes(
-                                        c
+                                        c,
                                       )}
                                       onChange={() =>
                                         setExcelSelected((p) => ({
@@ -959,7 +961,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                 .filter((d) => {
                                   if (!searchDriver) return true;
                                   return normalize(d).includes(
-                                    normalize(searchDriver)
+                                    normalize(searchDriver),
                                   );
                                 })
 
@@ -971,7 +973,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                     <input
                                       type="checkbox"
                                       checked={excelSelected.tenLaiXe.includes(
-                                        d
+                                        d,
                                       )}
                                       onChange={() =>
                                         setExcelSelected((p) => ({
@@ -1053,7 +1055,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                 .filter((p) => {
                                   if (!searchPlate) return true;
                                   return normalize(p).includes(
-                                    normalize(searchPlate)
+                                    normalize(searchPlate),
                                   );
                                 })
 
@@ -1065,7 +1067,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                     <input
                                       type="checkbox"
                                       checked={excelSelected.bienSoXe.includes(
-                                        p
+                                        p,
                                       )}
                                       onChange={() =>
                                         setExcelSelected((s) => ({
@@ -1147,7 +1149,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                 .filter((dg) => {
                                   if (!searchDGiai) return true;
                                   return normalize(dg).includes(
-                                    normalize(searchDGiai)
+                                    normalize(searchDGiai),
                                   );
                                 })
                                 .map((dg) => (
@@ -1158,14 +1160,14 @@ export default function DieuVanPage({ user, onLogout }) {
                                     <input
                                       type="checkbox"
                                       checked={excelSelected.dienGiai.includes(
-                                        dg
+                                        dg,
                                       )}
                                       onChange={() =>
                                         setExcelSelected((prev) => ({
                                           ...prev,
                                           dienGiai: prev.dienGiai.includes(dg)
                                             ? prev.dienGiai.filter(
-                                                (x) => x !== dg
+                                                (x) => x !== dg,
                                               )
                                             : [...prev.dienGiai, dg],
                                         }))
@@ -1244,7 +1246,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                 .filter((cp) => {
                                   if (!searchCuocPhiBD) return true;
                                   return normalize(cp).includes(
-                                    normalize(searchCuocPhiBD)
+                                    normalize(searchCuocPhiBD),
                                   );
                                 })
                                 .map((cp) => (
@@ -1255,14 +1257,14 @@ export default function DieuVanPage({ user, onLogout }) {
                                     <input
                                       type="checkbox"
                                       checked={excelSelected.cuocPhi.includes(
-                                        cp
+                                        cp,
                                       )}
                                       onChange={() =>
                                         setExcelSelected((prev) => ({
                                           ...prev,
                                           cuocPhi: prev.cuocPhi.includes(cp)
                                             ? prev.cuocPhi.filter(
-                                                (x) => x !== cp
+                                                (x) => x !== cp,
                                               )
                                             : [...prev.cuocPhi, cp],
                                         }))
@@ -1334,7 +1336,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                   type="text"
                                   className="w-full border px-2 py-1 rounded text-black"
                                   placeholder={`Lọc theo ${getColumnLabel(
-                                    openFilter
+                                    openFilter,
                                   )}`}
                                   value={filters[openFilter] || ""}
                                   onChange={(e) =>
@@ -1490,7 +1492,7 @@ export default function DieuVanPage({ user, onLogout }) {
                 if (filters.khachHang?.trim()) {
                   const kw = removeVietnamese(filters.khachHang.toLowerCase());
                   const name = removeVietnamese(
-                    (r.khachHang || "").toLowerCase()
+                    (r.khachHang || "").toLowerCase(),
                   );
                   if (!name.includes(kw)) return false;
                 }
@@ -1521,7 +1523,7 @@ export default function DieuVanPage({ user, onLogout }) {
 
                   // 🔹 Lọc TEXT có bỏ dấu
                   const field = removeVietnamese(
-                    (raw || "").toString().toLowerCase()
+                    (raw || "").toString().toLowerCase(),
                   );
                   const filterText = removeVietnamese(f.toLowerCase());
 
@@ -1584,18 +1586,23 @@ export default function DieuVanPage({ user, onLogout }) {
                       "ngayBoc",
                     ].includes(col.key)
                       ? formatDate(r[col.key])
-                      : [
-                          "cuocPhi",
-                          "laiXeThuCuoc",
-                          "bocXep",
-                          "ve",
-                          "hangVe",
-                          "luuCa",
-                          "luatChiPhiKhac",
-                          "cuocPhiBoSung",
-                        ].includes(col.key)
-                      ? formatMoney(r[col.key])
-                      : r[col.key];
+                      : // 🕒 format giờ
+                        ["gioNhanChuyen", "gioHoanThanh"].includes(col.key)
+                        ? r[col.key]
+                          ? format(new Date(r[col.key]), "HH:mm, dd/MM/yyyy")
+                          : ""
+                        : [
+                              "cuocPhi",
+                              "laiXeThuCuoc",
+                              "bocXep",
+                              "ve",
+                              "hangVe",
+                              "luuCa",
+                              "luatChiPhiKhac",
+                              "cuocPhiBoSung",
+                            ].includes(col.key)
+                          ? formatMoney(r[col.key])
+                          : r[col.key];
 
                     return (
                       <td
@@ -1605,7 +1612,57 @@ export default function DieuVanPage({ user, onLogout }) {
                           maxWidth: columnWidths[col.key],
                         }}
                       >
-                        {raw ?? ""}
+                        {col.key === "gioNhanChuyen" ? (
+                          raw ? (
+                            <span className="bg-yellow-200 text-black px-2 py-1 rounded font-semibold">
+                              {raw}
+                            </span>
+                          ) : (
+                            ""
+                          )
+                        ) : col.key === "gioHoanThanh" ? (
+                          r.gioHoanThanh ? (
+                            <span className="bg-green-300 text-black px-2 py-1 rounded font-semibold">
+                              {raw}
+                            </span>
+                          ) : !r.gioNhanChuyen ? (
+                            <span
+                              className="text-gray-400 cursor-not-allowed"
+                              title="Chưa nhận chuyến nên không thể hoàn thành"
+                            >
+                              -
+                            </span>
+                          ) : (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await axios.put(
+                                    `${API_URL}/complete/${r._id}`,
+                                    {},
+                                    {
+                                      headers: {
+                                        Authorization: `Bearer ${token}`,
+                                      },
+                                    },
+                                  );
+
+                                  fetchRides();
+                                } catch (err) {
+                                  alert(
+                                    err.response?.data?.error ||
+                                      "Không thể hoàn thành chuyến",
+                                  );
+                                }
+                              }}
+                              className="bg-green-300 text-black px-2 py-1 rounded font-bold hover:bg-green-600"
+                              title="Xác nhận hoàn thành chuyến"
+                            >
+                              Xác nhận
+                            </button>
+                          )
+                        ) : (
+                          (raw ?? "")
+                        )}
                       </td>
                     );
                   })}
@@ -1710,7 +1767,7 @@ export default function DieuVanPage({ user, onLogout }) {
             } catch (err) {
               alert(
                 "Không lưu được chuyến: " +
-                  (err.response?.data?.error || err.message)
+                  (err.response?.data?.error || err.message),
               );
             }
           }}

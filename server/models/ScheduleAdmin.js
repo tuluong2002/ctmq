@@ -54,6 +54,10 @@ const scheduleAdminSchema = new mongoose.Schema(
 
     maLichTrinh: { type: String, default: "" }, // MÃ LỊCH TRÌNH
 
+    // 🕒 THỜI GIAN
+    gioNhanChuyen: { type: Date, default: null }, // tự động khi đủ lái xe + biển số
+    gioHoanThanh: { type: Date, default: null }, // chỉ set khi bấm hoàn thành
+
     percentHH: { type: Number, default: 0 }, //%HH
     moneyHH: { type: Number, default: 0 }, //Tiền HH
     moneyConLai: { type: Number, default: 0 }, //Tiền còn lại
@@ -86,7 +90,7 @@ const scheduleAdminSchema = new mongoose.Schema(
       default: "INVOICE", // mặc định là hoá đơn
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const ScheduleAdmin = mongoose.model("ScheduleAdmin", scheduleAdminSchema);

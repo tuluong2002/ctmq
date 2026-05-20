@@ -142,6 +142,10 @@ const createScheduleAdmin = async (req, res) => {
     const maChuyen = `${counterKey}.${String(updated.seq).padStart(4, "0")}`;
 
     // 🧾 4️⃣ Tạo chuyến
+
+    const autoGioNhanChuyen =
+      data.tenLaiXe?.trim() && data.bienSoXe?.trim() ? new Date() : null;
+
     const schedule = await ScheduleAdmin.create({
       ...data,
       dieuVan: dieuVan || user.username,
@@ -149,6 +153,7 @@ const createScheduleAdmin = async (req, res) => {
       createdBy: user.fullname || user.username,
       maChuyen,
       ngayGiaoHang,
+      gioNhanChuyen: autoGioNhanChuyen,
     });
 
     return res.status(201).json(schedule);
@@ -275,6 +280,17 @@ const updateScheduleAdmin = async (req, res) => {
     // Cập nhật dữ liệu bình thường
     Object.assign(schedule, req.body);
 
+    // 🕒 AUTO GIỜ NHẬN CHUYẾN
+    const hadGioNhan = !!schedule.gioNhanChuyen;
+
+    const hasDriver = schedule.tenLaiXe?.trim();
+    const hasPlate = schedule.bienSoXe?.trim();
+
+    // trước đó chưa có giờ nhận + giờ này đã đủ dữ liệu
+    if (!hadGioNhan && hasDriver && hasPlate) {
+      schedule.gioNhanChuyen = new Date();
+    }
+
     // 🚀 PHẢI SAVE
     await schedule.save();
 
@@ -282,6 +298,37 @@ const updateScheduleAdmin = async (req, res) => {
   } catch (err) {
     console.error("Lỗi khi sửa chuyến:", err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+// Tích giờ hoàn thành chuyến
+const completeSchedule = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const schedule = await ScheduleAdmin.findById(id);
+
+    if (!schedule) {
+      return res.status(404).json({
+        error: "Không tìm thấy chuyến",
+      });
+    }
+
+    // ✅ tích hoàn thành
+    schedule.trangThai = "hoanThanh";
+
+    // 🕒 ghi giờ hoàn thành
+    schedule.gioHoanThanh = new Date();
+
+    await schedule.save();
+
+    res.json(schedule);
+  } catch (err) {
+    console.error("Lỗi hoàn thành chuyến:", err);
+
+    res.status(500).json({
+      error: err.message,
+    });
   }
 };
 
@@ -1824,4 +1871,5 @@ module.exports = {
   removeHoaDonFromSchedules,
   importHoaDonFromExcel,
   importCTXNFromExcel,
+  completeSchedule
 };

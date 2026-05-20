@@ -62,6 +62,7 @@ const createCustomer = async (req, res) => {
       accUsername: body.accUsername,
       percentHH: body.percentHH,
       createdBy: req.user?.username || body.createdBy || "",
+      diemDongHang: body.diemDongHang,
     });
     res.status(201).json(saved);
   } catch (err) {
@@ -91,6 +92,7 @@ const updateCustomer = async (req, res) => {
         accountant: body.accountant,
         code: body.code,
         accUsername: body.accUsername,
+        diemDongHang: body.diemDongHang,
       },
       { new: true }
     );
@@ -164,6 +166,7 @@ const importCustomersFromExcel = async (req, res) => {
           percentHH: row["%HH"] || 0,
           code: code,
           accUsername: row["User"] || "",
+          diemDongHang: row["Điểm đóng hàng"] || ""
         };
 
         // CHECK TRÙNG THEO CODE
@@ -439,6 +442,7 @@ const exportCustomers = async (req, res) => {
         row.getCell("F").value = c.percentHH ?? 0;
         row.getCell("G").value = c.accountant ?? "";
         row.getCell("H").value = c.accUsername ?? "";
+        row.getCell("I").value = c.diemDongHang ?? ""
       } else {
         // ❌ KHÔNG %HH → DỒN CỘT
         row.getCell("A").value = c.code ?? "";
@@ -448,6 +452,7 @@ const exportCustomers = async (req, res) => {
         row.getCell("E").value = c.address ?? "";
         row.getCell("G").value = c.accountant ?? "";
         row.getCell("H").value = c.accUsername ?? "";
+        row.getCell("I").value = c.diemDongHang ?? ""
       }
 
       row.commit();

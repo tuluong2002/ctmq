@@ -15,7 +15,8 @@ const customerSchema = new mongoose.Schema(
 
     percentHH: { type: Number, default: 0 }, // % HH hiện tại (áp cho chuyến mới)
     oneTripMoney: { type: Number, default: 0 }, //Tiền tính theo chuyến
-    timeStart: { type: Date, default:''}  // Thời gian bắt đầu tính
+    timeStart: { type: Date, default:''},  // Thời gian bắt đầu tính
+    diemDongHang: { type: String, default: "" } //Điểm đóng hàng
   },
   { timestamps: true }
 );

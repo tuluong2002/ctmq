@@ -25,6 +25,7 @@ export const allColumns = [
   { key: "accountant", label: "GHI CHÚ" },
   { key: "percentHH", label: "HOA HỒNG" },
   { key: "accUsername", label: "User" },
+  { key: "diemDongHang", label: "Điểm đóng hàng" },
 ];
 
 // helper để dựng key trong localStorage

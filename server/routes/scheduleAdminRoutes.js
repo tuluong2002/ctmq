@@ -24,6 +24,7 @@ const {
   exportTripsByDateRange,
   exportTripsByDateRangeBS,
   addBoSungSingle,
+  completeSchedule,
 } = require("../controllers/scheduleAdminController");
 const authMiddleware = require("../middleware/authMiddleware");
 
@@ -158,9 +159,8 @@ router.get(
 router.post(
   "/assign-ma-lich-trinh",
   authMiddleware(["keToan"]),
-  rideEditRequestController.assignMaLichTrinh
+  rideEditRequestController.assignMaLichTrinh,
 );
-
 
 // Lấy chuyến từ excel
 router.post(
@@ -212,6 +212,13 @@ router.put(
   "/warning/:id",
   authMiddleware(["admin", "dieuVan", "keToan"]),
   toggleWarning,
+);
+
+// Hoàn thành chuyến
+router.put(
+  "/complete/:id",
+  authMiddleware(["admin", "dieuVan", "keToan"]),
+  completeSchedule,
 );
 
 //xuất file excel
