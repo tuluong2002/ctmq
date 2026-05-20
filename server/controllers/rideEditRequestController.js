@@ -19,6 +19,17 @@ exports.editRide = async (req, res) => {
       return res.status(404).json({ error: "Không tìm thấy chuyến" });
     }
 
+    // 🕒 AUTO GIỜ NHẬN CHUYẾN
+    const hadGioNhan = !!ride.gioNhanChuyen;
+
+    const hasDriver = newData.tenLaiXe?.trim();
+    const hasPlate = newData.bienSoXe?.trim();
+
+    // trước chưa có giờ nhận + giờ này đã đủ dữ liệu
+    if (!hadGioNhan && hasDriver && hasPlate) {
+      newData.gioNhanChuyen = new Date();
+    }
+
     // Lưu dữ liệu cũ vào lịch sử
     await RideHistory.create({
       rideID: ride._id,

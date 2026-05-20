@@ -2,7 +2,19 @@ import React, { useEffect, useState } from "react";
 
 const splitAddressInput = (value) => {
   const parts = value.split(";");
+
+  // nếu đang nhập dấu ; thì coi như đang nhập điểm mới
+  const endsWithSemi = value.trim().endsWith(";");
+
+  if (endsWithSemi) {
+    return {
+      prefix: value,
+      keyword: "",
+    };
+  }
+
   const last = parts.pop() || "";
+
   return {
     prefix: parts.length ? parts.join(";").trim() + "; " : "",
     keyword: last.trim(),
@@ -54,13 +66,12 @@ const scoreAddressMatch = (keyword, address) => {
 
 const appendAddress = (prev, next) => {
   const { prefix } = splitAddressInput(prev || "");
-  return `${prefix}${next}; `;
+  return `${prefix}${next}`;
 };
 
 const splitCompletedPoints = (str = "") =>
   str
     .split(";")
-    .slice(0, -1)
     .map((s) => s.trim())
     .filter(Boolean);
 

@@ -9,7 +9,19 @@ registerLocale("vi", vi);
 // tách chuỗi nhiều địa chỉ bằng ;
 const splitAddressInput = (value) => {
   const parts = value.split(";");
+
+  // nếu đang nhập dấu ; thì coi như đang nhập điểm mới
+  const endsWithSemi = value.trim().endsWith(";");
+
+  if (endsWithSemi) {
+    return {
+      prefix: value,
+      keyword: "",
+    };
+  }
+
   const last = parts.pop() || "";
+
   return {
     prefix: parts.length ? parts.join(";").trim() + "; " : "",
     keyword: last.trim(),
@@ -33,7 +45,7 @@ const levenshtein = (a, b) => {
       dp[i][j] = Math.min(
         dp[i - 1][j] + 1,
         dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
       );
     }
   }
@@ -50,7 +62,6 @@ const fuzzyIncludes = (word, text) => {
 const splitCompletedPoints = (str = "") => {
   return str
     .split(";")
-    .slice(0, -1)
     .map((s) => s.trim())
     .filter(Boolean);
 };
@@ -67,7 +78,7 @@ const getDiaChiMoiByDiaChi = (diaChi, addresses = []) => {
 
 const appendAddress = (prevValue, newValue) => {
   const { prefix } = splitAddressInput(prevValue || "");
-  return `${prefix}${newValue}; `;
+  return `${prefix}${newValue}`;
 };
 
 export default function RideEditRequestModal({
@@ -251,15 +262,15 @@ export default function RideEditRequestModal({
 
       const filtered = customers.filter((c) =>
         removeVietnameseTones(c.tenKhachHang || c.name).includes(
-          removeVietnameseTones(value)
-        )
+          removeVietnameseTones(value),
+        ),
       );
       setCustomerSuggestions(filtered);
 
       const matched = customers.find(
         (c) =>
           removeVietnameseTones(c.tenKhachHang || c.name) ===
-          removeVietnameseTones(value)
+          removeVietnameseTones(value),
       );
       if (matched) {
         setForm((prev) => ({
@@ -277,7 +288,7 @@ export default function RideEditRequestModal({
       setForm((prev) => ({ ...prev, tenLaiXe: value }));
 
       const filtered = drivers.filter((d) =>
-        removeVietnameseTones(d.name).includes(removeVietnameseTones(value))
+        removeVietnameseTones(d.name).includes(removeVietnameseTones(value)),
       );
       setDriverSuggestions(filtered);
       return;
@@ -289,8 +300,8 @@ export default function RideEditRequestModal({
 
       const filtered = vehicles.filter((v) =>
         removeVietnameseTones(v.plateNumber).includes(
-          removeVietnameseTones(value)
-        )
+          removeVietnameseTones(value),
+        ),
       );
       setVehicleSuggestions(filtered);
       return;
@@ -302,7 +313,7 @@ export default function RideEditRequestModal({
 
         const completedList = splitCompletedPoints(next);
         const newList = completedList.map((diaChi) =>
-          getDiaChiMoiByDiaChi(diaChi, addresses)
+          getDiaChiMoiByDiaChi(diaChi, addresses),
         );
 
         return {
@@ -335,7 +346,7 @@ export default function RideEditRequestModal({
 
         const completedList = splitCompletedPoints(next);
         const newList = completedList.map((diaChi) =>
-          getDiaChiMoiByDiaChi(diaChi, addresses)
+          getDiaChiMoiByDiaChi(diaChi, addresses),
         );
 
         return {
@@ -369,7 +380,7 @@ export default function RideEditRequestModal({
       const keyword = removeVietnameseTones(value);
 
       const filtered = (customers2 || []).filter((c) =>
-        removeVietnameseTones(c.nameKH).includes(keyword)
+        removeVietnameseTones(c.nameKH).includes(keyword),
       );
 
       setCustomer2Suggestions(filtered);
@@ -545,9 +556,9 @@ export default function RideEditRequestModal({
                         ...prev,
                         [f.name]: date
                           ? `${date.getFullYear()}-${String(
-                              date.getMonth() + 1
+                              date.getMonth() + 1,
                             ).padStart(2, "0")}-${String(
-                              date.getDate()
+                              date.getDate(),
                             ).padStart(2, "0")}`
                           : "",
                       }));
@@ -627,18 +638,18 @@ export default function RideEditRequestModal({
                             onClick={() => {
                               const diaChiMoi = getDiaChiMoiByDiaChi(
                                 a.diaChi,
-                                addresses
+                                addresses,
                               );
 
                               setForm((prev) => ({
                                 ...prev,
                                 diemXepHang: appendAddress(
                                   prev.diemXepHang,
-                                  a.diaChi
+                                  a.diaChi,
                                 ),
                                 diemXepHangNew: appendAddress(
                                   prev.diemXepHangNew,
-                                  diaChiMoi
+                                  diaChiMoi,
                                 ),
                               }));
 
@@ -683,18 +694,18 @@ export default function RideEditRequestModal({
                             onClick={() => {
                               const diaChiMoi = getDiaChiMoiByDiaChi(
                                 a.diaChi,
-                                addresses
+                                addresses,
                               );
 
                               setForm((prev) => ({
                                 ...prev,
                                 diemDoHang: appendAddress(
                                   prev.diemDoHang,
-                                  a.diaChi
+                                  a.diaChi,
                                 ),
                                 diemDoHangNew: appendAddress(
                                   prev.diemDoHangNew,
-                                  diaChiMoi
+                                  diaChiMoi,
                                 ),
                               }));
 

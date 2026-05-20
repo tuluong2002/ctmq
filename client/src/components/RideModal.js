@@ -7,7 +7,19 @@ registerLocale("vi", vi);
 
 const splitAddressInput = (value) => {
   const parts = value.split(";");
+
+  // nếu đang nhập dấu ; thì coi như đang nhập điểm mới
+  const endsWithSemi = value.trim().endsWith(";");
+
+  if (endsWithSemi) {
+    return {
+      prefix: value,
+      keyword: "",
+    };
+  }
+
   const last = parts.pop() || "";
+
   return {
     prefix: parts.length ? parts.join(";").trim() + "; " : "",
     keyword: last.trim(),
@@ -30,7 +42,7 @@ const levenshtein = (a, b) => {
       dp[i][j] = Math.min(
         dp[i - 1][j] + 1,
         dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
       );
     }
   }
@@ -45,14 +57,13 @@ const getDiaChiMoi = (address) => {
 
 const appendAddress = (prevValue, newValue) => {
   const { prefix } = splitAddressInput(prevValue || "");
-  return `${prefix}${newValue}; `;
+  return `${prefix}${newValue}`;
 };
 
 const splitCompletedPoints = (str = "") => {
   // chỉ lấy các đoạn KẾT THÚC bởi ;
   return str
     .split(";")
-    .slice(0, -1) // ❗ bỏ đoạn đang gõ dở
     .map((s) => s.trim())
     .filter(Boolean);
 };
@@ -256,15 +267,15 @@ export default function RideModal({
 
       const filtered = customers.filter((c) =>
         removeVietnameseTones(c.tenKhachHang || c.name).includes(
-          removeVietnameseTones(value)
-        )
+          removeVietnameseTones(value),
+        ),
       );
       setCustomerSuggestions(filtered);
 
       const matched = customers.find(
         (c) =>
           removeVietnameseTones(c.tenKhachHang || c.name) ===
-          removeVietnameseTones(value)
+          removeVietnameseTones(value),
       );
       if (matched) {
         setForm((prev) => ({
@@ -272,6 +283,9 @@ export default function RideModal({
           maKH: matched.code,
           keToanPhuTrach: matched.accountant || "",
           accountUsername: matched.accUsername || "",
+
+          diemXepHang: prev.diemXepHang || c.diemDongHang || "",
+          diemXepHangNew: prev.diemXepHangNew || c.diemDongHang || "",
         }));
       }
       return;
@@ -282,7 +296,7 @@ export default function RideModal({
       setForm((prev) => ({ ...prev, tenLaiXe: value }));
 
       const filtered = drivers.filter((d) =>
-        removeVietnameseTones(d.name).includes(removeVietnameseTones(value))
+        removeVietnameseTones(d.name).includes(removeVietnameseTones(value)),
       );
       setDriverSuggestions(filtered);
       return;
@@ -294,8 +308,8 @@ export default function RideModal({
 
       const filtered = vehicles.filter((v) =>
         removeVietnameseTones(v.plateNumber).includes(
-          removeVietnameseTones(value)
-        )
+          removeVietnameseTones(value),
+        ),
       );
       setVehicleSuggestions(filtered);
       return;
@@ -308,7 +322,7 @@ export default function RideModal({
         const completedList = splitCompletedPoints(next);
 
         const newList = completedList.map((diaChi) =>
-          getDiaChiMoiByDiaChi(diaChi, addresses)
+          getDiaChiMoiByDiaChi(diaChi, addresses),
         );
 
         return {
@@ -347,7 +361,7 @@ export default function RideModal({
         const completedList = splitCompletedPoints(next);
 
         const newList = completedList.map((diaChi) =>
-          getDiaChiMoiByDiaChi(diaChi, addresses)
+          getDiaChiMoiByDiaChi(diaChi, addresses),
         );
 
         return {
@@ -384,7 +398,7 @@ export default function RideModal({
       setForm((prev) => ({ ...prev, KHdiemGiaoHang: value }));
 
       const filtered = customers2.filter((c) =>
-        removeVietnameseTones(c.nameKH).includes(removeVietnameseTones(value))
+        removeVietnameseTones(c.nameKH).includes(removeVietnameseTones(value)),
       );
 
       setCustomer2Suggestions(filtered);
@@ -412,7 +426,7 @@ export default function RideModal({
     e.preventDefault();
 
     const matchedCustomer = customers.find(
-      (c) => (c.tenKhachHang || c.name) === form.khachHang
+      (c) => (c.tenKhachHang || c.name) === form.khachHang,
     );
     if (!matchedCustomer) {
       alert("Vui lòng chọn khách hàng từ danh sách có sẵn!");
@@ -494,14 +508,14 @@ export default function RideModal({
                 if (e.key === "ArrowDown") {
                   e.preventDefault();
                   setDriverIndex((i) =>
-                    i < driverSuggestions.length - 1 ? i + 1 : 0
+                    i < driverSuggestions.length - 1 ? i + 1 : 0,
                   );
                 }
 
                 if (e.key === "ArrowUp") {
                   e.preventDefault();
                   setDriverIndex((i) =>
-                    i > 0 ? i - 1 : driverSuggestions.length - 1
+                    i > 0 ? i - 1 : driverSuggestions.length - 1,
                   );
                 }
 
@@ -559,10 +573,10 @@ export default function RideModal({
                       ...prev,
                       [f.name]: date
                         ? `${date.getFullYear()}-${String(
-                            date.getMonth() + 1
+                            date.getMonth() + 1,
                           ).padStart(2, "0")}-${String(date.getDate()).padStart(
                             2,
-                            "0"
+                            "0",
                           )}`
                         : "",
                     }))
@@ -584,14 +598,14 @@ export default function RideModal({
                       if (e.key === "ArrowDown") {
                         e.preventDefault();
                         setVehicleIndex((i) =>
-                          i < vehicleSuggestions.length - 1 ? i + 1 : 0
+                          i < vehicleSuggestions.length - 1 ? i + 1 : 0,
                         );
                       }
 
                       if (e.key === "ArrowUp") {
                         e.preventDefault();
                         setVehicleIndex((i) =>
-                          i > 0 ? i - 1 : vehicleSuggestions.length - 1
+                          i > 0 ? i - 1 : vehicleSuggestions.length - 1,
                         );
                       }
 
@@ -651,14 +665,14 @@ export default function RideModal({
                       if (e.key === "ArrowDown") {
                         e.preventDefault();
                         setPickupIndex((i) =>
-                          i < pickupSuggestions.length - 1 ? i + 1 : 0
+                          i < pickupSuggestions.length - 1 ? i + 1 : 0,
                         );
                       }
 
                       if (e.key === "ArrowUp") {
                         e.preventDefault();
                         setPickupIndex((i) =>
-                          i > 0 ? i - 1 : pickupSuggestions.length - 1
+                          i > 0 ? i - 1 : pickupSuggestions.length - 1,
                         );
                       }
 
@@ -671,11 +685,11 @@ export default function RideModal({
                           ...prev,
                           diemXepHang: appendAddress(
                             prev.diemXepHang,
-                            a.diaChi
+                            a.diaChi,
                           ),
                           diemXepHangNew: appendAddress(
                             prev.diemXepHangNew,
-                            diaChiMoi
+                            diaChiMoi,
                           ),
                         }));
 
@@ -721,11 +735,11 @@ export default function RideModal({
                               ...prev,
                               diemXepHang: appendAddress(
                                 prev.diemXepHang,
-                                a.diaChi
+                                a.diaChi,
                               ),
                               diemXepHangNew: appendAddress(
                                 prev.diemXepHangNew,
-                                diaChiMoi
+                                diaChiMoi,
                               ),
                             }));
                             setPickupSuggestions([]);
@@ -750,14 +764,14 @@ export default function RideModal({
                       if (e.key === "ArrowDown") {
                         e.preventDefault();
                         setDropIndex((i) =>
-                          i < dropSuggestions.length - 1 ? i + 1 : 0
+                          i < dropSuggestions.length - 1 ? i + 1 : 0,
                         );
                       }
 
                       if (e.key === "ArrowUp") {
                         e.preventDefault();
                         setDropIndex((i) =>
-                          i > 0 ? i - 1 : dropSuggestions.length - 1
+                          i > 0 ? i - 1 : dropSuggestions.length - 1,
                         );
                       }
 
@@ -771,7 +785,7 @@ export default function RideModal({
                           diemDoHang: appendAddress(prev.diemDoHang, a.diaChi),
                           diemDoHangNew: appendAddress(
                             prev.diemDoHangNew,
-                            diaChiMoi
+                            diaChiMoi,
                           ),
                         }));
                         setDropSuggestions([]);
@@ -809,11 +823,11 @@ export default function RideModal({
                               ...prev,
                               diemDoHang: appendAddress(
                                 prev.diemDoHang,
-                                a.diaChi
+                                a.diaChi,
                               ),
                               diemDoHangNew: appendAddress(
                                 prev.diemDoHangNew,
-                                diaChiMoi
+                                diaChiMoi,
                               ),
                             }));
                             setDropSuggestions([]);
@@ -844,14 +858,14 @@ export default function RideModal({
                           if (e.key === "ArrowDown") {
                             e.preventDefault();
                             setCustomerIndex((i) =>
-                              i < customerSuggestions.length - 1 ? i + 1 : 0
+                              i < customerSuggestions.length - 1 ? i + 1 : 0,
                             );
                           }
 
                           if (e.key === "ArrowUp") {
                             e.preventDefault();
                             setCustomerIndex((i) =>
-                              i > 0 ? i - 1 : customerSuggestions.length - 1
+                              i > 0 ? i - 1 : customerSuggestions.length - 1,
                             );
                           }
 
@@ -865,6 +879,12 @@ export default function RideModal({
                               maKH: c.code,
                               keToanPhuTrach: c.accountant || "",
                               accountUsername: c.accUsername || "",
+
+                              diemXepHang:
+                                prev.diemXepHang || c.diemDongHang || "",
+
+                              diemXepHangNew:
+                                prev.diemXepHangNew || c.diemDongHang || "",
                             }));
 
                             setCustomerSuggestions([]);
@@ -906,6 +926,12 @@ export default function RideModal({
                             maKH: c.code,
                             keToanPhuTrach: c.accountant || "",
                             accountUsername: c.accUsername || "",
+                            
+                            diemXepHang:
+                              prev.diemXepHang || c.diemDongHang || "",
+
+                            diemXepHangNew:
+                              prev.diemXepHangNew || c.diemDongHang || "",
                           }));
                           setCustomerSuggestions([]);
                         }}
@@ -935,14 +961,14 @@ export default function RideModal({
                 if (e.key === "ArrowDown") {
                   e.preventDefault();
                   setCustomer2Index((i) =>
-                    i < customer2Suggestions.length - 1 ? i + 1 : 0
+                    i < customer2Suggestions.length - 1 ? i + 1 : 0,
                   );
                 }
 
                 if (e.key === "ArrowUp") {
                   e.preventDefault();
                   setCustomer2Index((i) =>
-                    i > 0 ? i - 1 : customer2Suggestions.length - 1
+                    i > 0 ? i - 1 : customer2Suggestions.length - 1,
                   );
                 }
 
@@ -1061,14 +1087,14 @@ export default function RideModal({
                       {key === "bocXep"
                         ? "Bốc xếp"
                         : key === "hangVe"
-                        ? "Hàng về"
-                        : key === "ve"
-                        ? "Vé"
-                        : key === "luuCa"
-                        ? "Lưu ca"
-                        : key === "luatChiPhiKhac"
-                        ? "Chi phí khác"
-                        : "Lái xe thu cước"}
+                          ? "Hàng về"
+                          : key === "ve"
+                            ? "Vé"
+                            : key === "luuCa"
+                              ? "Lưu ca"
+                              : key === "luatChiPhiKhac"
+                                ? "Chi phí khác"
+                                : "Lái xe thu cước"}
                     </label>
                     <input
                       type="text"
@@ -1079,7 +1105,7 @@ export default function RideModal({
                       placeholder="0"
                     />
                   </div>
-                )
+                ),
             )}
           </div>
 
