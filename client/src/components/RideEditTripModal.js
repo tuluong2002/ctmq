@@ -6,7 +6,19 @@ const API_URL = `${API}/schedule-admin`;
 
 const splitAddressInput = (value) => {
   const parts = value.split(";");
+
+  // nếu đang nhập dấu ; thì coi như đang nhập điểm mới
+  const endsWithSemi = value.trim().endsWith(";");
+
+  if (endsWithSemi) {
+    return {
+      prefix: value,
+      keyword: "",
+    };
+  }
+
   const last = parts.pop() || "";
+
   return {
     prefix: parts.length ? parts.join(";").trim() + "; " : "",
     keyword: last.trim(),
@@ -56,10 +68,17 @@ const scoreAddressMatch = (keyword, address) => {
   return score;
 };
 
-const appendAddress = (prev, next) => {
-  const { prefix } = splitAddressInput(prev || "");
-  return `${prefix}${next}; `;
-};
+const appendAddress = (prevValue, newValue) => {
+  const parts = (prevValue || "")
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // bỏ phần đang gõ cuối cùng
+  parts.pop();
+
+  return [...parts, newValue].join("; ");
+};  
 
 const splitCompletedPoints = (str = "") =>
   str

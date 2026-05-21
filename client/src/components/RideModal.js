@@ -56,9 +56,16 @@ const getDiaChiMoi = (address) => {
 };
 
 const appendAddress = (prevValue, newValue) => {
-  const { prefix } = splitAddressInput(prevValue || "");
-  return `${prefix}${newValue}`;
-};
+  const parts = (prevValue || "")
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // bỏ phần đang gõ cuối cùng
+  parts.pop();
+
+  return [...parts, newValue].join("; ");
+};  
 
 const splitCompletedPoints = (str = "") => {
   // chỉ lấy các đoạn KẾT THÚC bởi ;

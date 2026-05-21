@@ -110,8 +110,6 @@ export default function DieuVanPage({ user, onLogout }) {
     fetchData();
   }, []);
 
-  console.log(customers2);
-
   // 🟢 Lấy danh sách điều vận
   const fetchManagers = async () => {
     try {
@@ -136,6 +134,10 @@ export default function DieuVanPage({ user, onLogout }) {
   const [totalPages, setTotalPages] = useState(1);
 
   const [warnings, setWarnings] = useState({});
+
+  const [tongChuyen, setTongChuyen] = useState(0);
+  const [tongNhanChuyen, setTongNhanChuyen] = useState(0);
+  const [tongHoanThanh, setTongHoanThanh] = useState(0);
 
   // 🔹 Lấy tất cả chuyến (có filter)
   const fetchRides = async () => {
@@ -176,6 +178,9 @@ export default function DieuVanPage({ user, onLogout }) {
 
       setRides(res.data.data || []);
       setTotalPages(res.data.totalPages || 1);
+      setTongChuyen(res.data.totalChuyenTrongNgay || 0);
+      setTongNhanChuyen(res.data.totalNhanChuyen || 0);
+      setTongHoanThanh(res.data.totalHoanThanh || 0);
 
       const w = {};
       res.data.data.forEach((d) => {
@@ -1654,7 +1659,7 @@ export default function DieuVanPage({ user, onLogout }) {
                                   );
                                 }
                               }}
-                              className="bg-green-300 text-black px-2 py-1 rounded font-bold hover:bg-green-600"
+                              className="bg-red-200 text-black px-2 py-1 rounded font-bold hover:bg-green-600"
                               title="Xác nhận hoàn thành chuyến"
                             >
                               Xác nhận
@@ -1708,6 +1713,14 @@ export default function DieuVanPage({ user, onLogout }) {
         >
           Trang sau →
         </button>
+      </div>
+
+      <div className="flex gap-6 mt-3 text-sm font-semibold">
+        <div>Tổng chuyến: {tongChuyen}</div>
+
+        <div className="text-yellow-500">Đã nhận: {tongNhanChuyen}</div>
+
+        <div className="text-green-600">Hoàn thành: {tongHoanThanh}</div>
       </div>
 
       {/* Modal */}

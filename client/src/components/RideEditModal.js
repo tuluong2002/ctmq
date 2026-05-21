@@ -64,10 +64,17 @@ const scoreAddressMatch = (keyword, address) => {
   return score;
 };
 
-const appendAddress = (prev, next) => {
-  const { prefix } = splitAddressInput(prev || "");
-  return `${prefix}${next}`;
-};
+const appendAddress = (prevValue, newValue) => {
+  const parts = (prevValue || "")
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // bỏ phần đang gõ cuối cùng
+  parts.pop();
+
+  return [...parts, newValue].join("; ");
+};  
 
 const splitCompletedPoints = (str = "") =>
   str

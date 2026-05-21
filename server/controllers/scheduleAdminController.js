@@ -1152,7 +1152,20 @@ const getSchedulesByDieuVan = async (req, res) => {
     const limit = parseInt(req.query.limit || 150);
     const skip = (page - 1) * limit;
 
+    // ===== THỐNG KÊ =====
     const total = await ScheduleAdmin.countDocuments(filter);
+
+    // có giờ nhận chuyến
+    const totalNhanChuyen = await ScheduleAdmin.countDocuments({
+      ...filter,
+      gioNhanChuyen: { $exists: true, $ne: null, $ne: "" },
+    });
+
+    // có giờ hoàn thành
+    const totalHoanThanh = await ScheduleAdmin.countDocuments({
+      ...filter,
+      gioHoanThanh: { $exists: true, $ne: null, $ne: "" },
+    });
 
     const schedules = await ScheduleAdmin.find(filter)
       .sort({ createdAt: -1 })
@@ -1161,9 +1174,16 @@ const getSchedulesByDieuVan = async (req, res) => {
 
     return res.json({
       data: schedules,
+
+      // phân trang
       total,
       totalPages: Math.ceil(total / limit),
       page,
+
+      // thống kê
+      totalChuyenTrongNgay: total,
+      totalNhanChuyen,
+      totalHoanThanh,
     });
   } catch (err) {
     console.error("❌ Lỗi lấy danh sách chuyến:", err);
