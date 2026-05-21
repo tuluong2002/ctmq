@@ -15,6 +15,7 @@ const paymentHistoryRoutes = require("./routes/paymentHistoryRoutes");
 const oddCustomerDebtRoutes = require("./routes/oddCustomerDebt.routes");
 const voucherRoutes = require("./routes/voucherRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
+const oilRoutes = require("./routes/oilRoutes")
 
 require("./models/cron");
 
@@ -42,6 +43,7 @@ app.use("/api/payment-history", paymentHistoryRoutes);
 app.use("/api/odd-debt", oddCustomerDebtRoutes);
 app.use("/api/vouchers", voucherRoutes);
 app.use("/api/expense", expenseRoutes);
+app.use("/api/oil", oilRoutes);
 
 app.use("/api/fuel-vinh-khuc", require("./routes/fuelVinhKhuc.routes"));
 app.use("/api/fuel-ngoc-long", require("./routes/fuelNgocLong.routes"));

@@ -40,6 +40,8 @@ import ManageTCBperson from "./pages/KeToanActions/ManageTCBperson";
 import AddressPage from "./pages/AddressPage";
 import Customer2Page from "./pages/Customer2Page";
 
+import OilCreatePage from "./pages/OilPage";
+
 function App() {
   const [user, setUser] = useState(null);
 
@@ -64,6 +66,8 @@ function App() {
 
         <Route path="/driver" element={<DriverPage />} />
         <Route path="/final" element={<FinalPage />} />
+
+        <Route path="/oil" element={<OilCreatePage />} />
 
         {/* Admin */}
         <Route
