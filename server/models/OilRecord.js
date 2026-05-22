@@ -45,6 +45,8 @@ const oilRecordSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+
+    imageOil: { type: [String], default: [] }, // ĐƯỜNG DẪN FILE ẢNH MÁY BƠM DẦU (REL PATH)
   },
   {
     timestamps: true,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import API from "../api";
 
@@ -35,19 +35,21 @@ const scoreMatch = (input, target) => {
 };
 
 const formatOilNumber = (value = "") => {
-  if (value === "" || value === null || value === undefined) {
-    return "";
-  }
+  if (!value) return "";
 
-  return Number(value).toFixed(3).replace(".", ",");
+  const num = Number(value) / 1000;
+
+  if (isNaN(num)) return "";
+
+  return num.toLocaleString("vi-VN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
 };
 
-const parseOilNumber = (value = "") => {
-  const digits = String(value).replace(/\D/g, "");
-
-  if (!digits) return "";
-
-  return Number(digits) / 1000;
+const toNumber = (v) => {
+  if (!v) return 0;
+  return Number(v) / 1000;
 };
 
 function AutoCompleteInput({
@@ -85,7 +87,7 @@ function AutoCompleteInput({
         onFocus={() => setShow(true)}
         onBlur={() => setTimeout(() => setShow(false), 500)}
         className="w-full border rounded-xl p-3 text-base"
-        style={{ fontSize: "16px" }}
+        style={{ fontSize: "18px" }}
       />
 
       {show && filtered.length > 0 && (
@@ -123,10 +125,8 @@ export default function OilCreatePage() {
     soLit: "",
     tongSoDauMay1: "",
     tongSoDauMay2: "",
+    imageOil: [],
   });
-
-  const [loading, setLoading] = useState(false);
-  const [showCloseShift, setShowCloseShift] = useState(false);
 
   // 🔹 4 danh sách gợi ý
   const [drivers, setDrivers] = useState([]);
@@ -135,15 +135,32 @@ export default function OilCreatePage() {
   // 🔹 Lấy danh sách gợi ý
   useEffect(() => {
     const fetchData = async () => {
-      const [driverRes, vehicleRes] = await Promise.all([
-        axios.get(`${API}/drivers/names/list`),
-        axios.get(`${API}/vehicles/names/list`),
-      ]);
-      setDrivers(driverRes.data);
-      setVehicles(vehicleRes.data);
+      try {
+        const [driverRes, vehicleRes] = await Promise.all([
+          axios.get(`${API}/drivers/names/list`),
+          axios.get(`${API}/vehicles/names/list`),
+        ]);
+
+        setDrivers(driverRes.data.data || driverRes.data || []);
+        setVehicles(vehicleRes.data.data || vehicleRes.data || []);
+      } catch (err) {
+        console.error("API ERROR:", err.response?.data || err.message);
+      }
     };
+
     fetchData();
   }, []);
+
+  const [loading, setLoading] = useState(false);
+  const [showCloseShift, setShowCloseShift] = useState(false);
+
+  const fileRefNormal = useRef(null);
+  const fileRefClose = useRef(null);
+
+  const [imagesNormal, setImagesNormal] = useState([]);
+  const [imagesClose, setImagesClose] = useState([]);
+
+  const [focusField, setFocusField] = useState(null);
 
   const driverNames = drivers.map((d) => d.name || d.tenLaiXe || d);
 
@@ -157,9 +174,11 @@ export default function OilCreatePage() {
 
     // 3 ô dầu
     if (["soLit", "tongSoDauMay1", "tongSoDauMay2"].includes(name)) {
+      const digits = value.replace(/[^\d]/g, "");
+
       return setForm((prev) => ({
         ...prev,
-        [name]: parseOilNumber(value),
+        [name]: digits,
       }));
     }
 
@@ -167,6 +186,26 @@ export default function OilCreatePage() {
       ...prev,
       [name]: name === "mayDo" ? Number(value) : value,
     }));
+  };
+
+  const handleImageChange = (e, type) => {
+    const files = Array.from(e.target.files || []);
+
+    if (!showCloseShift && type === "normal") {
+      if (files.length > 1) {
+        alert("Chỉ được chọn tối đa 1 ảnh");
+        return;
+      }
+      setImagesNormal(files);
+    }
+
+    if (showCloseShift && type === "close") {
+      if (files.length > 2) {
+        alert("Chỉ được chọn tối đa 2 ảnh");
+        return;
+      }
+      setImagesClose(files);
+    }
   };
 
   // =========================
@@ -208,21 +247,44 @@ export default function OilCreatePage() {
     try {
       setLoading(true);
 
-      await axios.post(`${API}/oil`, {
-        ...form,
+      const formData = new FormData();
 
-        // Nếu chốt ca thì không gửi các trường này
-        bienSoXe: showCloseShift ? "" : form.bienSoXe,
-        tenLaiXe: showCloseShift ? "" : form.tenLaiXe,
-        soLit: showCloseShift ? 0 : Number(form.soLit),
+      formData.append("ngay", form.ngay);
+      formData.append("ca", form.ca);
+      formData.append("mayDo", form.mayDo);
 
-        tongSoDauMay1: form.tongSoDauMay1 ? Number(form.tongSoDauMay1) : "",
+      formData.append("bienSoXe", showCloseShift ? "" : form.bienSoXe);
 
-        tongSoDauMay2: form.tongSoDauMay2 ? Number(form.tongSoDauMay2) : "",
+      formData.append("tenLaiXe", showCloseShift ? "" : form.tenLaiXe);
+
+      formData.append("soLit", showCloseShift ? 0 : toNumber(form.soLit));
+
+      formData.append(
+        "tongSoDauMay1",
+        form.tongSoDauMay1 ? toNumber(form.tongSoDauMay1) : 0
+      );
+
+      formData.append(
+        "tongSoDauMay2",
+        form.tongSoDauMay2 ? toNumber(form.tongSoDauMay2) : 0
+      );
+
+      // append ảnh
+      const imgs = showCloseShift ? imagesClose : imagesNormal;
+
+      imgs.forEach((img) => {
+        formData.append("imageOil", img);
+      });
+
+      await axios.post(`${API}/oil`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
       alert(showCloseShift ? "Chốt ca thành công!" : "Lưu bơm dầu thành công!");
 
+      // reset form
       setForm((prev) => ({
         ...prev,
         bienSoXe: "",
@@ -231,6 +293,14 @@ export default function OilCreatePage() {
         tongSoDauMay1: "",
         tongSoDauMay2: "",
       }));
+
+      // reset ảnh
+      setImagesNormal([]);
+      setImagesClose([]);
+
+      // reset file input
+      if (fileRefNormal.current) fileRefNormal.current.value = "";
+      if (fileRefClose.current) fileRefClose.current.value = "";
     } catch (err) {
       console.error(err);
 
@@ -260,7 +330,7 @@ export default function OilCreatePage() {
                 return next;
               });
             }}
-            className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap ${
+            className={`px-4 py-2 rounded-xl text-xm font-bold whitespace-nowrap ${
               showCloseShift
                 ? "bg-gray-500 text-white"
                 : "bg-red-500 text-white"
@@ -273,7 +343,7 @@ export default function OilCreatePage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* NGÀY */}
           <div>
-            <label className="block text-sm font-medium mb-1">Ngày</label>
+            <label className="block text-xm font-medium mb-1">Ngày</label>
 
             <input
               type="date"
@@ -337,7 +407,7 @@ export default function OilCreatePage() {
               </div>
               {/* BIỂN SỐ */}
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-xm font-medium mb-1">
                   Biển số xe
                 </label>
 
@@ -357,7 +427,7 @@ export default function OilCreatePage() {
 
               {/* LÁI XE */}
               <div>
-                <label className="block text-sm font-medium mb-1">
+                <label className="block text-xm font-medium mb-1">
                   Tên lái xe
                 </label>
 
@@ -376,17 +446,68 @@ export default function OilCreatePage() {
 
               {/* SỐ LÍT */}
               <div>
-                <label className="block text-sm font-medium mb-1">Số lít</label>
+                <label className="block text-xm font-medium mb-1">Số lít</label>
 
                 <input
                   type="text"
                   inputMode="numeric"
                   name="soLit"
-                  value={formatOilNumber(form.soLit)}
+                  value={
+                    focusField === "soLit"
+                      ? form.soLit
+                      : formatOilNumber(form.soLit)
+                  }
                   onChange={handleChange}
+                  onFocus={() => setFocusField("soLit")}
+                  onBlur={() => setFocusField(null)}
                   placeholder="Nhập số lít"
                   className="w-full border rounded-xl p-4 text-xl font-bold"
                 />
+
+                {/* ẢNH */}
+                <div className="mt-4">
+                  <label className="block text-xm font-medium mb-1">
+                    Ảnh bơm dầu (tối đa 1 ảnh)
+                  </label>
+
+                  <input
+                    ref={fileRefNormal}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple={false}
+                    onChange={(e) => handleImageChange(e, "normal")}
+                    className="w-full border rounded-xl p-3 bg-white"
+                  />
+
+                  {imagesNormal.length > 0 && (
+                    <div className="grid grid-cols-1 gap-2 mt-3">
+                      {imagesNormal.map((img, index) => (
+                        <div
+                          key={index}
+                          className="relative border rounded-xl overflow-hidden"
+                        >
+                          <img
+                            src={URL.createObjectURL(img)}
+                            className="w-full aspect-[3/4] object-cover"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setImagesNormal([]);
+                              if (fileRefNormal.current)
+                                fileRefNormal.current.value = "";
+                            }}
+                            className="absolute top-1 right-1 bg-red-500 text-white w-7 h-7 rounded-full"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}
@@ -403,8 +524,14 @@ export default function OilCreatePage() {
                   type="text"
                   inputMode="numeric"
                   name="tongSoDauMay1"
-                  value={formatOilNumber(form.tongSoDauMay1)}
+                  value={
+                    focusField === "tongSoDauMay1"
+                      ? form.tongSoDauMay1
+                      : formatOilNumber(form.tongSoDauMay1)
+                  }
                   onChange={handleChange}
+                  onFocus={() => setFocusField("tongSoDauMay1")}
+                  onBlur={() => setFocusField(null)}
                   placeholder="Nhập tổng máy 1"
                   className="w-full border rounded-xl p-3 text-base"
                 />
@@ -420,11 +547,66 @@ export default function OilCreatePage() {
                   type="text"
                   inputMode="numeric"
                   name="tongSoDauMay2"
-                  value={formatOilNumber(form.tongSoDauMay2)}
+                  value={
+                    focusField === "tongSoDauMay2"
+                      ? form.tongSoDauMay2
+                      : formatOilNumber(form.tongSoDauMay2)
+                  }
                   onChange={handleChange}
+                  onFocus={() => setFocusField("tongSoDauMay2")}
+                  onBlur={() => setFocusField(null)}
                   placeholder="Nhập tổng máy 2"
                   className="w-full border rounded-xl p-3 text-base"
                 />
+              </div>
+
+              {/* ẢNH CHỐT CA */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium mb-1">
+                  Ảnh chốt ca (tối đa 2 ảnh)
+                </label>
+
+                <input
+                  ref={fileRefClose}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  onChange={(e) => handleImageChange(e, "close")}
+                  className="w-full border rounded-xl p-3 bg-white"
+                />
+
+                {imagesClose.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 mt-3">
+                    {imagesClose.map((img, index) => (
+                      <div
+                        key={index}
+                        className="relative border rounded-xl overflow-hidden"
+                      >
+                        <img
+                          src={URL.createObjectURL(img)}
+                          className="w-full aspect-[3/4] object-cover"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImagesClose((prev) => {
+                              const next = prev.filter((_, i) => i !== index);
+                              if (next.length === 0 && fileRefClose.current) {
+                                fileRefClose.current.value = "";
+                              }
+                              return next;
+                            });
+                          }}
+                          className="absolute top-1 right-1 bg-red-500 text-white w-7 h-7 rounded-full"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </>
           )}

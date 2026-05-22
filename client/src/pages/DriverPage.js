@@ -49,8 +49,30 @@ const scoreMatch = (input, target) => {
 const numberToWordsVN = (num) => {
   if (!num || num === 0) return "Không đồng";
 
-  const units = ["", "một", "hai", "ba", "bốn", "năm", "sáu", "bảy", "tám", "chín"];
-  const tens = ["", "mười", "hai mươi", "ba mươi", "bốn mươi", "năm mươi", "sáu mươi", "bảy mươi", "tám mươi", "chín mươi"];
+  const units = [
+    "",
+    "một",
+    "hai",
+    "ba",
+    "bốn",
+    "năm",
+    "sáu",
+    "bảy",
+    "tám",
+    "chín",
+  ];
+  const tens = [
+    "",
+    "mười",
+    "hai mươi",
+    "ba mươi",
+    "bốn mươi",
+    "năm mươi",
+    "sáu mươi",
+    "bảy mươi",
+    "tám mươi",
+    "chín mươi",
+  ];
 
   const readTwoDigits = (n) => {
     if (n < 10) return units[n];
@@ -94,7 +116,6 @@ const numberToWordsVN = (num) => {
 
   return result + " đồng";
 };
-
 
 function AutoCompleteInput({ value, onChange, options, placeholder = "" }) {
   const [show, setShow] = useState(false);
@@ -200,8 +221,6 @@ function DriverPage() {
     setDriverInfo((prev) => ({ ...prev, [field]: value }));
   };
 
-  console.log(driverInfo);
-
   const handleInputChange = (rowId, colIndex, value) => {
     setRows((prev) =>
       prev.map((row) =>
@@ -210,8 +229,8 @@ function DriverPage() {
               ...row,
               values: row.values.map((v, i) => (i === colIndex ? value : v)),
             }
-          : row,
-      ),
+          : row
+      )
     );
   };
 
@@ -364,8 +383,8 @@ function DriverPage() {
                         i === 0
                           ? vehiclePlates
                           : i === 1
-                            ? customerNames
-                            : addressList
+                          ? customerNames
+                          : addressList
                       }
                       placeholder={
                         [0, 1, 3, 4].includes(i) ? "Bắt buộc điền" : ""
