@@ -47,7 +47,7 @@ function AutoCompleteInput({ value, onChange, options, placeholder = "" }) {
     .slice(0, 10);
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full overflow-visible">
       <input
         type="text"
         value={value}
@@ -62,10 +62,11 @@ function AutoCompleteInput({ value, onChange, options, placeholder = "" }) {
         onFocus={() => setShow(true)}
         onBlur={() => setTimeout(() => setShow(false), 500)}
         className="w-full border rounded-xl p-3 text-base"
+        style={{ fontSize: "16px" }}
       />
 
       {show && filtered.length > 0 && (
-        <div className="absolute z-30 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-56 overflow-y-auto touch-manipulation">
+        <div className="absolute left-0 top-full z-[9999] bg-white border rounded-xl shadow-lg mt-1 w-full max-h-56 overflow-y-auto touch-manipulation">
           {filtered.map((o, i) => (
             <div
               key={i}
