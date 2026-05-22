@@ -15,25 +15,23 @@ const oilRecordSchema = new mongoose.Schema(
 
     mayDo: {
       type: Number,
-      enum: [1, 2],
+      enum: [1, 2, 3],
       required: true,
     },
 
     bienSoXe: {
       type: String,
-      required: true,
-      trim: true,
+      default: "",
     },
 
     tenLaiXe: {
       type: String,
       default: "",
-      trim: true,
     },
 
     soLit: {
       type: Number,
-      required: true,
+      default: 0,
       min: 0,
     },
 
@@ -50,7 +48,7 @@ const oilRecordSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 module.exports = mongoose.model("OilRecord", oilRecordSchema);

@@ -34,7 +34,29 @@ const scoreMatch = (input, target) => {
   return score;
 };
 
-function AutoCompleteInput({ value, onChange, options, placeholder = "" }) {
+const formatOilNumber = (value = "") => {
+  if (value === "" || value === null || value === undefined) {
+    return "";
+  }
+
+  return Number(value).toFixed(3).replace(".", ",");
+};
+
+const parseOilNumber = (value = "") => {
+  const digits = String(value).replace(/\D/g, "");
+
+  if (!digits) return "";
+
+  return Number(digits) / 1000;
+};
+
+function AutoCompleteInput({
+  value,
+  onChange,
+  options,
+  placeholder = "",
+  inputMode = "text",
+}) {
   const [show, setShow] = useState(false);
 
   const filtered = options
@@ -50,6 +72,7 @@ function AutoCompleteInput({ value, onChange, options, placeholder = "" }) {
     <div className="relative w-full overflow-visible">
       <input
         type="text"
+        inputMode={inputMode}
         value={value}
         placeholder={placeholder}
         autoComplete="off"
@@ -132,6 +155,14 @@ export default function OilCreatePage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
 
+    // 3 ô dầu
+    if (["soLit", "tongSoDauMay1", "tongSoDauMay2"].includes(name)) {
+      return setForm((prev) => ({
+        ...prev,
+        [name]: parseOilNumber(value),
+      }));
+    }
+
     setForm((prev) => ({
       ...prev,
       [name]: name === "mayDo" ? Number(value) : value,
@@ -144,21 +175,61 @@ export default function OilCreatePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // =========================
+    // VALIDATE
+    // =========================
+
+    // Nếu KHÔNG phải chốt ca
+    if (!showCloseShift) {
+      if (!form.bienSoXe?.trim()) {
+        return alert("Chưa nhập biển số xe");
+      }
+
+      if (!form.tenLaiXe?.trim()) {
+        return alert("Chưa nhập tên lái xe");
+      }
+
+      if (!form.soLit) {
+        return alert("Chưa nhập số lít");
+      }
+    }
+
+    // Nếu là CHỐT CA
+    if (showCloseShift) {
+      if (!form.tongSoDauMay1) {
+        return alert("Chưa nhập tổng dầu máy 1");
+      }
+
+      if (!form.tongSoDauMay2) {
+        return alert("Chưa nhập tổng dầu máy 2");
+      }
+    }
+
     try {
       setLoading(true);
 
       await axios.post(`${API}/oil`, {
         ...form,
-        soLit: Number(form.soLit),
+
+        // Nếu chốt ca thì không gửi các trường này
+        bienSoXe: showCloseShift ? "" : form.bienSoXe,
+        tenLaiXe: showCloseShift ? "" : form.tenLaiXe,
+        soLit: showCloseShift ? 0 : Number(form.soLit),
+
+        tongSoDauMay1: form.tongSoDauMay1 ? Number(form.tongSoDauMay1) : "",
+
+        tongSoDauMay2: form.tongSoDauMay2 ? Number(form.tongSoDauMay2) : "",
       });
 
-      alert("Lưu bơm dầu thành công!");
+      alert(showCloseShift ? "Chốt ca thành công!" : "Lưu bơm dầu thành công!");
 
       setForm((prev) => ({
         ...prev,
         bienSoXe: "",
         tenLaiXe: "",
         soLit: "",
+        tongSoDauMay1: "",
+        tongSoDauMay2: "",
       }));
     } catch (err) {
       console.error(err);
@@ -177,7 +248,18 @@ export default function OilCreatePage() {
 
           <button
             type="button"
-            onClick={() => setShowCloseShift((prev) => !prev)}
+            onClick={() => {
+              setShowCloseShift((prev) => {
+                const next = !prev;
+
+                setForm((f) => ({
+                  ...f,
+                  mayDo: next ? 3 : 1,
+                }));
+
+                return next;
+              });
+            }}
             className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap ${
               showCloseShift
                 ? "bg-gray-500 text-white"
@@ -204,8 +286,6 @@ export default function OilCreatePage() {
 
           {/* CA */}
           <div>
-            <label className="block text-sm font-medium mb-2">Ca</label>
-
             <div className="grid grid-cols-2 gap-2">
               {["Sáng", "Chiều"].map((item) => (
                 <button
@@ -223,87 +303,93 @@ export default function OilCreatePage() {
                       : "bg-white border-gray-300"
                   }`}
                 >
-                  {item}
+                  Ca {item}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* MÁY */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Máy đổ</label>
+          {!showCloseShift && (
+            <>
+              {/* MÁY */}
+              <div>
+                <div className="grid grid-cols-2 gap-2">
+                  {[1, 2].map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          mayDo: item,
+                        }))
+                      }
+                      className={`rounded-xl py-3 font-semibold border transition ${
+                        form.mayDo === item
+                          ? "bg-green-600 text-white border-green-600"
+                          : "bg-white border-gray-300"
+                      }`}
+                    >
+                      Máy đổ {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* BIỂN SỐ */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Biển số xe
+                </label>
 
-            <div className="grid grid-cols-2 gap-2">
-              {[1, 2].map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() =>
+                <AutoCompleteInput
+                  value={form.bienSoXe}
+                  options={vehiclePlates}
+                  placeholder="Nhập biển số xe"
+                  inputMode="numeric"
+                  onChange={(val) =>
                     setForm((prev) => ({
                       ...prev,
-                      mayDo: item,
+                      bienSoXe: val,
                     }))
                   }
-                  className={`rounded-xl py-3 font-semibold border transition ${
-                    form.mayDo === item
-                      ? "bg-green-600 text-white border-green-600"
-                      : "bg-white border-gray-300"
-                  }`}
-                >
-                  Máy {item}
-                </button>
-              ))}
-            </div>
-          </div>
+                />
+              </div>
 
-          {/* BIỂN SỐ */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Biển số xe</label>
+              {/* LÁI XE */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tên lái xe
+                </label>
 
-            <AutoCompleteInput
-              value={form.bienSoXe}
-              options={vehiclePlates}
-              placeholder="Nhập biển số xe"
-              onChange={(val) =>
-                setForm((prev) => ({
-                  ...prev,
-                  bienSoXe: val,
-                }))
-              }
-            />
-          </div>
+                <AutoCompleteInput
+                  value={form.tenLaiXe}
+                  options={driverNames}
+                  placeholder="Nhập tên lái xe"
+                  onChange={(val) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      tenLaiXe: val,
+                    }))
+                  }
+                />
+              </div>
 
-          {/* LÁI XE */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Tên lái xe</label>
+              {/* SỐ LÍT */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Số lít</label>
 
-            <AutoCompleteInput
-              value={form.tenLaiXe}
-              options={driverNames}
-              placeholder="Nhập tên lái xe"
-              onChange={(val) =>
-                setForm((prev) => ({
-                  ...prev,
-                  tenLaiXe: val,
-                }))
-              }
-            />
-          </div>
-
-          {/* SỐ LÍT */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Số lít</label>
-
-            <input
-              type="text"
-              inputMode="decimal"
-              name="soLit"
-              value={form.soLit}
-              onChange={handleChange}
-              placeholder="Nhập số lít"
-              className="w-full border rounded-xl p-4 text-xl font-bold"
-            />
-          </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  name="soLit"
+                  value={formatOilNumber(form.soLit)}
+                  onChange={handleChange}
+                  placeholder="Nhập số lít"
+                  className="w-full border rounded-xl p-4 text-xl font-bold"
+                />
+              </div>
+            </>
+          )}
 
           {showCloseShift && (
             <>
@@ -315,9 +401,9 @@ export default function OilCreatePage() {
 
                 <input
                   type="text"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   name="tongSoDauMay1"
-                  value={form.tongSoDauMay1}
+                  value={formatOilNumber(form.tongSoDauMay1)}
                   onChange={handleChange}
                   placeholder="Nhập tổng máy 1"
                   className="w-full border rounded-xl p-3 text-base"
@@ -332,9 +418,9 @@ export default function OilCreatePage() {
 
                 <input
                   type="text"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   name="tongSoDauMay2"
-                  value={form.tongSoDauMay2}
+                  value={formatOilNumber(form.tongSoDauMay2)}
                   onChange={handleChange}
                   placeholder="Nhập tổng máy 2"
                   className="w-full border rounded-xl p-3 text-base"
