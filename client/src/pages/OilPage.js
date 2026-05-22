@@ -1,6 +1,86 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import API from "../api";
+
+const normalize = (str = "") =>
+  String(str)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d");
+
+const scoreMatch = (input, target) => {
+  input = normalize(input);
+  target = normalize(target);
+
+  if (!input) return 0;
+
+  if (target.includes(input)) {
+    return 100 - (target.length - input.length);
+  }
+
+  let score = 0;
+  let ti = 0;
+
+  for (let i = 0; i < input.length; i++) {
+    const idx = target.indexOf(input[i], ti);
+
+    if (idx === -1) return 0;
+
+    score += 5;
+    ti = idx + 1;
+  }
+
+  return score;
+};
+
+function AutoCompleteInput({ value, onChange, options, placeholder = "" }) {
+  const [show, setShow] = useState(false);
+
+  const filtered = options
+    .map((opt) => ({
+      text: opt,
+      score: scoreMatch(value, opt),
+    }))
+    .filter((o) => o.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+
+  return (
+    <div className="relative w-full">
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        autoComplete="off"
+        onChange={(e) => {
+          onChange(e.target.value);
+          setShow(true);
+        }}
+        onFocus={() => setShow(true)}
+        onBlur={() => setTimeout(() => setShow(false), 150)}
+        className="w-full border rounded-xl p-3 text-base"
+      />
+
+      {show && filtered.length > 0 && (
+        <div className="absolute z-30 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-56 overflow-y-auto">
+          {filtered.map((o, i) => (
+            <div
+              key={i}
+              onClick={() => {
+                onChange(o.text);
+                setShow(false);
+              }}
+              className="px-3 py-3 border-b last:border-b-0 cursor-pointer active:bg-gray-100"
+            >
+              {o.text}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function OilCreatePage() {
   const [form, setForm] = useState({
@@ -15,6 +95,28 @@ export default function OilCreatePage() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [showCloseShift, setShowCloseShift] = useState(false);
+
+  // 🔹 4 danh sách gợi ý
+  const [drivers, setDrivers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+
+  // 🔹 Lấy danh sách gợi ý
+  useEffect(() => {
+    const fetchData = async () => {
+      const [driverRes, vehicleRes] = await Promise.all([
+        axios.get(`${API}/drivers/names/list`),
+        axios.get(`${API}/vehicles/names/list`),
+      ]);
+      setDrivers(driverRes.data);
+      setVehicles(vehicleRes.data);
+    };
+    fetchData();
+  }, []);
+
+  const driverNames = drivers.map((d) => d.name || d.tenLaiXe || d);
+
+  const vehiclePlates = vehicles.map((v) => v.plateNumber || v.bienSoXe || v);
 
   // =========================
   // HANDLE CHANGE
@@ -62,7 +164,21 @@ export default function OilCreatePage() {
   return (
     <div className="min-h-screen bg-gray-100 p-3">
       <div className="max-w-md mx-auto bg-white rounded-2xl shadow p-4">
-        <h1 className="text-2xl font-bold text-center mb-5">Thêm bơm dầu</h1>
+        <div className="flex items-center justify-between mb-5 gap-3">
+          <h1 className="text-2xl font-bold">CÂY DẦU NGỌC LONG</h1>
+
+          <button
+            type="button"
+            onClick={() => setShowCloseShift((prev) => !prev)}
+            className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap ${
+              showCloseShift
+                ? "bg-gray-500 text-white"
+                : "bg-red-500 text-white"
+            }`}
+          >
+            {showCloseShift ? "Ẩn chốt ca" : "Chốt ca"}
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* NGÀY */}
@@ -80,47 +196,72 @@ export default function OilCreatePage() {
 
           {/* CA */}
           <div>
-            <label className="block text-sm font-medium mb-1">Ca</label>
+            <label className="block text-sm font-medium mb-2">Ca</label>
 
-            <select
-              name="ca"
-              value={form.ca}
-              onChange={handleChange}
-              className="w-full border rounded-xl p-3 text-base"
-            >
-              <option value="Sáng">Sáng</option>
-
-              <option value="Chiều">Chiều</option>
-            </select>
+            <div className="grid grid-cols-2 gap-2">
+              {["Sáng", "Chiều"].map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      ca: item,
+                    }))
+                  }
+                  className={`rounded-xl py-3 font-semibold border transition ${
+                    form.ca === item
+                      ? "bg-green-600 text-white border-blue-600"
+                      : "bg-white border-gray-300"
+                  }`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* MÁY */}
           <div>
-            <label className="block text-sm font-medium mb-1">Máy đổ</label>
+            <label className="block text-sm font-medium mb-2">Máy đổ</label>
 
-            <select
-              name="mayDo"
-              value={form.mayDo}
-              onChange={handleChange}
-              className="w-full border rounded-xl p-3 text-base"
-            >
-              <option value={1}>Máy 1</option>
-
-              <option value={2}>Máy 2</option>
-            </select>
+            <div className="grid grid-cols-2 gap-2">
+              {[1, 2].map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() =>
+                    setForm((prev) => ({
+                      ...prev,
+                      mayDo: item,
+                    }))
+                  }
+                  className={`rounded-xl py-3 font-semibold border transition ${
+                    form.mayDo === item
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white border-gray-300"
+                  }`}
+                >
+                  Máy {item}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* BIỂN SỐ */}
           <div>
             <label className="block text-sm font-medium mb-1">Biển số xe</label>
 
-            <input
-              type="text"
-              name="bienSoXe"
+            <AutoCompleteInput
               value={form.bienSoXe}
-              onChange={handleChange}
+              options={vehiclePlates}
               placeholder="Nhập biển số xe"
-              className="w-full border rounded-xl p-3 text-base"
+              onChange={(val) =>
+                setForm((prev) => ({
+                  ...prev,
+                  bienSoXe: val,
+                }))
+              }
             />
           </div>
 
@@ -128,13 +269,16 @@ export default function OilCreatePage() {
           <div>
             <label className="block text-sm font-medium mb-1">Tên lái xe</label>
 
-            <input
-              type="text"
-              name="tenLaiXe"
+            <AutoCompleteInput
               value={form.tenLaiXe}
-              onChange={handleChange}
+              options={driverNames}
               placeholder="Nhập tên lái xe"
-              className="w-full border rounded-xl p-3 text-base"
+              onChange={(val) =>
+                setForm((prev) => ({
+                  ...prev,
+                  tenLaiXe: val,
+                }))
+              }
             />
           </div>
 
@@ -143,9 +287,8 @@ export default function OilCreatePage() {
             <label className="block text-sm font-medium mb-1">Số lít</label>
 
             <input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
+              type="text"
+              inputMode="decimal"
               name="soLit"
               value={form.soLit}
               onChange={handleChange}
@@ -154,41 +297,43 @@ export default function OilCreatePage() {
             />
           </div>
 
-          {/* TỔNG MÁY 1 */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Tổng số dầu máy 1
-            </label>
+          {showCloseShift && (
+            <>
+              {/* TỔNG MÁY 1 */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tổng số dầu máy 1
+                </label>
 
-            <input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              name="tongSoDauMay1"
-              value={form.tongSoDauMay1}
-              onChange={handleChange}
-              placeholder="Không bắt buộc"
-              className="w-full border rounded-xl p-3 text-base"
-            />
-          </div>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  name="tongSoDauMay1"
+                  value={form.tongSoDauMay1}
+                  onChange={handleChange}
+                  placeholder="Nhập tổng máy 1"
+                  className="w-full border rounded-xl p-3 text-base"
+                />
+              </div>
 
-          {/* TỔNG MÁY 2 */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Tổng số dầu máy 2
-            </label>
+              {/* TỔNG MÁY 2 */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Tổng số dầu máy 2
+                </label>
 
-            <input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              name="tongSoDauMay2"
-              value={form.tongSoDauMay2}
-              onChange={handleChange}
-              placeholder="Không bắt buộc"
-              className="w-full border rounded-xl p-3 text-base"
-            />
-          </div>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  name="tongSoDauMay2"
+                  value={form.tongSoDauMay2}
+                  onChange={handleChange}
+                  placeholder="Nhập tổng máy 2"
+                  className="w-full border rounded-xl p-3 text-base"
+                />
+              </div>
+            </>
+          )}
 
           {/* BUTTON */}
           <button
