@@ -53,12 +53,14 @@ function AutoCompleteInput({ value, onChange, options, placeholder = "" }) {
         value={value}
         placeholder={placeholder}
         autoComplete="off"
+        autoCorrect="off"
+        spellCheck={false}
         onChange={(e) => {
           onChange(e.target.value);
           setShow(true);
         }}
         onFocus={() => setShow(true)}
-        onBlur={() => setTimeout(() => setShow(false), 150)}
+        onBlur={() => setTimeout(() => setShow(false), 200)}
         className="w-full border rounded-xl p-3 text-base"
       />
 
@@ -67,7 +69,8 @@ function AutoCompleteInput({ value, onChange, options, placeholder = "" }) {
           {filtered.map((o, i) => (
             <div
               key={i}
-              onClick={() => {
+              onMouseDown={(e) => {
+                e.preventDefault();
                 onChange(o.text);
                 setShow(false);
               }}
