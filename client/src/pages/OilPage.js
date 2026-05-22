@@ -60,15 +60,19 @@ function AutoCompleteInput({ value, onChange, options, placeholder = "" }) {
           setShow(true);
         }}
         onFocus={() => setShow(true)}
-        onBlur={() => setTimeout(() => setShow(false), 200)}
+        onBlur={() => setTimeout(() => setShow(false), 500)}
         className="w-full border rounded-xl p-3 text-base"
       />
 
       {show && filtered.length > 0 && (
-        <div className="absolute z-30 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-56 overflow-y-auto">
+        <div className="absolute z-30 bg-white border rounded-xl shadow-lg mt-1 w-full max-h-56 overflow-y-auto touch-manipulation">
           {filtered.map((o, i) => (
             <div
               key={i}
+              onTouchStart={() => {
+                onChange(o.text);
+                setShow(false);
+              }}
               onMouseDown={(e) => {
                 e.preventDefault();
                 onChange(o.text);
