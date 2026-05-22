@@ -128,7 +128,7 @@ const createScheduleAdmin = async (req, res) => {
       await Counter.updateOne(
         { key: counterKey },
         { $set: { seq: lastNumber } },
-        { upsert: true },
+        { upsert: true }
       );
     }
 
@@ -136,7 +136,7 @@ const createScheduleAdmin = async (req, res) => {
     const updated = await Counter.findOneAndUpdate(
       { key: counterKey },
       { $inc: { seq: 1 } },
-      { new: true },
+      { new: true }
     );
 
     const maChuyen = `${counterKey}.${String(updated.seq).padStart(4, "0")}`;
@@ -181,7 +181,7 @@ const updateScheduleAdmin = async (req, res) => {
     // 🔒 Kiểm tra khóa công nợ
     const lockedOld = await checkLockedDebtPeriod(
       schedule.maKH,
-      schedule.maChuyen,
+      schedule.maChuyen
     );
     if (lockedOld)
       return res.status(400).json({
@@ -190,7 +190,7 @@ const updateScheduleAdmin = async (req, res) => {
 
     const lockedNew = await checkLockedDebtPeriod(
       schedule.maKH,
-      schedule.maChuyen,
+      schedule.maChuyen
     );
     if (lockedNew)
       return res.status(400).json({
@@ -258,7 +258,7 @@ const updateScheduleAdmin = async (req, res) => {
       changedFields.every(
         (field) =>
           importantFields.includes(field) &&
-          [0, null, ""].includes(Number(previousData[field]) || 0),
+          [0, null, ""].includes(Number(previousData[field]) || 0)
       );
 
     // 3️⃣ Chỉ tạo lịch sử nếu không thuộc 2 trường hợp trên
@@ -370,7 +370,7 @@ const deleteSchedulesByDateRange = async (req, res) => {
 
     const result = await ScheduleAdmin.updateMany(
       { ngayGiaoHang: { $gte: start, $lte: end } },
-      { $set: { isDeleted: true, deletedAt: new Date() } },
+      { $set: { isDeleted: true, deletedAt: new Date() } }
     );
 
     res.json({
@@ -445,7 +445,7 @@ const restoreSchedule = async (req, res) => {
 
     const result = await ScheduleAdmin.updateMany(
       { maChuyen: { $in: maChuyenList }, isDeleted: true },
-      { $set: { isDeleted: false, deletedAt: null } },
+      { $set: { isDeleted: false, deletedAt: null } }
     );
 
     return res.json({
@@ -735,7 +735,7 @@ const getAllSchedulesAdmin = async (req, res) => {
       }
 
       andConditions.push(
-        orConditions.length === 1 ? orConditions[0] : { $or: orConditions },
+        orConditions.length === 1 ? orConditions[0] : { $or: orConditions }
       );
     }
 
@@ -1020,7 +1020,7 @@ const getAllScheduleFilterOptions = async (req, res) => {
         }
 
         results[field] = cleaned;
-      }),
+      })
     );
 
     res.json(results);
@@ -1101,7 +1101,7 @@ const getScheduleFilterOptions = async (req, res) => {
         if (hasEmpty) cleaned.unshift("__EMPTY__");
 
         results[field] = cleaned;
-      }),
+      })
     );
 
     res.json(results);
@@ -1209,7 +1209,7 @@ const addHoaDonToSchedules = async (req, res) => {
     // Cập nhật tất cả chuyến có mã chuyến trong maChuyenList
     const result = await ScheduleAdmin.updateMany(
       { maChuyen: { $in: maChuyenList } },
-      { $set: { maHoaDon } },
+      { $set: { maHoaDon } }
     );
 
     res.json({
@@ -1234,7 +1234,7 @@ const removeHoaDonFromSchedules = async (req, res) => {
 
     const result = await ScheduleAdmin.updateMany(
       { maChuyen: { $in: maChuyenList } },
-      { $set: { maHoaDon: "" } },
+      { $set: { maHoaDon: "" } }
     );
 
     return res.json({
@@ -1449,7 +1449,7 @@ const importSchedulesFromExcel = async (req, res) => {
 
       if (locked) {
         console.log(
-          `⛔ Bỏ qua chuyến ${maChuyen} vì kỳ ${locked.periodCode} đã khoá`,
+          `⛔ Bỏ qua chuyến ${maChuyen} vì kỳ ${locked.periodCode} đã khoá`
         );
         skipped++;
         skippedTrips.push(maChuyen);
@@ -1640,6 +1640,7 @@ const exportTripsByDateRange = async (req, res) => {
     // QUERY CONDITION
     // ======================
     const condition = {
+      isDeleted: { $ne: true },
       ngayGiaoHang: { $gte: fromDate, $lte: toDate },
     };
 
@@ -1660,7 +1661,7 @@ const exportTripsByDateRange = async (req, res) => {
     // ======================
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(
-      path.join(__dirname, "../templates/DANH_SACH_CHUYEN.xlsx"),
+      path.join(__dirname, "../templates/DANH_SACH_CHUYEN.xlsx")
     );
 
     const sheet = workbook.getWorksheet("Thang 11"); // ⚠️ đúng tên sheet mẫu
@@ -1687,10 +1688,10 @@ const exportTripsByDateRange = async (req, res) => {
 
       // DATE
       row.getCell("H").value = new Date(
-        trip.ngayBocHang.toISOString().slice(0, 10),
+        trip.ngayBocHang.toISOString().slice(0, 10)
       );
       row.getCell("I").value = new Date(
-        trip.ngayGiaoHang.toISOString().slice(0, 10),
+        trip.ngayGiaoHang.toISOString().slice(0, 10)
       );
 
       row.getCell("J").value = trip.diemXepHang || "";
@@ -1726,11 +1727,11 @@ const exportTripsByDateRange = async (req, res) => {
     // ======================
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=DANH_SACH_CHUYEN_${from}_den_${to}.xlsx`,
+      `attachment; filename=DANH_SACH_CHUYEN_${from}_den_${to}.xlsx`
     );
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
 
     await workbook.xlsx.write(res);
@@ -1758,6 +1759,7 @@ const exportTripsByDateRangeBS = async (req, res) => {
     // QUERY CONDITION
     // ======================
     const condition = {
+      isDeleted: { $ne: true },
       ngayGiaoHang: { $gte: fromDate, $lte: toDate },
     };
 
@@ -1778,7 +1780,7 @@ const exportTripsByDateRangeBS = async (req, res) => {
     // ======================
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(
-      path.join(__dirname, "../templates/DSC_BS.xlsm"),
+      path.join(__dirname, "../templates/DSC_BS.xlsm")
     );
 
     const sheet = workbook.getWorksheet("BANGKE"); // ⚠️ đúng tên sheet mẫu
@@ -1805,10 +1807,10 @@ const exportTripsByDateRangeBS = async (req, res) => {
 
       // DATE
       row.getCell("H").value = new Date(
-        trip.ngayBocHang.toISOString().slice(0, 10),
+        trip.ngayBocHang.toISOString().slice(0, 10)
       );
       row.getCell("I").value = new Date(
-        trip.ngayGiaoHang.toISOString().slice(0, 10),
+        trip.ngayGiaoHang.toISOString().slice(0, 10)
       );
 
       row.getCell("J").value = trip.diemXepHang || "";
@@ -1852,11 +1854,11 @@ const exportTripsByDateRangeBS = async (req, res) => {
     // ======================
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=DANH_SACH_CHUYEN_${from}_den_${to}.xlsx`,
+      `attachment; filename=DANH_SACH_CHUYEN_${from}_den_${to}.xlsx`
     );
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
 
     await workbook.xlsx.write(res);
@@ -1891,5 +1893,5 @@ module.exports = {
   removeHoaDonFromSchedules,
   importHoaDonFromExcel,
   importCTXNFromExcel,
-  completeSchedule
+  completeSchedule,
 };
