@@ -35,21 +35,23 @@ const scoreMatch = (input, target) => {
 };
 
 const formatOilNumber = (value = "") => {
-  if (!value) return "";
+  if (value === "") return "";
 
   const num = Number(value) / 1000;
 
   if (isNaN(num)) return "";
 
   return num.toLocaleString("vi-VN", {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 3,
     maximumFractionDigits: 3,
   });
 };
 
 const toNumber = (v) => {
   if (!v) return 0;
-  return Number(v) / 1000;
+
+  // giữ nguyên dạng chia 1000 nhưng KHÔNG làm tròn
+  return parseInt(v, 10) / 1000;
 };
 
 function AutoCompleteInput({
@@ -189,22 +191,26 @@ export default function OilCreatePage() {
   };
 
   const handleImageChange = (e, type) => {
-    const files = Array.from(e.target.files || []);
+    const rawFiles = Array.from(e.target.files || []);
+
+    const files = rawFiles.map(
+      (file) =>
+        new File([file], file.name, {
+          type: file.type,
+          lastModified: file.lastModified,
+        })
+    );
 
     if (!showCloseShift && type === "normal") {
-      if (files.length > 1) {
-        alert("Chỉ được chọn tối đa 1 ảnh");
-        return;
-      }
       setImagesNormal(files);
+      e.target.value = "";
+      fileRefNormal.current && (fileRefNormal.current.value = "");
     }
 
     if (showCloseShift && type === "close") {
-      if (files.length > 2) {
-        alert("Chỉ được chọn tối đa 2 ảnh");
-        return;
-      }
       setImagesClose(files);
+      e.target.value = "";
+      fileRefClose.current && (fileRefClose.current.value = "");
     }
   };
 
