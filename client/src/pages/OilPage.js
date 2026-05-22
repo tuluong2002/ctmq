@@ -201,16 +201,38 @@ export default function OilCreatePage() {
         })
     );
 
+    const max = showCloseShift ? 2 : 1;
+
     if (!showCloseShift && type === "normal") {
-      setImagesNormal(files);
+      setImagesNormal((prev) => {
+        const merged = [...prev, ...files];
+
+        if (merged.length > max) {
+          alert("Chỉ được chọn tối đa 1 ảnh. Hãy xoá ảnh cũ trước.");
+          return prev; // KHÔNG thêm
+        }
+
+        return merged;
+      });
+
       e.target.value = "";
-      fileRefNormal.current && (fileRefNormal.current.value = "");
+      if (fileRefNormal.current) fileRefNormal.current.value = "";
     }
 
     if (showCloseShift && type === "close") {
-      setImagesClose(files);
+      setImagesClose((prev) => {
+        const merged = [...prev, ...files];
+
+        if (merged.length > max) {
+          alert("Chỉ được chọn tối đa 2 ảnh. Hãy xoá ảnh cũ trước.");
+          return prev; // KHÔNG thêm
+        }
+
+        return merged;
+      });
+
       e.target.value = "";
-      fileRefClose.current && (fileRefClose.current.value = "");
+      if (fileRefClose.current) fileRefClose.current.value = "";
     }
   };
 
