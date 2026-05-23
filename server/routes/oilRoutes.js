@@ -6,7 +6,10 @@ const { Readable } = require("stream");
 
 const cloudinary = require("../config/cloudinary");
 
-const { createOilRecord } = require("../controllers/oilController");
+const {
+  createOilRecord,
+  getOilRecordsByDate,
+} = require("../controllers/oilController");
 
 // ==========================
 // MULTER MEMORY
@@ -85,5 +88,6 @@ router.post(
 // ================================
 // LẤY DANH SÁCH
 // ================================
+router.get("/by-date", getOilRecordsByDate);
 
 module.exports = router;

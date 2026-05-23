@@ -100,6 +100,10 @@ const KeToanPage = () => {
     navigate("/customer2", { state: { user } });
   };
 
+  const handleGoToMngOil = () => {
+    navigate("/manage-oil", { state: { user } });
+  };
+
   const handleExport = async () => {
     if (!selectedDate) return alert("Vui lòng chọn ngày.");
 
@@ -218,7 +222,7 @@ const KeToanPage = () => {
     if (!startDate || !endDate) return alert("Vui lòng chọn đủ ngày.");
     if (
       !window.confirm(
-        "Bạn có chắc chắn muốn xóa toàn bộ lịch trình trong khoảng ngày này?",
+        "Bạn có chắc chắn muốn xóa toàn bộ lịch trình trong khoảng ngày này?"
       )
     )
       return;
@@ -280,7 +284,7 @@ const KeToanPage = () => {
 
   const isActiveRow = (scheduleId, rowIndex) =>
     activeRows.some(
-      (r) => r.scheduleId === scheduleId && r.rowIndex === rowIndex,
+      (r) => r.scheduleId === scheduleId && r.rowIndex === rowIndex
     );
 
   const isActiveSchedule = (scheduleId) =>
@@ -296,7 +300,7 @@ const KeToanPage = () => {
 
     // 2️⃣ match theo mã lịch trình (duyệt từng row)
     const matchMaLT = schedule.rows?.some((row) =>
-      normalizeText(row.maLichTrinh).includes(keyword),
+      normalizeText(row.maLichTrinh).includes(keyword)
     );
 
     return matchDriver || matchMaLT;
@@ -426,6 +430,12 @@ const KeToanPage = () => {
           className="bg-purple-500 text-white px-3 py-1 rounded"
         >
           KH điểm giao
+        </button>
+        <button
+          onClick={handleGoToMngOil}
+          className="bg-purple-500 text-white px-3 py-1 rounded"
+        >
+          Trạm dầu
         </button>
 
         <button
@@ -648,7 +658,7 @@ const KeToanPage = () => {
                         const existed = prev.some(
                           (r) =>
                             r.scheduleId === schedule._id &&
-                            r.rowIndex === rowIndex,
+                            r.rowIndex === rowIndex
                         );
 
                         if (existed) {
@@ -658,7 +668,7 @@ const KeToanPage = () => {
                               !(
                                 r.scheduleId === schedule._id &&
                                 r.rowIndex === rowIndex
-                              ),
+                              )
                           );
                         }
 
@@ -753,8 +763,8 @@ const KeToanPage = () => {
                       {row.phuongAn === "daChuyenKhoan"
                         ? "Đã CK"
                         : row.phuongAn === "truVaoTongLichTrinh"
-                          ? "Trừ tổng"
-                          : ""}
+                        ? "Trừ tổng"
+                        : ""}
                     </td>
 
                     {/* Tổng tiền – chỉ 1 lần */}
@@ -770,7 +780,7 @@ const KeToanPage = () => {
                     )}
                     <td className="border p-1">{row.maLichTrinh}</td>
                   </tr>
-                )),
+                ))
               )}
             </tbody>
           </table>

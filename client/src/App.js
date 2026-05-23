@@ -36,6 +36,7 @@ import VehicleLegalCostPage from "./pages/CostManagementTables/VehicleLegalCostP
 import TripPaymentPage from "./pages/CostManagementTables/TripPaymentPage";
 import ManageContract from "./pages/KeToanActions/ManageContract";
 import ManageTCBperson from "./pages/KeToanActions/ManageTCBperson";
+import ManageOil from "./pages/KeToanActions/ManageOil";
 
 import AddressPage from "./pages/AddressPage";
 import Customer2Page from "./pages/Customer2Page";
@@ -164,6 +165,15 @@ function App() {
           element={
             <PrivateRoute roles={["keToan", "admin"]}>
               <Customer2Page user={user} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/manage-oil"
+          element={
+            <PrivateRoute roles={["keToan", "admin"]}>
+              <ManageOil user={user} onLogout={handleLogout} />
             </PrivateRoute>
           }
         />
