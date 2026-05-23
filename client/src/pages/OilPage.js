@@ -117,17 +117,23 @@ function AutoCompleteInput({
   );
 }
 
+const SHIFT_KEY = "last_shift";
+
 export default function OilCreatePage() {
-  const [form, setForm] = useState({
-    ngay: new Date().toISOString().split("T")[0],
-    ca: "Sáng",
-    mayDo: 1,
-    bienSoXe: "",
-    tenLaiXe: "",
-    soLit: "",
-    tongSoDauMay1: "",
-    tongSoDauMay2: "",
-    imageOil: [],
+  const [form, setForm] = useState(() => {
+    const savedShift = localStorage.getItem(SHIFT_KEY);
+
+    return {
+      ngay: new Date().toISOString().split("T")[0],
+      ca: savedShift || "Sáng",
+      mayDo: 1,
+      bienSoXe: "",
+      tenLaiXe: "",
+      soLit: "",
+      tongSoDauMay1: "",
+      tongSoDauMay2: "",
+      imageOil: [],
+    };
   });
 
   // 🔹 4 danh sách gợi ý
@@ -312,6 +318,17 @@ export default function OilCreatePage() {
 
       alert(showCloseShift ? "Chốt ca thành công!" : "Lưu bơm dầu thành công!");
 
+      let nextShift = form.ca;
+
+      // CHỈ CHỐT CA MỚI ĐỔI CA
+      if (showCloseShift) {
+        nextShift = form.ca === "Sáng" ? "Chiều" : "Sáng";
+        localStorage.setItem(SHIFT_KEY, nextShift);
+      } else {
+        // không chốt ca thì giữ nguyên ca
+        localStorage.setItem(SHIFT_KEY, form.ca);
+      }
+
       // reset form
       setForm((prev) => ({
         ...prev,
@@ -320,7 +337,11 @@ export default function OilCreatePage() {
         soLit: "",
         tongSoDauMay1: "",
         tongSoDauMay2: "",
+        ca: nextShift,
       }));
+
+      // QUAN TRỌNG: quay về chưa chốt ca
+      setShowCloseShift(false);
 
       // reset ảnh
       setImagesNormal([]);
@@ -389,12 +410,14 @@ export default function OilCreatePage() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    localStorage.setItem(SHIFT_KEY, item);
+
                     setForm((prev) => ({
                       ...prev,
                       ca: item,
-                    }))
-                  }
+                    }));
+                  }}
                   className={`rounded-xl py-3 font-semibold border transition ${
                     form.ca === item
                       ? "bg-green-600 text-white border-blue-600"
@@ -645,7 +668,11 @@ export default function OilCreatePage() {
             disabled={loading}
             className="w-full bg-blue-600 text-white rounded-xl py-4 text-lg font-bold active:scale-[0.98]"
           >
-            {loading ? "Đang lưu..." : "Lưu bơm dầu"}
+            {loading
+              ? "Đang lưu..."
+              : showCloseShift
+              ? "Lưu chốt ca"
+              : "Lưu bơm dầu"}
           </button>
         </form>
       </div>
