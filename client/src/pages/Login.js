@@ -172,6 +172,16 @@ export default function Login({ setUser }) {
             </button>
           </div>
         </div>
+
+        {/* NÚT NGOÀI BOX */}
+        <button
+          onClick={() => {
+            window.location.href = "/oil";
+          }}
+          className="mt-6 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-3 rounded-lg shadow-lg transition text-xl"
+        >
+          Nhập số liệu dầu ( Ngọc Long )
+        </button>
       </div>
     );
   }
@@ -343,6 +353,16 @@ export default function Login({ setUser }) {
           © 2025 Công ty Minh Quân. All rights reserved.
         </p>
       </div>
+
+      {/* NÚT NGOÀI BOX */}
+      <button
+        onClick={() => {
+          window.location.href = "/oil";
+        }}
+        className="mt-6 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-3 rounded-lg shadow-lg transition text-xl"
+      >
+        Nhập số liệu dầu ( Ngọc Long )
+      </button>
     </div>
   );
 }
