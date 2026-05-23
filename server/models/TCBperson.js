@@ -16,6 +16,8 @@ const TCBpersonSchema = new mongoose.Schema({
   },
 });
 
+TCBpersonSchema.index({ timePay: 1, maGD: 1 });
+
 const TCBperson = mongoose.model("TCBperson", TCBpersonSchema);
 
 module.exports = TCBperson;

@@ -32,27 +32,41 @@ const buildPrefix = (date) => {
   return `${mm}.${yy}`;
 };
 
-const rebuildSoDuFromDate = async (date, session) => {
-  const records = await TCBperson.find(
-    { timePay: { $gte: date } },
-    {},
-    { sort: { timePay: 1, maGD: 1 }, session },
-  );
+const updateFutureBalances = async (
+  fromDate,
+  fromMaGD,
+  delta,
+  session,
+  excludeId = null
+) => {
+  if (!delta) return;
 
-  // lấy số dư trước đó
-  const prev = await TCBperson.findOne(
-    { timePay: { $lt: date } },
-    {},
-    { sort: { timePay: -1, maGD: -1 }, session },
-  );
+  const filter = {
+    $or: [
+      {
+        timePay: { $gt: fromDate },
+      },
+      {
+        timePay: fromDate,
+        maGD: { $gt: fromMaGD },
+      },
+    ],
+  };
 
-  let runningSoDu = prev?.soDu || 0;
-
-  for (const r of records) {
-    runningSoDu += r.soTien;
-    r.soDu = runningSoDu;
-    await r.save({ session });
+  // Không update chính record mới chèn
+  if (excludeId) {
+    filter._id = { $ne: excludeId };
   }
+
+  await TCBperson.updateMany(
+    filter,
+    {
+      $inc: {
+        soDu: delta,
+      },
+    },
+    { session }
+  );
 };
 
 // ===================
@@ -73,7 +87,7 @@ exports.create = async (req, res) => {
     const lastInMonth = await TCBperson.findOne(
       { maGD: { $regex: `^${prefix}` } },
       {},
-      { sort: { maGD: -1 }, session },
+      { sort: { maGD: -1 }, session }
     );
 
     let stt = 1;
@@ -88,7 +102,7 @@ exports.create = async (req, res) => {
       const lastBefore = await TCBperson.findOne(
         { maGD: { $lt: `${prefix}.9999` } },
         {},
-        { sort: { maGD: -1 }, session },
+        { sort: { maGD: -1 }, session }
       );
 
       stt = 1;
@@ -109,10 +123,15 @@ exports.create = async (req, res) => {
           maChuyen,
         },
       ],
-      { session },
+      { session }
     );
 
-    await rebuildSoDuFromDate(date, session);
+    await updateFutureBalances(
+      date,
+      newItem[0].maGD,
+      parseNumber(soTien),
+      session
+    );
 
     await session.commitTransaction();
     res.json({ success: true, data: newItem[0] });
@@ -126,16 +145,21 @@ exports.create = async (req, res) => {
 };
 
 //Chèn giao dịch
+//Chèn giao dịch
 exports.insertAfter = async (req, res) => {
   const session = await TCBperson.startSession();
   session.startTransaction();
 
   try {
     const { anchorId } = req.params;
+
     const { timePay, noiDungCK, soTien, khachHang, keToan, ghiChu, maChuyen } =
       req.body;
 
+    const amount = parseNumber(soTien);
+
     const anchor = await TCBperson.findById(anchorId).session(session);
+
     if (!anchor) {
       throw new Error("Không tìm thấy giao dịch mốc");
     }
@@ -143,9 +167,9 @@ exports.insertAfter = async (req, res) => {
     const prefix = buildPrefix(anchor.timePay);
     const anchorSTT = parseSTT(anchor.maGD);
 
-    /** =============================
-     * 1. ĐẨY STT +1 (CÙNG THÁNG)
-     ============================= */
+    // =============================
+    // 1. ĐẨY STT +1
+    // =============================
     const laterRecords = await TCBperson.find(
       {
         maGD: { $regex: `^${prefix}` },
@@ -154,49 +178,73 @@ exports.insertAfter = async (req, res) => {
         },
       },
       {},
-      { sort: { maGD: -1 }, session },
+      {
+        sort: { maGD: -1 },
+        session,
+      }
     );
 
     for (const r of laterRecords) {
       const stt = parseSTT(r.maGD) + 1;
+
       r.maGD = `${prefix}.${String(stt).padStart(4, "0")}`;
+
       await r.save({ session });
     }
 
-    /** =============================
-     * 2. TẠO GIAO DỊCH MỚI
-     ============================= */
+    // =============================
+    // 2. TẠO GIAO DỊCH MỚI
+    // =============================
     const newSTT = anchorSTT + 1;
-    const newSoDu = anchor.soDu + parseNumber(soTien);
 
     const newItem = await TCBperson.create(
       [
         {
           timePay: timePay ? parseExcelDate(timePay) : anchor.timePay,
+
           maGD: `${prefix}.${String(newSTT).padStart(4, "0")}`,
+
           noiDungCK,
-          soTien: parseNumber(soTien),
-          soDu: newSoDu,
+
+          soTien: amount,
+
+          // QUAN TRỌNG
+          soDu: anchor.soDu + amount,
+
           khachHang,
           keToan,
           ghiChu,
           maChuyen,
         },
       ],
-      { session },
+      { session }
     );
 
-    /** =============================
-     * 3. CẬP NHẬT LẠI SỐ DƯ PHÍA SAU
-     ============================= */
-    await rebuildSoDuFromDate(anchor.timePay, session);
+    // =============================
+    // 3. UPDATE SỐ DƯ PHÍA SAU
+    // =============================
+    await updateFutureBalances(
+      anchor.timePay,
+      anchor.maGD,
+      amount,
+      session,
+      newItem[0]._id
+    );
 
     await session.commitTransaction();
-    res.json({ success: true, data: newItem[0] });
+
+    res.json({
+      success: true,
+      data: newItem[0],
+    });
   } catch (err) {
     await session.abortTransaction();
+
     console.error(err);
-    res.status(500).json({ message: err.message });
+
+    res.status(500).json({
+      message: err.message,
+    });
   } finally {
     session.endSession();
   }
@@ -243,7 +291,7 @@ exports.update = async (req, res) => {
     /** ======================
      * 2. REBUILD PHÍA SAU
      ====================== */
-    await rebuildSoDuFromDate(record.timePay, session);
+    await updateFutureBalances(record.timePay, record.maGD, delta, session);
 
     await session.commitTransaction();
     res.json({ success: true, data: record });
@@ -267,9 +315,11 @@ exports.deleteOne = async (req, res) => {
     const { id } = req.params;
 
     const record = await TCBperson.findById(id).session(session);
+
     if (!record) {
       throw new Error("Không tìm thấy bản ghi");
     }
+
     if (record.isLocked) {
       throw new Error("Giao dịch đã bị khoá, không thể sửa");
     }
@@ -277,14 +327,24 @@ exports.deleteOne = async (req, res) => {
     const prefix = buildPrefix(record.timePay);
     const curSTT = parseSTT(record.maGD);
 
-    /** ======================
-     * 1. XÓA GIAO DỊCH
-     ====================== */
+    // ======================
+    // 1. UPDATE SỐ DƯ PHÍA SAU TRƯỚC
+    // ======================
+    await updateFutureBalances(
+      record.timePay,
+      record.maGD,
+      -record.soTien,
+      session
+    );
+
+    // ======================
+    // 2. XOÁ GIAO DỊCH
+    // ======================
     await record.deleteOne({ session });
 
-    /** ======================
-     * 2. LẤY SỐ DƯ TRƯỚC ĐÓ
-     ====================== */
+    // ======================
+    // 3. SHIFT STT
+    // ======================
     const laterRecords = await TCBperson.find(
       {
         maGD: { $regex: `^${prefix}` },
@@ -293,23 +353,30 @@ exports.deleteOne = async (req, res) => {
         },
       },
       {},
-      { sort: { maGD: 1 }, session },
+      { sort: { maGD: 1 }, session }
     );
 
     for (const r of laterRecords) {
       const newSTT = parseSTT(r.maGD) - 1;
+
       r.maGD = `${prefix}.${String(newSTT).padStart(4, "0")}`;
+
       await r.save({ session });
     }
 
-    await rebuildSoDuFromDate(record.timePay, session);
-
     await session.commitTransaction();
-    res.json({ success: true });
+
+    res.json({
+      success: true,
+    });
   } catch (err) {
     await session.abortTransaction();
+
     console.error(err);
-    res.status(500).json({ message: err.message });
+
+    res.status(500).json({
+      message: err.message,
+    });
   } finally {
     session.endSession();
   }
@@ -492,7 +559,7 @@ exports.importExcel = async (req, res) => {
     const lastRecord = await TCBperson.findOne(
       {},
       {},
-      { sort: { timePay: -1 }, session },
+      { sort: { timePay: -1 }, session }
     );
 
     let runningSoDu = lastRecord?.soDu || 0;
@@ -528,7 +595,7 @@ exports.importExcel = async (req, res) => {
         const lastInMonth = await TCBperson.findOne(
           { maGD: { $regex: `^${prefix}` } },
           {},
-          { sort: { maGD: -1 }, session },
+          { sort: { maGD: -1 }, session }
         );
 
         stt = lastInMonth ? parseSTT(lastInMonth.maGD) : 0;
@@ -595,7 +662,7 @@ exports.exportExcel = async (req, res) => {
     // 2️⃣ LOAD FORM MẪU
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(
-      path.join(__dirname, "../templates/SAO_KE_TCB.xlsx"),
+      path.join(__dirname, "../templates/SAO_KE_TCB.xlsx")
     );
 
     const sheet = workbook.getWorksheet("Sheet1");
@@ -626,11 +693,11 @@ exports.exportExcel = async (req, res) => {
     // 4️⃣ TRẢ FILE
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=SAO_KE_TCB.xlsx",
+      "attachment; filename=SAO_KE_TCB.xlsx"
     );
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
 
     // QUAN TRỌNG
@@ -692,7 +759,7 @@ exports.lockByDateRange = async (req, res) => {
       },
       {
         $set: { isLocked: true },
-      },
+      }
     );
 
     res.json({
