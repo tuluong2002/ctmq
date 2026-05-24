@@ -44,13 +44,12 @@ export default function ManageOil() {
 
   const totalLit = records.reduce(
     (sum, item) => sum + Number(item.soLit || 0),
-    0
+    0,
   );
 
   const location = useLocation();
   const isActive = (path) => location.pathname === path;
 
-  // 👉 Hàm chuyển sang trang quản lý lái xe
   // 👉 Hàm chuyển sang trang quản lý lái xe
   const handleGoToDrivers = () => {
     navigate("/manage-driver", { state: { user } });
@@ -267,7 +266,10 @@ export default function ManageOil() {
             fontWeight: "bold",
           }}
         >
-          <div>Tổng số lần bơm: {records.length}</div>
+          <div>
+            Tổng số lần bơm:{" "}
+            {records.filter((item) => Number(item.mayDo) !== 3).length}
+          </div>
 
           <div style={{ color: "green" }}>
             Tổng số lít: {totalLit.toLocaleString("vi-VN")}
