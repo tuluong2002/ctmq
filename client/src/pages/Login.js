@@ -63,7 +63,7 @@ export default function Login({ setUser }) {
           phone: res.data.phone,
           avatar: res.data.avatar,
           permissions: res.data.permissions || [],
-        })
+        }),
       );
 
       if (setUser) setUser(res.data);
@@ -153,35 +153,46 @@ export default function Login({ setUser }) {
           backgroundPosition: "center -60px",
         }}
       >
-        <div className="bg-white shadow-xl rounded-2xl px-8 py-10 w-full max-w-sm text-center">
-          <h2 className="text-2xl font-semibold mb-6 text-gray-700">
-            🚚 Bạn có phải là lái xe không?
-          </h2>
-          <div className="flex justify-center gap-4">
+        <div className="bg-white shadow-xl rounded-2xl px-8 py-10 w-full max-w-sm text-center overflow-hidden">
+          <div className="flex flex-col gap-4">
             <button
               onClick={() => navigate("/driver")}
-              className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-lg transition"
+              className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-3 rounded-lg transition"
             >
-              Có
+              Nhập lịch trình lái xe
             </button>
+
             <button
               onClick={() => setStep("login")}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition"
             >
-              Không
+              Quản lý dữ liệu
+            </button>
+
+            <button
+              onClick={() => {
+                window.location.href = "/oil";
+              }}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 py-3 rounded-lg shadow-lg transition"
+            >
+              Nhập số liệu dầu ( Ngọc Long )
             </button>
           </div>
         </div>
 
-        {/* NÚT NGOÀI BOX */}
-        <button
-          onClick={() => {
-            window.location.href = "/oil";
-          }}
-          className="mt-6 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-3 rounded-lg shadow-lg transition text-xl"
-        >
-          Nhập số liệu dầu ( Ngọc Long )
-        </button>
+        {/* CSS animation */}
+        <style>
+          {`
+          @keyframes catRun {
+            0% {
+              left: -40px;
+            }
+            100% {
+              left: 100%;
+            }
+          }
+        `}
+        </style>
       </div>
     );
   }
@@ -357,11 +368,12 @@ export default function Login({ setUser }) {
       {/* NÚT NGOÀI BOX */}
       <button
         onClick={() => {
-          window.location.href = "/oil";
+          setStep("question");
+          setForgotStep("login");
         }}
-        className="mt-6 bg-orange-500 hover:bg-orange-600 text-white font-medium px-8 py-3 rounded-lg shadow-lg transition text-xl"
+        className="mt-6 bg-green-500 hover:bg-green-600 text-white font-medium px-8 py-3 rounded-lg shadow-lg transition text-sm"
       >
-        Nhập số liệu dầu ( Ngọc Long )
+        ← Quay lại trang trước
       </button>
     </div>
   );
