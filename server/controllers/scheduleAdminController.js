@@ -519,6 +519,7 @@ const buildScheduleFilter = (query) => {
     maHoaDon: "maHoaDon",
     debtCode: "debtCode",
     ngayGiaoHang: "ngayGiaoHang",
+    maKH: "maKH"
   };
 
   for (const [queryKey, field] of Object.entries(arrayFilterMap)) {
@@ -999,6 +1000,7 @@ const getAllScheduleFilterOptions = async (req, res) => {
       "cuocPhi",
       "maHoaDon",
       "debtCode",
+      "maKH"
     ];
 
     const results = {};
