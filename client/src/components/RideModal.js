@@ -65,7 +65,7 @@ const appendAddress = (prevValue, newValue) => {
   parts.pop();
 
   return [...parts, newValue].join("; ");
-};  
+};
 
 const splitCompletedPoints = (str = "") => {
   // chỉ lấy các đoạn KẾT THÚC bởi ;
@@ -291,8 +291,8 @@ export default function RideModal({
           keToanPhuTrach: matched.accountant || "",
           accountUsername: matched.accUsername || "",
 
-          diemXepHang: prev.diemXepHang || c.diemDongHang || "",
-          diemXepHangNew: prev.diemXepHangNew || c.diemDongHang || "",
+          diemXepHang: prev.diemXepHang || matched.diemDongHang || "",
+          diemXepHangNew: prev.diemXepHangNew || matched.diemDongHang || "",
         }));
       }
       return;
@@ -933,7 +933,7 @@ export default function RideModal({
                             maKH: c.code,
                             keToanPhuTrach: c.accountant || "",
                             accountUsername: c.accUsername || "",
-                            
+
                             diemXepHang:
                               prev.diemXepHang || c.diemDongHang || "",
 
