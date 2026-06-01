@@ -61,8 +61,27 @@ export default function VehicleModal({
         bhVC: formatDateForInput(initialData.bhVC),
       });
 
-      setPreviewReg(initialData.registrationImage || []);
-      setPreviewInsp(initialData.inspectionImage || []);
+      setPreviewReg(
+        (initialData.registrationImage || []).map((url) => ({
+          url,
+          name: url.split("/").pop(),
+          type: url.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+            ? "image/*"
+            : "application/octet-stream",
+          existing: true,
+        })),
+      );
+
+      setPreviewInsp(
+        (initialData.inspectionImage || []).map((url) => ({
+          url,
+          name: url.split("/").pop(),
+          type: url.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+            ? "image/*"
+            : "application/octet-stream",
+          existing: true,
+        })),
+      );
     } else {
       setForm({
         plateNumber: "",
@@ -91,17 +110,6 @@ export default function VehicleModal({
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFiles = (e, type) => {
-    const files = Array.from(e.target.files);
-    if (type === "registration") {
-      setRegistrationImages(files);
-      setPreviewReg(files.map((f) => URL.createObjectURL(f)));
-    } else {
-      setInspectionImages(files);
-      setPreviewInsp(files.map((f) => URL.createObjectURL(f)));
-    }
   };
 
   const submit = async (e) => {
@@ -134,8 +142,27 @@ export default function VehicleModal({
       }
 
       const savedData = res.data;
-      setPreviewReg(savedData.registrationImage || []);
-      setPreviewInsp(savedData.inspectionImage || []);
+      setPreviewReg(
+        (savedData.registrationImage || []).map((url) => ({
+          url,
+          name: url.split("/").pop(),
+          type: url.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+            ? "image/*"
+            : "application/octet-stream",
+          existing: true,
+        })),
+      );
+
+      setPreviewInsp(
+        (savedData.inspectionImage || []).map((url) => ({
+          url,
+          name: url.split("/").pop(),
+          type: url.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+            ? "image/*"
+            : "application/octet-stream",
+          existing: true,
+        })),
+      );
 
       onSave(savedData);
       onClose();
@@ -241,12 +268,12 @@ export default function VehicleModal({
               className="bg-blue-500 text-white px-3 py-1 rounded mb-2"
               onClick={() => document.getElementById("regInput").click()}
             >
-              Thêm ảnh
+              Thêm file
             </button>
             <input
               type="file"
               id="regInput"
-              accept="image/*"
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
               multiple
               className="hidden"
               onChange={(e) => {
@@ -254,30 +281,44 @@ export default function VehicleModal({
                 setRegistrationImages((prev) => [...prev, ...files]);
                 setPreviewReg((prev) => [
                   ...prev,
-                  ...files.map((f) => URL.createObjectURL(f)),
+                  ...files.map((f) => ({
+                    url: URL.createObjectURL(f),
+                    name: f.name,
+                    type: f.type,
+                  })),
                 ]);
               }}
             />
             <div className="flex flex-wrap gap-2 mt-2">
-              {previewReg.map((url, idx) => (
-                <div key={idx} className="relative">
-                  <img
-                    src={url}
-                    alt={`Đăng ký ${idx}`}
-                    className="max-h-40 rounded shadow-sm"
-                  />
+              {previewReg.map((file, idx) => (
+                <div key={idx} className="relative border rounded p-2">
+                  {file.type?.startsWith("image/") ? (
+                    <img
+                      src={file.url}
+                      alt={file.name}
+                      className="max-h-40 rounded shadow-sm"
+                    />
+                  ) : (
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      📎 {file.name}
+                    </a>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
-                      const newFiles = registrationImages.filter(
-                        (_, i) => i !== idx,
-                      );
-                      setRegistrationImages(newFiles);
-                      setPreviewReg(
-                        newFiles.map((f) => URL.createObjectURL(f)),
+                      setPreviewReg((prev) => prev.filter((_, i) => i !== idx));
+
+                      setRegistrationImages((prev) =>
+                        prev.filter((_, i) => i !== idx),
                       );
                     }}
-                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                    className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6"
                   >
                     ×
                   </button>
@@ -322,12 +363,12 @@ export default function VehicleModal({
               className="bg-blue-500 text-white px-3 py-1 rounded mb-2"
               onClick={() => document.getElementById("inspInput").click()}
             >
-              Thêm ảnh
+              Thêm file
             </button>
             <input
               type="file"
               id="inspInput"
-              accept="image/*"
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
               multiple
               className="hidden"
               onChange={(e) => {
@@ -335,27 +376,43 @@ export default function VehicleModal({
                 setInspectionImages((prev) => [...prev, ...files]);
                 setPreviewInsp((prev) => [
                   ...prev,
-                  ...files.map((f) => URL.createObjectURL(f)),
+                  ...files.map((f) => ({
+                    url: URL.createObjectURL(f),
+                    name: f.name,
+                    type: f.type,
+                  })),
                 ]);
               }}
             />
             <div className="flex flex-wrap gap-2 mt-2">
-              {previewInsp.map((url, idx) => (
-                <div key={idx} className="relative">
-                  <img
-                    src={url}
-                    alt={`Đăng kiểm ${idx}`}
-                    className="max-h-40 rounded shadow-sm"
-                  />
+              {previewInsp.map((file, idx) => (
+                <div key={idx} className="relative border rounded p-2">
+                  {file.type?.startsWith("image/") ? (
+                    <img
+                      src={file.url}
+                      alt={file.name}
+                      className="max-h-40 rounded shadow-sm"
+                    />
+                  ) : (
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      📎 {file.name}
+                    </a>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
-                      const newFiles = inspectionImages.filter(
-                        (_, i) => i !== idx,
+                      setPreviewInsp((prev) =>
+                        prev.filter((_, i) => i !== idx),
                       );
-                      setInspectionImages(newFiles);
-                      setPreviewInsp(
-                        newFiles.map((f) => URL.createObjectURL(f)),
+
+                      setInspectionImages((prev) =>
+                        prev.filter((_, i) => i !== idx),
                       );
                     }}
                     className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"

@@ -63,8 +63,8 @@ const createVehicle = async (req, res) => {
       norm: body.norm || "",
 
       // ✅ Mảng ảnh
-      registrationImage: body.registrationImage || [],
-      inspectionImage: body.inspectionImage || [],
+      registrationImage: (body.registrationImage || []).map((f) => f.url || f),
+      inspectionImage: (body.inspectionImage || []).map((f) => f.url || f),
 
       // 🎯 Ngày
       resDay: body.resDay || null,
@@ -113,8 +113,13 @@ const updateVehicle = async (req, res) => {
       norm: body.norm ?? vehicle.norm,
 
       // ✅ Mảng ảnh: thay thế nếu có gửi mới
-      registrationImage: body.registrationImage ?? vehicle.registrationImage,
-      inspectionImage: body.inspectionImage ?? vehicle.inspectionImage,
+      registrationImage: body.registrationImage
+        ? body.registrationImage.map((f) => f.url || f)
+        : vehicle.registrationImage,
+
+      inspectionImage: body.inspectionImage
+        ? body.inspectionImage.map((f) => f.url || f)
+        : vehicle.inspectionImage,
 
       // 🎯 Ngày
       resDay: body.resDay ?? vehicle.resDay,
@@ -423,5 +428,5 @@ module.exports = {
   listVehicleNames,
   toggleWarning,
   deleteAllVehicles,
-  exportVehicles
+  exportVehicles,
 };

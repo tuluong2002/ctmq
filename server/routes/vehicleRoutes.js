@@ -22,25 +22,75 @@ const { Readable } = require("stream");
 // --------------------------
 const memoryStorage = multer.memoryStorage();
 const upload = multer({ storage: memoryStorage });
+const path = require("path");
 
 // --------------------------
 // Helper upload file lên Cloudinary
 // --------------------------
-async function uploadToCloudinary(buffer, folder = "vehicles") {
+async function uploadToCloudinary(file, folder = "vehicles") {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder },
+      {
+        folder,
+        resource_type: "raw",
+        public_id: path.parse(file.originalname).name,
+      },
       (error, result) => {
         if (error) reject(error);
-        else resolve(result.secure_url);
-      }
+        else resolve(result);
+      },
     );
+
     const readable = new Readable();
     readable._read = () => {};
-    readable.push(buffer);
+    readable.push(file.buffer);
     readable.push(null);
     readable.pipe(stream);
   });
+}
+
+async function handleVehicleFileUpload(req, res, next) {
+  try {
+    const files = req.files || {};
+
+    if (Array.isArray(files.registrationImage)) {
+      const uploaded = [];
+
+      for (const file of files.registrationImage) {
+        const result = await uploadToCloudinary(file);
+
+        uploaded.push(result.secure_url);
+      }
+
+      req.body.registrationImage = uploaded;
+    }
+
+    if (Array.isArray(files.inspectionImage)) {
+      const uploaded = [];
+
+      for (const file of files.inspectionImage) {
+        const result = await uploadToCloudinary(file);
+
+        uploaded.push({
+          url: result.secure_url,
+          originalName: file.originalname,
+          mimeType: file.mimetype,
+          size: file.size,
+        });
+      }
+
+      req.body.inspectionImage = uploaded;
+    }
+
+    next();
+  } catch (err) {
+    console.error("Vehicle upload error:", err);
+
+    return res.status(500).json({
+      message: "Upload vehicle files failed",
+      error: err.message,
+    });
+  }
 }
 
 // --------------------------
@@ -53,32 +103,11 @@ router.get("/:id", getVehicle);
 router.post(
   "/",
   upload.fields([
-    { name: "registrationImage", maxCount: 5 }, // nhận tối đa 10 ảnh
+    { name: "registrationImage", maxCount: 5 },
     { name: "inspectionImage", maxCount: 5 },
   ]),
-  async (req, res, next) => {
-    try {
-      const files = req.files || {};
-
-      // Upload từng file lên Cloudinary và tạo mảng URL
-      if (files.registrationImage?.length) {
-        req.body.registrationImage = await Promise.all(
-          files.registrationImage.map(f => uploadToCloudinary(f.buffer))
-        );
-      }
-
-      if (files.inspectionImage?.length) {
-        req.body.inspectionImage = await Promise.all(
-          files.inspectionImage.map(f => uploadToCloudinary(f.buffer))
-        );
-      }
-
-      next();
-    } catch (err) {
-      next(err);
-    }
-  },
-  createVehicle
+  handleVehicleFileUpload,
+  createVehicle,
 );
 
 router.put(
@@ -87,30 +116,9 @@ router.put(
     { name: "registrationImage", maxCount: 5 },
     { name: "inspectionImage", maxCount: 5 },
   ]),
-  async (req, res, next) => {
-    try {
-      const files = req.files || {};
-
-      if (files.registrationImage?.length) {
-        req.body.registrationImage = await Promise.all(
-          files.registrationImage.map(f => uploadToCloudinary(f.buffer))
-        );
-      }
-
-      if (files.inspectionImage?.length) {
-        req.body.inspectionImage = await Promise.all(
-          files.inspectionImage.map(f => uploadToCloudinary(f.buffer))
-        );
-      }
-
-      next();
-    } catch (err) {
-      next(err);
-    }
-  },
-  updateVehicle
+  handleVehicleFileUpload,
+  updateVehicle,
 );
-
 
 router.delete("/all", deleteAllVehicles);
 router.delete("/:id", deleteVehicle);
@@ -121,6 +129,6 @@ const excelUpload = multer({ storage: excelStorage });
 router.post("/import", excelUpload.single("file"), importVehiclesFromExcel);
 
 router.get("/names/list", listVehicleNames);
-router.put("/warning/:id", toggleWarning)
+router.put("/warning/:id", toggleWarning);
 
 module.exports = router;

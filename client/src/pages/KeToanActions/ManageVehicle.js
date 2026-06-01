@@ -754,6 +754,18 @@ export default function ManageVehicle() {
                 }}
               />
 
+              <th
+                className="border p-1 sticky top-0 text-center bg-gray-200"
+                style={{
+                  width: 40,
+                  minWidth: 40,
+                  left: 30,
+                  zIndex: 50,
+                }}
+              >
+                STT
+              </th>
+
               {visibleColumns.map((cKey, index) => {
                 const colMeta = allColumns.find((c) => c.key === cKey) || {
                   key: cKey,
@@ -771,9 +783,9 @@ export default function ManageVehicle() {
                 const isFirst = index === 0;
                 const isSecond = index === 1;
                 const leftOffset = isSecond
-                  ? 30 + firstColWidth
+                  ? 30 + 40 + firstColWidth
                   : isFirst
-                    ? 30
+                    ? 30 + 40
                     : undefined;
 
                 return (
@@ -841,7 +853,7 @@ export default function ManageVehicle() {
             {loadingVehicles && (
               <tr>
                 <td
-                  colSpan={visibleColumns.length + 2}
+                  colSpan={visibleColumns.length + 3}
                   className="p-6 text-center"
                 >
                   <div className="flex items-center justify-center gap-3 text-blue-500">
@@ -856,7 +868,7 @@ export default function ManageVehicle() {
             {!loadingVehicles && vehicles.length === 0 && (
               <tr>
                 <td
-                  colSpan={visibleColumns.length + 2}
+                  colSpan={visibleColumns.length + 3}
                   className="p-4 text-center text-gray-500"
                 >
                   Không có dữ liệu
@@ -899,13 +911,33 @@ export default function ManageVehicle() {
                     </button>
                   </td>
 
+                  <td
+                    className="border text-center font-medium"
+                    style={{
+                      position: "sticky",
+                      left: 30,
+                      zIndex: 20,
+                      width: 40,
+                      minWidth: 40,
+                      background: isWarning
+                        ? "#fca5a5"
+                        : selectedRows.includes(v._id)
+                          ? "#fde68a"
+                          : idx % 2 === 0
+                            ? "#fff"
+                            : "#f9fafb",
+                    }}
+                  >
+                    {idx + 1}
+                  </td>
+
                   {visibleColumns.map((cKey, colIndex) => {
                     const isFirst = colIndex === 0;
                     const isSecond = colIndex === 1;
                     const stickyLeft = isFirst
-                      ? 30
+                      ? 30 + 40
                       : isSecond
-                        ? 30 + firstColWidth
+                        ? 30 + 40 + firstColWidth
                         : undefined;
                     const cellWidthStyle = columnWidths[cKey]
                       ? {
@@ -943,24 +975,37 @@ export default function ManageVehicle() {
                         cKey === "inspectionImage" ? (
                           v[cKey] && v[cKey].length > 0 ? (
                             <div className="flex gap-1">
-                              {v[cKey].map((url, idx) => (
-                                <a
-                                  href={url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  key={idx}
-                                >
-                                  <img
-                                    src={url}
-                                    alt={
-                                      cKey === "registrationImage"
-                                        ? "reg"
-                                        : "insp"
-                                    }
-                                    className="w-[42px] h-[28px] object-cover rounded border"
-                                  />
-                                </a>
-                              ))}
+                              {v[cKey].map((url, idx) => {
+                                const isImage =
+                                  /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(
+                                    url,
+                                  );
+
+                                return (
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    key={idx}
+                                    className="inline-block"
+                                  >
+                                    {isImage ? (
+                                      <img
+                                        src={url}
+                                        alt="file"
+                                        className="w-[28px] h-[16px] object-cover rounded border"
+                                      />
+                                    ) : (
+                                      <div className="border rounded bg-gray-100 text-blue-600 text-[10px] whitespace-nowrap">
+                                        📎{" "}
+                                        {decodeURIComponent(
+                                          url.split("/").pop(),
+                                        )}
+                                      </div>
+                                    )}
+                                  </a>
+                                );
+                              })}
                             </div>
                           ) : (
                             ""
