@@ -3,8 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import VehicleModal from "../../components/VehicleModal";
 import { format as formatDateFns } from "date-fns";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 import API from "../../api";
 
 const apiVehicles = `${API}/vehicles`;
@@ -25,7 +23,7 @@ export const allColumns = [
   { key: "insDay", label: "Ngày đăng kiểm" },
   { key: "insExpDay", label: "Ngày hết hạn đăng kiểm" },
   { key: "dayTravel", label: "Giấy đi đường" },
-  { key: "ghiChu", label: "Ghi chú" },
+  { key: "note", label: "Ghi chú" },
   { key: "bhTNDS", label: "Bảo hiểm TNDS" },
   { key: "bhVC", label: "Bảo hiểm VC" },
 ];
@@ -85,7 +83,7 @@ export default function ManageVehicle() {
 
   // visibleColumns khởi tạo mặc định từ allColumns
   const [visibleColumns, setVisibleColumns] = useState(
-    allColumns.map((c) => c.key)
+    allColumns.map((c) => c.key),
   );
   const [columnWidths, setColumnWidths] = useState({});
 
@@ -112,7 +110,7 @@ export default function ManageVehicle() {
   const [selectedRows, setSelectedRows] = useState([]);
   const toggleRowHighlight = (id) => {
     setSelectedRows((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
@@ -156,6 +154,8 @@ export default function ManageVehicle() {
         return 0;
       });
 
+      console.log(data);
+
       setVehicles(sorted);
 
       // set warnings map
@@ -167,7 +167,7 @@ export default function ManageVehicle() {
     } catch (err) {
       console.error(
         "Lỗi lấy vehicles:",
-        err.response?.data || err.message || err
+        err.response?.data || err.message || err,
       );
       setVehicles([]);
       setWarnings({});
@@ -193,7 +193,7 @@ export default function ManageVehicle() {
       if (Array.isArray(parsed.order)) {
         // keep only valid keys and append missing columns
         const valid = parsed.order.filter((k) =>
-          allColumns.some((ac) => ac.key === k)
+          allColumns.some((ac) => ac.key === k),
         );
         const missing = allColumns
           .map((c) => c.key)
@@ -409,7 +409,7 @@ export default function ManageVehicle() {
     } catch (err) {
       console.error("Xóa tất cả thất bại:", err);
       alert(
-        "Không thể xóa tất cả: " + (err.response?.data?.error || err.message)
+        "Không thể xóa tất cả: " + (err.response?.data?.error || err.message),
       );
     }
   };
@@ -445,7 +445,7 @@ export default function ManageVehicle() {
             "Content-Type": "multipart/form-data",
             Authorization: token ? `Bearer ${token}` : undefined,
           },
-        }
+        },
       );
       const added = res.data.imported || 0;
       const updated = res.data.updated || 0;
@@ -464,31 +464,34 @@ export default function ManageVehicle() {
     }
   };
 
-  const exportExcel = () => {
-    if (!vehicles.length) return alert("Không có dữ liệu để xuất");
-    const headers = allColumns
-      .filter((c) => visibleColumns.includes(c.key))
-      .map((c) => c.label);
-    const data = vehicles.map((d) => {
-      const row = {};
-      allColumns.forEach((c) => {
-        if (!visibleColumns.includes(c.key)) return;
-        if (c.key === "registrationImage" || c.key === "inspectionImage") {
-          row[c.label] = d[c.key] ? `${window.location.origin}${d[c.key]}` : "";
-        } else {
-          row[c.label] = d[c.key] || "";
-        }
+  const exportExcel = async () => {
+    try {
+      const response = await axios.get(`${apiVehicles}/export`, {
+        responseType: "blob",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : undefined,
+        },
       });
-      return row;
-    });
-    const ws = XLSX.utils.json_to_sheet(data, { header: headers });
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Vehicles");
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    saveAs(
-      new Blob([wbout], { type: "application/octet-stream" }),
-      `vehicles_${formatDateFns(new Date(), "yyyyMMdd_HHmm")}.xlsx`
-    );
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `DANH_SACH_XE.xlsx`;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Lỗi export:", err);
+      alert("Không xuất được file Excel!");
+    }
   };
 
   // toggle warning per vehicle
@@ -497,7 +500,7 @@ export default function ManageVehicle() {
       const res = await axios.put(
         `${apiVehicles}/warning/${vehicleId}`,
         {},
-        { headers: { Authorization: token ? `Bearer ${token}` : undefined } }
+        { headers: { Authorization: token ? `Bearer ${token}` : undefined } },
       );
       const newWarningState = res.data.warning;
       setWarnings((prev) => ({ ...prev, [vehicleId]: newWarningState }));
@@ -711,7 +714,7 @@ export default function ManageVehicle() {
                     setVisibleColumns((prev) =>
                       prev.includes(c.key)
                         ? prev.filter((k) => k !== c.key)
-                        : [...prev, c.key]
+                        : [...prev, c.key],
                     )
                   }
                 />
@@ -770,8 +773,8 @@ export default function ManageVehicle() {
                 const leftOffset = isSecond
                   ? 30 + firstColWidth
                   : isFirst
-                  ? 30
-                  : undefined;
+                    ? 30
+                    : undefined;
 
                 return (
                   <th
@@ -871,8 +874,8 @@ export default function ManageVehicle() {
                     isWarning
                       ? "bg-red-300"
                       : idx % 2 === 0
-                      ? "bg-white"
-                      : "bg-gray-50"
+                        ? "bg-white"
+                        : "bg-gray-50"
                   } ${selectedRows.includes(v._id) ? "bg-yellow-200" : ""}`}
                 >
                   {/* Warning cell */}
@@ -902,8 +905,8 @@ export default function ManageVehicle() {
                     const stickyLeft = isFirst
                       ? 30
                       : isSecond
-                      ? 30 + firstColWidth
-                      : undefined;
+                        ? 30 + firstColWidth
+                        : undefined;
                     const cellWidthStyle = columnWidths[cKey]
                       ? {
                           width: columnWidths[cKey],
@@ -929,10 +932,10 @@ export default function ManageVehicle() {
                           background: isWarning
                             ? "#fca5a5"
                             : selectedRows.includes(v._id)
-                            ? "#fde68a"
-                            : idx % 2 === 0
-                            ? "#fff"
-                            : "#f9fafb",
+                              ? "#fde68a"
+                              : idx % 2 === 0
+                                ? "#fff"
+                                : "#f9fafb",
                           ...cellWidthStyle,
                         }}
                       >

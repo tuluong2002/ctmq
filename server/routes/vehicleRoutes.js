@@ -9,6 +9,7 @@ const {
   updateVehicle,
   deleteVehicle,
   importVehiclesFromExcel,
+  exportVehicles,
   listVehicleNames,
   toggleWarning,
   deleteAllVehicles,
@@ -46,6 +47,7 @@ async function uploadToCloudinary(buffer, folder = "vehicles") {
 // Routes
 // --------------------------
 router.get("/", listVehicles);
+router.get("/export", exportVehicles);
 router.get("/:id", getVehicle);
 
 router.post(

@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const fs = require("fs");
 const path = require("path");
 const XLSX = require("xlsx");
+const ExcelJS = require("exceljs");
 
 /* ==============================
    LẤY DANH SÁCH
@@ -14,15 +15,10 @@ const listVehicles = async (req, res) => {
 
     if (q) {
       const re = new RegExp(q, "i");
-      filter.$or = [
-        { plateNumber: re },
-        { company: re },
-        { vehicleType: re },
-      ];
+      filter.$or = [{ plateNumber: re }, { company: re }, { vehicleType: re }];
     }
 
-    const vehicles = await VehiclePlate.find(filter)
-      .sort({ createdAt: -1 });
+    const vehicles = await VehiclePlate.find(filter).sort({ createdAt: -1 });
 
     res.json(vehicles);
   } catch (err) {
@@ -176,7 +172,8 @@ const deleteVehicle = async (req, res) => {
 ============================== */
 const importVehiclesFromExcel = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "Chưa upload file Excel" });
+    if (!req.file)
+      return res.status(400).json({ error: "Chưa upload file Excel" });
 
     const mode = req.query.mode || "add";
 
@@ -184,12 +181,15 @@ const importVehiclesFromExcel = async (req, res) => {
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet);
 
-    let imported = 0, updated = 0, skipped = 0;
+    let imported = 0,
+      updated = 0,
+      skipped = 0;
     const errors = [];
 
     const parseDate = (str) => {
       if (!str) return null;
-      if (typeof str === "number") return new Date(Math.round((str - 25569) * 86400 * 1000));
+      if (typeof str === "number")
+        return new Date(Math.round((str - 25569) * 86400 * 1000));
       if (typeof str === "string") {
         const parts = str.split("/");
         if (parts.length !== 3) return null;
@@ -202,8 +202,12 @@ const importVehiclesFromExcel = async (req, res) => {
 
     for (const [idx, row] of rows.entries()) {
       try {
-        const plate = row["BSX"]?.toString().trim() || row["BIỂN SỐ XE"]?.toString().trim();
-        if (!plate) { skipped++; continue; }
+        const plate =
+          row["BSX"]?.toString().trim() || row["BIỂN SỐ XE"]?.toString().trim();
+        if (!plate) {
+          skipped++;
+          continue;
+        }
 
         const data = {
           plateNumber: plate,
@@ -225,10 +229,6 @@ const importVehiclesFromExcel = async (req, res) => {
           note: row["Ghi chú"] || "",
           bhTNDS: parseDate(row["Bảo hiểm TNDS"]),
           bhVC: parseDate(row["Bảo hiểm VC"]),
-
-          // Mảng ảnh, nếu cần bạn có thể map từ Excel
-          registrationImage: row["Ảnh đăng ký"] ? [row["Ảnh đăng ký"]] : [],
-          inspectionImage: row["Ảnh đăng kiểm"] ? [row["Ảnh đăng kiểm"]] : [],
         };
 
         const existing = await VehiclePlate.findOne({ plateNumber: plate });
@@ -247,7 +247,13 @@ const importVehiclesFromExcel = async (req, res) => {
       }
     }
 
-    res.json({ message: "Import hoàn tất", imported, updated, skipped, errors });
+    res.json({
+      message: "Import hoàn tất",
+      imported,
+      updated,
+      skipped,
+      errors,
+    });
   } catch (err) {
     console.error("Lỗi import Excel:", err);
     res.status(500).json({ error: err.message });
@@ -268,7 +274,7 @@ const listVehicleNames = async (req, res) => {
         width: 1,
         height: 1,
         norm: 1,
-      }
+      },
     );
     res.json(vehicles);
   } catch (error) {
@@ -318,10 +324,92 @@ const deleteAllVehicles = async (req, res) => {
     }
 
     await VehiclePlate.deleteMany();
-    res.json({ message: "Đã xóa tất cả xe thành công", count: vehicles.length });
+    res.json({
+      message: "Đã xóa tất cả xe thành công",
+      count: vehicles.length,
+    });
   } catch (err) {
     console.error("Lỗi xóa tất cả xe:", err);
     res.status(500).json({ error: err.message });
+  }
+};
+
+/* ==============================
+   EXPORT DS XE (FORM MẪU)
+============================== */
+const exportVehicles = async (req, res) => {
+  try {
+    // 1️⃣ LẤY DATA
+    const vehicles = await VehiclePlate.find({}).sort({
+      createdAt: 1,
+    });
+
+    if (!vehicles.length) {
+      return res.status(400).json({
+        message: "Không có dữ liệu xe",
+      });
+    }
+
+    // 2️⃣ LOAD FILE MẪU
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(
+      path.join(__dirname, "../templates/DS_XE.xlsx"),
+    );
+
+    const sheet = workbook.getWorksheet("Vehicles");
+
+    if (!sheet) {
+      return res.status(500).json({
+        message: "Không tìm thấy sheet DS XE",
+      });
+    }
+
+    // 3️⃣ GHI DỮ LIỆU TỪ DÒNG 2
+    const startRow = 2;
+
+    vehicles.forEach((v, index) => {
+      const row = sheet.getRow(startRow + index);
+
+      row.getCell("A").value = index + 1; // STT
+      row.getCell("B").value = v.plateNumber || ""; // BSX
+      row.getCell("C").value = v.company || ""; // Đơn vị vận tải
+      row.getCell("D").value = v.vehicleType || ""; // Loại xe
+      row.getCell("E").value = v.length || ""; // Dài
+      row.getCell("F").value = v.width || ""; // Rộng
+      row.getCell("G").value = v.height || ""; // Cao
+      row.getCell("H").value = v.norm || ""; // Định mức
+      row.getCell("J").value = v.resDay ? new Date(v.resDay) : null; // Ngày đăng ký
+      row.getCell("K").value = v.resExpDay ? new Date(v.resExpDay) : null; // Ngày hết hạn đăng ký
+      row.getCell("M").value = v.insDay ? new Date(v.insDay) : null; // Ngày đăng kiểm
+      row.getCell("N").value = v.insExpDay ? new Date(v.insExpDay) : null; // Ngày hết hạn đăng kiểm
+      row.getCell("O").value = v.dayTravel ? new Date(v.dayTravel) : null; // Giấy đi đường
+      row.getCell("P").value = v.note || ""; // Ghi chú
+      row.getCell("Q").value = v.bhTNDS ? new Date(v.bhTNDS) : null; // Bảo hiểm TNDS
+      row.getCell("R").value = v.bhVC ? new Date(v.bhVC) : null; // Bảo hiểm VC
+
+      row.commit();
+    });
+
+    // 4️⃣ TRẢ FILE
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=DANH_SACH_XE.xlsx",
+    );
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error("❌ Export vehicles error:", err);
+
+    res.status(500).json({
+      message: "Lỗi xuất danh sách xe",
+    });
   }
 };
 
@@ -335,4 +423,5 @@ module.exports = {
   listVehicleNames,
   toggleWarning,
   deleteAllVehicles,
+  exportVehicles
 };
