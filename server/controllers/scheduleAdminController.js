@@ -1823,6 +1823,7 @@ const exportTripsByDateRangeBS = async (req, res) => {
 
       const cuocPhi = cleanNumber(trip.cuocPhiBS);
       const daThanhToan = cleanNumber(trip.daThanhToan);
+      const themDiem = cleanNumber(trip.themDiem);
       const bocXep = cleanNumber(trip.bocXepBS);
       const ve = cleanNumber(trip.veBS);
       const hangVe = cleanNumber(trip.hangVeBS);
@@ -1831,22 +1832,23 @@ const exportTripsByDateRangeBS = async (req, res) => {
 
       row.getCell("O").value = cuocPhi;
       row.getCell("P").value = daThanhToan;
-      row.getCell("Q").value = bocXep;
-      row.getCell("R").value = ve;
-      row.getCell("S").value = hangVe;
-      row.getCell("T").value = luuCa;
-      row.getCell("U").value = cpKhac;
-      row.getCell("V").value = trip.ghiChu || "";
-      row.getCell("W").value = trip.maChuyen || "";
-      row.getCell("X").value = trip.debtCode || "";
-      row.getCell("Y").value = trip.accountUsername || "";
-      row.getCell("Z").value = trip.percentHH || "0";
-      row.getCell("AA").value = trip.moneyHH || "0";
-      row.getCell("AB").value = trip.moneyConLai || "0";
-      row.getCell("AC").value = trip.diemXepHangNew || "";
-      row.getCell("AD").value = trip.diemDoHangNew || "";
-      row.getCell("AE").value = trip.KHdiemGiaoHang || "";
-      row.getCell("AF").value = trip.maHoaDon || "";
+      row.getCell("Q").value = themDiem;
+      row.getCell("R").value = bocXep;
+      row.getCell("S").value = ve;
+      row.getCell("T").value = hangVe;
+      row.getCell("U").value = luuCa;
+      row.getCell("V").value = cpKhac;
+      row.getCell("W").value = trip.ghiChu || "";
+      row.getCell("X").value = trip.maChuyen || "";
+      row.getCell("Y").value = trip.debtCode || "";
+      row.getCell("Z").value = trip.accountUsername || "";
+      row.getCell("AA").value = trip.percentHH || "0";
+      row.getCell("AB").value = trip.moneyHH || "0";
+      row.getCell("AC").value = trip.moneyConLai || "0";
+      row.getCell("AD").value = trip.diemXepHangNew || "";
+      row.getCell("AE").value = trip.diemDoHangNew || "";
+      row.getCell("AF").value = trip.KHdiemGiaoHang || "";
+      row.getCell("AG").value = trip.maHoaDon || "";
 
       row.commit();
     });
