@@ -16,7 +16,7 @@ const scheduleAdminSchema = new mongoose.Schema(
     // 🧾 Thông tin chuyến
     tenLaiXe: { type: String, default: "" }, // TÊN LÁI XE
     khachHang: { type: String, default: "" }, // KHÁCH HÀNG
-    dienGiai: { type: String, default: "" }, // DIỄN GIẢI
+    dienGiai: { type: String, trim: true }, // DIỄN GIẢI
     ngayBocHang: { type: Date, default: null }, // NGÀY BỐC HÀNG
     ngayGiaoHang: { type: Date, default: null }, // NGÀY GIAO HÀNG
     diemXepHang: { type: String, default: "" }, // ĐIỂM XẾP HÀNG
@@ -32,7 +32,7 @@ const scheduleAdminSchema = new mongoose.Schema(
     hangVe: { type: String, default: "" }, // HÀNG VỀ
     luuCa: { type: String, default: "" }, // LƯU CA
     luatChiPhiKhac: { type: String, default: "" }, // LUẬT CP KHÁC
-    ghiChu: { type: String, default: "" }, // GHI CHÚ
+    ghiChu: { type: String, trim: true }, // GHI CHÚ
     maChuyen: { type: String, unique: true }, // MÃ CHUYẾN
     ngayBoc: { type: Date, default: null }, // NGÀY NHẬP
     accountUsername: { type: String, default: "" }, // USERNAME TÀI KHOẢN
