@@ -299,15 +299,20 @@ const KeToanPage = () => {
   const displayedData = filteredData.filter((schedule) => {
     if (!keyword) return true;
 
-    // 1️⃣ match theo tên lái xe
+    // 1️⃣ tên lái xe
     const matchDriver = normalizeText(schedule.tenLaiXe).includes(keyword);
 
-    // 2️⃣ match theo mã lịch trình (duyệt từng row)
+    // 2️⃣ mã lịch trình
     const matchMaLT = schedule.rows?.some((row) =>
       normalizeText(row.maLichTrinh).includes(keyword),
     );
 
-    return matchDriver || matchMaLT;
+    // 3️⃣ biển số xe
+    const matchBSX = schedule.rows?.some((row) =>
+      normalizeText(row.bienSoXe).includes(keyword),
+    );
+
+    return matchDriver || matchMaLT || matchBSX;
   });
 
   return (
@@ -582,7 +587,7 @@ const KeToanPage = () => {
           type="text"
           value={searchDriver}
           onChange={(e) => setSearchDriver(e.target.value)}
-          placeholder="Nhập tên lái xe hoặc mã lịch trình..."
+          placeholder="Nhập tên lái xe, biển số hoặc mã lịch trình..."
           className="border px-2 py-1 rounded w-64"
         />
       </div>
