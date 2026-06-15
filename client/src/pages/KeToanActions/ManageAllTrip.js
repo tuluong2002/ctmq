@@ -457,7 +457,7 @@ export default function ManageTrip({ user, onLogout }) {
     cuocPhi: [],
     maHoaDon: [],
     debtCode: [],
-    maKH: []
+    maKH: [],
   });
 
   // ✅ DANH SÁCH ĐƯỢC CHỌN
@@ -469,7 +469,7 @@ export default function ManageTrip({ user, onLogout }) {
     cuocPhi: [],
     maHoaDon: [],
     debtCode: [],
-    maKH: []
+    maKH: [],
   });
 
   const buildQueryParams = () => {
@@ -1012,15 +1012,21 @@ export default function ManageTrip({ user, onLogout }) {
     setRemainingCount(excelData.length);
 
     const failed = [];
+    let totalSkipped = [];
+    let totalUpdated = 0;
 
     for (let i = 0; i < excelData.length; i++) {
       const item = excelData[i];
+
       try {
-        await axios.post(
+        const res = await axios.post(
           `${API_URL}/add-bo-sung`,
-          { updates: [item] }, // gửi từng chuyến
+          { updates: [item] },
           { headers: { Authorization: `Bearer ${token}` } },
         );
+
+        totalUpdated += res.data?.updatedCount || 0;
+        totalSkipped = [...totalSkipped, ...(res.data?.skippedTrips || [])];
       } catch (err) {
         failed.push(item.maChuyen);
         console.error("Lỗi chuyến", item.maChuyen, err);
@@ -1031,14 +1037,22 @@ export default function ManageTrip({ user, onLogout }) {
     }
 
     setLoadingImport(false);
-    setShowFileStatus(false); // ẩn text sau khi import xong
+    setShowFileStatus(false);
     setExcelData([]);
+
     const input = document.getElementById("excelInput");
     if (input) input.value = "";
+
     fetchAllRides();
 
-    if (failed.length) {
-      alert(`Một số chuyến không cập nhật được: ${failed.join(", ")}`);
+    // 🔥 CHỈ ALERT 1 LẦN
+    if (failed.length || totalSkipped.length) {
+      alert(
+        `Import xong:\n` +
+          `- Thành công: ${totalUpdated}\n` +
+          `- Bị bỏ qua: ${totalSkipped.length}\n` +
+          `- Lỗi: ${failed.length}`,
+      );
     } else {
       alert("Cập nhật cước phí bổ sung thành công!");
     }
@@ -1619,7 +1633,7 @@ export default function ManageTrip({ user, onLogout }) {
     return moveEmptyToTop(list);
   })();
 
-    const filteredMaKH = (() => {
+  const filteredMaKH = (() => {
     const list = excelOptions.maKH.filter((c) => {
       if (!searchMaKH) return true;
       return normalize(c).includes(normalize(searchMaKH));
@@ -2078,7 +2092,7 @@ export default function ManageTrip({ user, onLogout }) {
                 cuocPhi: [],
                 maHoaDon: [],
                 debtCode: [],
-                maKH: []
+                maKH: [],
               });
               setSearchKH("");
               setSearchCuocPhiBD("");
@@ -2389,23 +2403,20 @@ export default function ManageTrip({ user, onLogout }) {
                                 }
                                 onChange={() => {
                                   setExcelSelected((prev) => {
-                                    const isAllSelected =
-                                      filteredMaKH.every((c) =>
-                                        prev.maKH.includes(c),
-                                      );
+                                    const isAllSelected = filteredMaKH.every(
+                                      (c) => prev.maKH.includes(c),
+                                    );
 
                                     return {
                                       ...prev,
                                       maKH: isAllSelected
                                         ? prev.maKH.filter(
-                                            (x) =>
-                                              !filteredMaKH.includes(x),
+                                            (x) => !filteredMaKH.includes(x),
                                           )
                                         : [
                                             ...prev.maKH,
                                             ...filteredMaKH.filter(
-                                              (x) =>
-                                                !prev.maKH.includes(x),
+                                              (x) => !prev.maKH.includes(x),
                                             ),
                                           ],
                                     };
@@ -2424,9 +2435,7 @@ export default function ManageTrip({ user, onLogout }) {
                                 >
                                   <input
                                     type="checkbox"
-                                    checked={excelSelected.maKH.includes(
-                                      c,
-                                    )}
+                                    checked={excelSelected.maKH.includes(c)}
                                     onChange={() =>
                                       setExcelSelected((p) => ({
                                         ...p,
@@ -3110,7 +3119,7 @@ export default function ManageTrip({ user, onLogout }) {
                           "cuocPhi",
                           "maHoaDon",
                           "debtCode",
-                          "maKH"
+                          "maKH",
                         ].includes(openFilter) &&
                           !moneyColumns.includes(openFilter) && (
                             <>

@@ -17,12 +17,6 @@ const fieldMap = {
   themDiem: { base: "themDiem", bs: "themDiem" },
 };
 
-const pickBaseOnly = (obj, field) => {
-  const map = fieldMap[field];
-  if (!map) return 0;
-
-  return Number(obj[map.base]) || 0;
-};
 
 const pickBsOnly = (obj, field) => {
   const map = fieldMap[field];

@@ -83,6 +83,19 @@ const hasEmptyValue = async (field, filter) => {
   return count > 0;
 };
 
+const checkLockedDebtPeriod = async (maKH, debtCode) => {
+  if (!maKH || !debtCode) return null;
+
+  const code = debtCode?.toString().trim();
+  if (!code) return null;
+
+  return await CustomerDebtPeriod.findOne({
+    customerCode: maKH,
+    debtCode: code,
+    isLocked: true,
+  });
+};
+
 // 🆕 Tạo chuyến mới
 const createScheduleAdmin = async (req, res) => {
   try {
@@ -128,7 +141,7 @@ const createScheduleAdmin = async (req, res) => {
       await Counter.updateOne(
         { key: counterKey },
         { $set: { seq: lastNumber } },
-        { upsert: true }
+        { upsert: true },
       );
     }
 
@@ -136,7 +149,7 @@ const createScheduleAdmin = async (req, res) => {
     const updated = await Counter.findOneAndUpdate(
       { key: counterKey },
       { $inc: { seq: 1 } },
-      { new: true }
+      { new: true },
     );
 
     const maChuyen = `${counterKey}.${String(updated.seq).padStart(4, "0")}`;
@@ -181,7 +194,7 @@ const updateScheduleAdmin = async (req, res) => {
     // 🔒 Kiểm tra khóa công nợ
     const lockedOld = await checkLockedDebtPeriod(
       schedule.maKH,
-      schedule.maChuyen
+      schedule.debtCode,
     );
     if (lockedOld)
       return res.status(400).json({
@@ -190,7 +203,7 @@ const updateScheduleAdmin = async (req, res) => {
 
     const lockedNew = await checkLockedDebtPeriod(
       schedule.maKH,
-      schedule.maChuyen
+      schedule.debtCode,
     );
     if (lockedNew)
       return res.status(400).json({
@@ -258,7 +271,7 @@ const updateScheduleAdmin = async (req, res) => {
       changedFields.every(
         (field) =>
           importantFields.includes(field) &&
-          [0, null, ""].includes(Number(previousData[field]) || 0)
+          [0, null, ""].includes(Number(previousData[field]) || 0),
       );
 
     // 3️⃣ Chỉ tạo lịch sử nếu không thuộc 2 trường hợp trên
@@ -370,7 +383,7 @@ const deleteSchedulesByDateRange = async (req, res) => {
 
     const result = await ScheduleAdmin.updateMany(
       { ngayGiaoHang: { $gte: start, $lte: end } },
-      { $set: { isDeleted: true, deletedAt: new Date() } }
+      { $set: { isDeleted: true, deletedAt: new Date() } },
     );
 
     res.json({
@@ -445,7 +458,7 @@ const restoreSchedule = async (req, res) => {
 
     const result = await ScheduleAdmin.updateMany(
       { maChuyen: { $in: maChuyenList }, isDeleted: true },
-      { $set: { isDeleted: false, deletedAt: null } }
+      { $set: { isDeleted: false, deletedAt: null } },
     );
 
     return res.json({
@@ -519,7 +532,7 @@ const buildScheduleFilter = (query) => {
     maHoaDon: "maHoaDon",
     debtCode: "debtCode",
     ngayGiaoHang: "ngayGiaoHang",
-    maKH: "maKH"
+    maKH: "maKH",
   };
 
   for (const [queryKey, field] of Object.entries(arrayFilterMap)) {
@@ -736,7 +749,7 @@ const getAllSchedulesAdmin = async (req, res) => {
       }
 
       andConditions.push(
-        orConditions.length === 1 ? orConditions[0] : { $or: orConditions }
+        orConditions.length === 1 ? orConditions[0] : { $or: orConditions },
       );
     }
 
@@ -1000,7 +1013,7 @@ const getAllScheduleFilterOptions = async (req, res) => {
       "cuocPhi",
       "maHoaDon",
       "debtCode",
-      "maKH"
+      "maKH",
     ];
 
     const results = {};
@@ -1022,7 +1035,7 @@ const getAllScheduleFilterOptions = async (req, res) => {
         }
 
         results[field] = cleaned;
-      })
+      }),
     );
 
     res.json(results);
@@ -1103,7 +1116,7 @@ const getScheduleFilterOptions = async (req, res) => {
         if (hasEmpty) cleaned.unshift("__EMPTY__");
 
         results[field] = cleaned;
-      })
+      }),
     );
 
     res.json(results);
@@ -1211,7 +1224,7 @@ const addHoaDonToSchedules = async (req, res) => {
     // Cập nhật tất cả chuyến có mã chuyến trong maChuyenList
     const result = await ScheduleAdmin.updateMany(
       { maChuyen: { $in: maChuyenList } },
-      { $set: { maHoaDon } }
+      { $set: { maHoaDon } },
     );
 
     res.json({
@@ -1236,7 +1249,7 @@ const removeHoaDonFromSchedules = async (req, res) => {
 
     const result = await ScheduleAdmin.updateMany(
       { maChuyen: { $in: maChuyenList } },
-      { $set: { maHoaDon: "" } }
+      { $set: { maHoaDon: "" } },
     );
 
     return res.json({
@@ -1340,24 +1353,52 @@ const importCTXNFromExcel = async (req, res) => {
 
 const addBoSung = async (req, res) => {
   try {
-    const { updates } = req.body; // [{ maChuyen, cuocPhiBoSung }, ...]
+    const { updates } = req.body;
+
+    const skippedTrips = [];
+    let updatedCount = 0;
 
     for (const u of updates) {
-      const schedule = await ScheduleAdmin.findOne({ maChuyen: u.maChuyen });
-      if (schedule) {
-        schedule.cuocPhiBS = u.cuocPhiBS?.toString() || "";
-        schedule.bocXepBS = u.bocXepBS?.toString() || "";
-        schedule.veBS = u.veBS?.toString() || "";
-        schedule.hangVeBS = u.hangVeBS?.toString() || "";
-        schedule.luuCaBS = u.luuCaBS?.toString() || "";
-        schedule.cpKhacBS = u.cpKhacBS?.toString() || "";
-        schedule.themDiem = u.themDiem?.toString() || "";
-        await calcHoaHong(schedule);
-        await schedule.save();
+      const schedule = await ScheduleAdmin.findOne({
+        maChuyen: u.maChuyen,
+      });
+
+      if (!schedule) continue;
+
+      // 🔒 CHECK LOCK THEO debtCode
+      const locked =
+        schedule.maKH && schedule.debtCode
+          ? await checkLockedDebtPeriod(schedule.maKH, schedule.debtCode)
+          : null;
+
+      if (locked) {
+        skippedTrips.push({
+          maChuyen: schedule.maChuyen,
+          debtCode: schedule.debtCode,
+        });
+        continue;
       }
+
+      schedule.cuocPhiBS = u.cuocPhiBS?.toString() || "";
+      schedule.bocXepBS = u.bocXepBS?.toString() || "";
+      schedule.veBS = u.veBS?.toString() || "";
+      schedule.hangVeBS = u.hangVeBS?.toString() || "";
+      schedule.luuCaBS = u.luuCaBS?.toString() || "";
+      schedule.cpKhacBS = u.cpKhacBS?.toString() || "";
+      schedule.themDiem = u.themDiem?.toString() || "";
+
+      await calcHoaHong(schedule);
+      await schedule.save();
+
+      updatedCount++;
     }
 
-    res.json({ message: "Cập nhật cước phí bổ sung thành công" });
+    return res.json({
+      success: true,
+      message: "Cập nhật cước phí bổ sung thành công",
+      updatedCount,
+      skippedTrips,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -1368,6 +1409,7 @@ const addBoSung = async (req, res) => {
 const addBoSungSingle = async (req, res) => {
   try {
     const { id } = req.params;
+
     const {
       ltState,
       onlState,
@@ -1383,8 +1425,30 @@ const addBoSungSingle = async (req, res) => {
     } = req.body;
 
     const schedule = await ScheduleAdmin.findById(id);
+
     if (!schedule) {
-      return res.status(404).json({ error: "Không tìm thấy chuyến" });
+      return res.status(404).json({
+        error: "Không tìm thấy chuyến",
+      });
+    }
+
+    // 🔒 Check kỳ công nợ
+    const locked =
+  schedule.maKH && schedule.debtCode
+    ? await checkLockedDebtPeriod(schedule.maKH, schedule.debtCode)
+    : null;
+
+    console.log("LOCK CHECK:", {
+      maKH: schedule.maKH,
+      debtCode: schedule.debtCode,
+      locked,
+    });
+
+    if (locked) {
+      return res.status(400).json({
+        success: false,
+        error: `Chuyến ${schedule.maChuyen} thuộc kỳ ${locked.debtCode} đã khoá công nợ, không thể cập nhật`,
+      });
     }
 
     schedule.ltState = ltState?.toString() || "";
@@ -1400,6 +1464,7 @@ const addBoSungSingle = async (req, res) => {
 
     schedule.themDiem = themDiem?.toString() || "";
     schedule.cuocTraXN = cuocTraXN;
+
     await calcHoaHong(schedule);
     await schedule.save();
 
@@ -1446,12 +1511,12 @@ const importSchedulesFromExcel = async (req, res) => {
       // 🔒 check khoá kỳ công nợ (THEO maKH + maChuyen)
       let locked = null;
       if (maKH && maChuyen) {
-        locked = await checkLockedDebtPeriod(maKH, maChuyen);
+        locked = await checkLockedDebtPeriod(maKH, r.debtCode);
       }
 
       if (locked) {
         console.log(
-          `⛔ Bỏ qua chuyến ${maChuyen} vì kỳ ${locked.periodCode} đã khoá`
+          `⛔ Bỏ qua chuyến ${maChuyen} vì kỳ ${locked.debtCode} đã khoá`,
         );
         skipped++;
         skippedTrips.push(maChuyen);
@@ -1574,22 +1639,6 @@ const toggleWarning = async (req, res) => {
   }
 };
 
-const checkLockedDebtPeriod = async (maKH, maChuyen) => {
-  if (!maKH || !maChuyen) return null;
-  if (typeof maChuyen !== "string") return null; // 🛡️ chống nổ
-
-  const parts = maChuyen.split(".");
-  if (parts.length < 3) return null;
-
-  const periodCode = `${parts[0]}.${parts[1]}.${parts[2]}`;
-
-  return await CustomerDebtPeriod.findOne({
-    customerCode: maKH,
-    periodCode,
-    isLocked: true,
-  });
-};
-
 const cleanNumber = (v) => Number(String(v || 0).replace(/[.,]/g, "")) || 0;
 
 const parseVNDate = (dateStr, isEnd = false) => {
@@ -1663,7 +1712,7 @@ const exportTripsByDateRange = async (req, res) => {
     // ======================
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(
-      path.join(__dirname, "../templates/DANH_SACH_CHUYEN.xlsx")
+      path.join(__dirname, "../templates/DANH_SACH_CHUYEN.xlsx"),
     );
 
     const sheet = workbook.getWorksheet("Thang 11"); // ⚠️ đúng tên sheet mẫu
@@ -1690,10 +1739,10 @@ const exportTripsByDateRange = async (req, res) => {
 
       // DATE
       row.getCell("H").value = new Date(
-        trip.ngayBocHang.toISOString().slice(0, 10)
+        trip.ngayBocHang.toISOString().slice(0, 10),
       );
       row.getCell("I").value = new Date(
-        trip.ngayGiaoHang.toISOString().slice(0, 10)
+        trip.ngayGiaoHang.toISOString().slice(0, 10),
       );
 
       row.getCell("J").value = trip.diemXepHang || "";
@@ -1729,11 +1778,11 @@ const exportTripsByDateRange = async (req, res) => {
     // ======================
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=DANH_SACH_CHUYEN_${from}_den_${to}.xlsx`
+      `attachment; filename=DANH_SACH_CHUYEN_${from}_den_${to}.xlsx`,
     );
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     await workbook.xlsx.write(res);
@@ -1782,7 +1831,7 @@ const exportTripsByDateRangeBS = async (req, res) => {
     // ======================
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(
-      path.join(__dirname, "../templates/DSC_BS.xlsm")
+      path.join(__dirname, "../templates/DSC_BS.xlsm"),
     );
 
     const sheet = workbook.getWorksheet("BANGKE"); // ⚠️ đúng tên sheet mẫu
@@ -1809,10 +1858,10 @@ const exportTripsByDateRangeBS = async (req, res) => {
 
       // DATE
       row.getCell("H").value = new Date(
-        trip.ngayBocHang.toISOString().slice(0, 10)
+        trip.ngayBocHang.toISOString().slice(0, 10),
       );
       row.getCell("I").value = new Date(
-        trip.ngayGiaoHang.toISOString().slice(0, 10)
+        trip.ngayGiaoHang.toISOString().slice(0, 10),
       );
 
       row.getCell("J").value = trip.diemXepHang || "";
@@ -1858,11 +1907,11 @@ const exportTripsByDateRangeBS = async (req, res) => {
     // ======================
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=DANH_SACH_CHUYEN_${from}_den_${to}.xlsx`
+      `attachment; filename=DANH_SACH_CHUYEN_${from}_den_${to}.xlsx`,
     );
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     await workbook.xlsx.write(res);

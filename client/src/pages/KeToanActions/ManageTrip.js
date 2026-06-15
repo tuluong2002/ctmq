@@ -872,36 +872,37 @@ export default function ManageTrip({ user, onLogout }) {
     setLoadedCount(0);
     setRemainingCount(excelData.length);
 
-    const failed = [];
+    try {
+      const res = await axios.post(
+        `${API_URL}/add-bo-sung-bulk`,
+        { updates: excelData },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
-    for (let i = 0; i < excelData.length; i++) {
-      const item = excelData[i];
-      try {
-        await axios.post(
-          `${API_URL}/add-bo-sung`,
-          { updates: [item] }, // gửi từng chuyến
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-      } catch (err) {
-        failed.push(item.maChuyen);
-        console.error("Lỗi chuyến", item.maChuyen, err);
-      }
+      const { updatedCount, skippedTrips, failedTrips } = res.data;
 
-      setLoadedCount((prev) => prev + 1);
-      setRemainingCount((prev) => prev - 1);
-    }
+      setLoadedCount(excelData.length);
+      setRemainingCount(0);
 
-    setLoadingImport(false);
-    setShowFileStatus(false); // ẩn text sau khi import xong
-    setExcelData([]);
-    const input = document.getElementById("excelInput");
-    if (input) input.value = "";
-    fetchAllRides();
+      setLoadingImport(false);
+      setShowFileStatus(false);
+      setExcelData([]);
 
-    if (failed.length) {
-      alert(`Một số chuyến không cập nhật được: ${failed.join(", ")}`);
-    } else {
-      alert("Cập nhật cước phí bổ sung thành công!");
+      const input = document.getElementById("excelInput");
+      if (input) input.value = "";
+
+      fetchAllRides();
+
+      alert(
+        `Import xong:\n` +
+          `✔ Thành công: ${updatedCount}\n` +
+          `⚠ Bị bỏ qua: ${skippedTrips?.length || 0}\n` +
+          `❌ Lỗi: ${failedTrips?.length || 0}`,
+      );
+    } catch (err) {
+      console.error(err);
+      setLoadingImport(false);
+      alert("Import thất bại!");
     }
   };
 
