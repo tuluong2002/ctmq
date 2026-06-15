@@ -16,6 +16,7 @@ const oddCustomerDebtRoutes = require("./routes/oddCustomerDebt.routes");
 const voucherRoutes = require("./routes/voucherRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const oilRoutes = require("./routes/oilRoutes")
+const userScheduleRoutes = require("./routes/userScheduleRoutes")
 
 require("./models/cron");
 
@@ -31,6 +32,7 @@ mongoose
 app.use("/api/auth", authRoutes);
 app.use("/api/schedule-admin", scheduleAdminRoutes);
 app.use("/api/schedules", scheduleRoutes);
+app.use("/api/user-schedules", userScheduleRoutes);
 
 // serve uploads
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));

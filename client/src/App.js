@@ -37,6 +37,7 @@ import TripPaymentPage from "./pages/CostManagementTables/TripPaymentPage";
 import ManageContract from "./pages/KeToanActions/ManageContract";
 import ManageTCBperson from "./pages/KeToanActions/ManageTCBperson";
 import ManageOil from "./pages/KeToanActions/ManageOil";
+import ManageOnlineSchedule from "./pages/KeToanActions/ManageOnlineSchedule";
 
 import AddressPage from "./pages/AddressPage";
 import Customer2Page from "./pages/Customer2Page";
@@ -147,6 +148,15 @@ function App() {
           element={
             <PrivateRoute roles={["keToan"]}>
               <ManageTCBperson user={user} onLogout={handleLogout} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/onl-schedules"
+          element={
+            <PrivateRoute roles={["keToan"]}>
+              <ManageOnlineSchedule user={user} onLogout={handleLogout} />
             </PrivateRoute>
           }
         />

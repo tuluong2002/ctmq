@@ -89,6 +89,10 @@ export default function ManageCustomer() {
     navigate("/tcb-person", { state: { user } });
   };
 
+  const handleGoToOnlKT = () => {
+    navigate("/onl-schedules", { state: { user } });
+  };
+
   // visibleColumns khởi tạo mặc định từ allColumns
   const [visibleColumns, setVisibleColumns] = useState(
     allColumns.map((c) => c.key),
@@ -580,6 +584,14 @@ export default function ManageCustomer() {
           }`}
         >
           TCB cá nhân
+        </button>
+        <button
+          onClick={handleGoToOnlKT}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          KT - Lịch trình
         </button>
       </div>
 

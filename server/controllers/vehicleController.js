@@ -216,7 +216,7 @@ const importVehiclesFromExcel = async (req, res) => {
 
         const data = {
           plateNumber: plate,
-          company: row["Đơn vị Vận tải"] || "",
+          company: row["Đơn vị vận tải"] || "",
           vehicleType: row["Loại xe"] || "",
           length: row["Dài"] || "",
           width: row["Rộng"] || "",

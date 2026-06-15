@@ -112,6 +112,10 @@ export default function ManageContract() {
     navigate("/tcb-person", { state: { user } });
   };
 
+  const handleGoToOnlKT = () => {
+    navigate("/onl-schedules", { state: { user } });
+  };
+
   useEffect(() => {
     if (firstColRef.current) {
       setFirstColWidth(firstColRef.current.offsetWidth);
@@ -536,6 +540,14 @@ export default function ManageContract() {
           }`}
         >
           TCB cá nhân
+        </button>
+        <button
+          onClick={handleGoToOnlKT}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          KT - Lịch trình
         </button>
       </div>
       <h1 className="text-xl font-bold">HỢP ĐỒNG VẬN CHUYỂN</h1>

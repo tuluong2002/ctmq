@@ -114,9 +114,17 @@ export default function ManageDriver() {
     navigate("/contract", { state: { user } });
   };
 
+  const handleGoToTCB = () => {
+    navigate("/tcb-person", { state: { user } });
+  };
+
+  const handleGoToOnlKT = () => {
+    navigate("/onl-schedules", { state: { user } });
+  };
+
   // visibleColumns khởi tạo mặc định từ allColumns
   const [visibleColumns, setVisibleColumns] = useState(
-    allColumns.map((c) => c.key)
+    allColumns.map((c) => c.key),
   );
   const [columnWidths, setColumnWidths] = useState({});
 
@@ -194,7 +202,7 @@ export default function ManageDriver() {
       if (Array.isArray(parsed.order)) {
         // keep only valid keys and append missing columns (preserve defaults for new columns)
         const valid = parsed.order.filter((k) =>
-          allColumns.some((ac) => ac.key === k)
+          allColumns.some((ac) => ac.key === k),
         );
         const missing = allColumns
           .map((c) => c.key)
@@ -370,7 +378,7 @@ export default function ManageDriver() {
     if (!canEditDriver) return alert("Bạn chưa có quyền xóa lái xe!");
     if (
       !window.confirm(
-        "Xác nhận xóa tất cả lái xe? Hành động này không thể hoàn tác!"
+        "Xác nhận xóa tất cả lái xe? Hành động này không thể hoàn tác!",
       )
     )
       return;
@@ -384,7 +392,7 @@ export default function ManageDriver() {
     } catch (err) {
       console.error(
         "Xóa tất cả thất bại:",
-        err.response?.data?.error || err.message
+        err.response?.data?.error || err.message,
       );
       alert("Không thể xóa tất cả lái xe!");
     }
@@ -415,7 +423,7 @@ export default function ManageDriver() {
             "Content-Type": "multipart/form-data",
             Authorization: token ? `Bearer ${token}` : undefined,
           },
-        }
+        },
       );
 
       const added = res.data.imported || 0;
@@ -444,14 +452,14 @@ export default function ManageDriver() {
         },
         {
           headers: { Authorization: token ? `Bearer ${token}` : undefined },
-        }
+        },
       );
 
       saveAs(
         new Blob([res.data], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         }),
-        "DANH_SACH_LAI_XE.xlsx"
+        "DANH_SACH_LAI_XE.xlsx",
       );
     } catch (err) {
       console.error("Export drivers lỗi:", err);
@@ -467,7 +475,7 @@ export default function ManageDriver() {
         {}, // body rỗng
         {
           headers: { Authorization: token ? `Bearer ${token}` : undefined },
-        }
+        },
       );
 
       const newWarningState = res.data.warning;
@@ -488,7 +496,7 @@ export default function ManageDriver() {
       (prev) =>
         prev.includes(id)
           ? prev.filter((x) => x !== id) // bỏ ra
-          : [...prev, id] // thêm vào
+          : [...prev, id], // thêm vào
     );
   };
 
@@ -588,6 +596,23 @@ export default function ManageDriver() {
           }`}
         >
           Hợp đồng vận chuyển
+        </button>
+
+        <button
+          onClick={handleGoToTCB}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/tcb-person") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          TCB cá nhân
+        </button>
+        <button
+          onClick={handleGoToOnlKT}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          KT - Lịch trình
         </button>
       </div>
 
@@ -691,7 +716,7 @@ export default function ManageDriver() {
                     setVisibleColumns((prev) =>
                       prev.includes(c.key)
                         ? prev.filter((k) => k !== c.key)
-                        : [...prev, c.key]
+                        : [...prev, c.key],
                     )
                   }
                 />
@@ -756,8 +781,8 @@ export default function ManageDriver() {
                 const leftOffset = isFirst
                   ? 30
                   : isSecond
-                  ? 30 + firstColWidth
-                  : undefined;
+                    ? 30 + firstColWidth
+                    : undefined;
 
                 return (
                   <th
@@ -875,8 +900,8 @@ export default function ManageDriver() {
                     isWarning
                       ? "bg-red-300"
                       : idx % 2 === 0
-                      ? "bg-white"
-                      : "bg-gray-50"
+                        ? "bg-white"
+                        : "bg-gray-50"
                   } ${selectedRows.includes(d._id) ? "bg-yellow-200" : ""}`}
                   style={{ height: 20 }}
                 >
@@ -936,8 +961,8 @@ export default function ManageDriver() {
                     const stickyLeft = isFirst
                       ? 30
                       : isSecond
-                      ? 30 + firstColWidth
-                      : undefined;
+                        ? 30 + firstColWidth
+                        : undefined;
 
                     const cellWidthStyle = columnWidths[cKey]
                       ? {
@@ -964,10 +989,10 @@ export default function ManageDriver() {
                           background: warnings[d._id]
                             ? "#fca5a5"
                             : selectedRows.includes(d._id)
-                            ? "#fde68a"
-                            : idx % 2 === 0
-                            ? "#ffffff"
-                            : "#f9fafb",
+                              ? "#fde68a"
+                              : idx % 2 === 0
+                                ? "#ffffff"
+                                : "#f9fafb",
                           transform: "translateZ(0)",
                           WebkitTransform: "translateZ(0)",
                           backgroundClip: "padding-box",

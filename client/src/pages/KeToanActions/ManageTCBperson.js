@@ -108,6 +108,10 @@ export default function ManageTCBperson() {
     navigate("/tcb-person", { state: { user } });
   };
 
+  const handleGoToOnlKT = () => {
+    navigate("/onl-schedules", { state: { user } });
+  };
+
   const [customerList, setCustomerList] = useState([]);
   const [accountantList, setAccountantList] = useState([]);
   const [maChuyenList, setMaChuyenList] = useState([]);
@@ -558,6 +562,14 @@ export default function ManageTCBperson() {
           }`}
         >
           TCB cá nhân
+        </button>
+        <button
+          onClick={handleGoToOnlKT}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          KT - Lịch trình
         </button>
       </div>
       <div className="flex gap-2 items-center mb-4">

@@ -185,6 +185,10 @@ export default function CustomerDebt26Page() {
     navigate("/tcb-person", { state: { user } });
   };
 
+  const handleGoToOnlKT = () => {
+    navigate("/onl-schedules", { state: { user } });
+  };
+
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [limit] = useState(50); // cố định 100 / trang
@@ -1031,6 +1035,15 @@ export default function CustomerDebt26Page() {
           }`}
         >
           TCB cá nhân
+        </button>
+
+        <button
+          onClick={handleGoToTCB}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          KT - Lịch trình
         </button>
       </div>
       <h1 className="text-xl font-bold mb-4">CÔNG NỢ KHÁCH LẺ (MÃ 26)</h1>

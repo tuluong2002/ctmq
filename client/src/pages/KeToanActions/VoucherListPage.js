@@ -123,6 +123,10 @@ export default function VoucherListPage() {
     navigate("/tcb-person", { state: { user } });
   };
 
+  const handleGoToOnlKT = () => {
+    navigate("/onl-schedules", { state: { user } });
+  };
+
   const [expenseTypeOptions, setExpenseTypeOptions] = useState([]);
   const [companyOptions, setCompanyOptions] = useState([]);
   const [receiverOptions, setReceiverOptions] = useState([]);
@@ -954,6 +958,14 @@ export default function VoucherListPage() {
         >
           TCB cá nhân
         </button>
+        <button
+          onClick={handleGoToOnlKT}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          KT - Lịch trình
+        </button>
       </div>
 
       <div className="flex justify-between items-center mb-4">
@@ -1576,44 +1588,46 @@ export default function VoucherListPage() {
                               case "reason":
                                 return v.reason;
 
-case "attachment":
-                              return Array.isArray(v.attachments) &&
-                                v.attachments.length > 0 ? (
-                                <div className="flex gap-2 overflow-x-auto max-w-full">
-                                  {v.attachments.map((file, i) => (
-                                    <div
-                                      key={i}
-                                      className="flex items-center gap-1 border rounded px-1 py-[2px]
+                              case "attachment":
+                                return Array.isArray(v.attachments) &&
+                                  v.attachments.length > 0 ? (
+                                  <div className="flex gap-2 overflow-x-auto max-w-full">
+                                    {v.attachments.map((file, i) => (
+                                      <div
+                                        key={i}
+                                        className="flex items-center gap-1 border rounded px-1 py-[2px]
                      cursor-pointer hover:bg-gray-100 shrink-0"
-                                      title={file.originalName}
-                                      onClick={() =>
-                                        window.open(
-                                          `${API}/vouchers/download/${v._id}/attachments/${i}`,
-                                          "_blank",
-                                        )
-                                      }
-                                    >
-                                      {isImageFile(file) ? (
-                                        <img
-                                          src={file.url}
-                                          alt={file.originalName}
-                                          className="h-4 w-auto object-cover rounded"
-                                        />
-                                      ) : (
-                                        <span className="text-xs">
-                                          {getFileIcon(file)}
-                                        </span>
-                                      )}
+                                        title={file.originalName}
+                                        onClick={() =>
+                                          window.open(
+                                            `${API}/vouchers/download/${v._id}/attachments/${i}`,
+                                            "_blank",
+                                          )
+                                        }
+                                      >
+                                        {isImageFile(file) ? (
+                                          <img
+                                            src={file.url}
+                                            alt={file.originalName}
+                                            className="h-4 w-auto object-cover rounded"
+                                          />
+                                        ) : (
+                                          <span className="text-xs">
+                                            {getFileIcon(file)}
+                                          </span>
+                                        )}
 
-                                      <span className="text-xs max-w-[120px] truncate">
-                                        {file.originalName}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400 italic">—</span>
-                              );
+                                        <span className="text-xs max-w-[120px] truncate">
+                                          {file.originalName}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 italic">
+                                    —
+                                  </span>
+                                );
 
                               case "expenseType":
                                 return v.expenseType;

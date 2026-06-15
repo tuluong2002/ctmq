@@ -163,6 +163,10 @@ export default function ManageTrip({ user, onLogout }) {
     navigate("/tcb-person", { state: { user } });
   };
 
+  const handleGoToOnlKT = () => {
+    navigate("/onl-schedules", { state: { user } });
+  };
+
   // 5 danh sách gợi ý
   const [drivers, setDrivers] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -1733,6 +1737,14 @@ export default function ManageTrip({ user, onLogout }) {
           }`}
         >
           TCB cá nhân
+        </button>
+        <button
+          onClick={handleGoToOnlKT}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          KT - Lịch trình
         </button>
       </div>
 

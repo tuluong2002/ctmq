@@ -81,6 +81,10 @@ export default function ManageVehicle() {
     navigate("/tcb-person", { state: { user } });
   };
 
+  const handleGoToOnlKT = () => {
+    navigate("/onl-schedules", { state: { user } });
+  };
+
   // visibleColumns khởi tạo mặc định từ allColumns
   const [visibleColumns, setVisibleColumns] = useState(
     allColumns.map((c) => c.key),
@@ -133,28 +137,23 @@ export default function ManageVehicle() {
 
       // sort plateNumber as numeric if possible (strings of digits)
       const sorted = [...data].sort((a, b) => {
+        const companyA = (a.company || "").trim().toUpperCase();
+        const companyB = (b.company || "").trim().toUpperCase();
+
+        // Ưu tiên MINH QUÂN
+        if (companyA === "MINH QUÂN" && companyB !== "MINH QUÂN") return -1;
+        if (companyA !== "MINH QUÂN" && companyB === "MINH QUÂN") return 1;
+
+        // Gom theo đơn vị vận tải
+        const companyCompare = companyA.localeCompare(companyB, "vi");
+        if (companyCompare !== 0) return companyCompare;
+
+        // Trong cùng đơn vị thì sort biển số
         const numA = Number((a.plateNumber || "").replace(/\D/g, "") || 0);
         const numB = Number((b.plateNumber || "").replace(/\D/g, "") || 0);
 
-        if (numA !== numB) return numA - numB;
-
-        // tiebreaker: Minh Quân first
-        if (
-          (a.company || "").trim() === "Minh Quân" &&
-          (b.company || "").trim() !== "Minh Quân"
-        )
-          return -1;
-
-        if (
-          (a.company || "").trim() !== "Minh Quân" &&
-          (b.company || "").trim() === "Minh Quân"
-        )
-          return 1;
-
-        return 0;
+        return numA - numB;
       });
-
-      console.log(data);
 
       setVehicles(sorted);
 
@@ -621,6 +620,15 @@ export default function ManageVehicle() {
           }`}
         >
           TCB cá nhân
+        </button>
+
+        <button
+          onClick={handleGoToOnlKT}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          KT - Lịch trình
         </button>
       </div>
 

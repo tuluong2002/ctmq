@@ -1,52 +1,34 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
-import ProfileModal from "../components/ProfileModal";
-import API from "../api";
+import axios from "axios";
+import API from "../../api";
+import AddUserScheduleModal from "../../components/ScheduleModal/AddUserScheduleModal";
 
 const normalizeText = (str = "") =>
   str
     .toString()
-    .normalize("NFD") // tách dấu
-    .replace(/[\u0300-\u036f]/g, "") // xoá dấu
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D")
     .toLowerCase()
     .trim();
 
-const KeToanPage = () => {
+const ManageOnlineSchedule = () => {
   const [filterType, setFilterType] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [filteredData, setFilteredData] = useState([]);
-  const [user, setUser] = useState(null);
   const [activeRows, setActiveRows] = useState([]);
   const [searchDriver, setSearchDriver] = useState("");
   const [dateMode, setDateMode] = useState("ngayDi");
-  // "ngayDi" | "createdAt"
+  const [user, setUser] = useState(null);
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-  const navigate = useNavigate(); // 👈 khởi tạo navigate
-
-  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-
-  // State quản lý user hiện tại, để live update avatar/tên
-  const [currentUserState, setCurrentUserState] = useState(user || storedUser);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  // 👉 Hàm đăng xuất
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    window.location.href = "/";
-  };
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isActive = (path) => location.pathname === path;
 
   // 👉 Hàm chuyển sang trang quản lý lái xe
   const handleGoToDrivers = () => {
@@ -76,37 +58,29 @@ const KeToanPage = () => {
   const handleGoToCustomer26 = () => {
     navigate("/customer-debt-26", { state: { user } });
   };
-
-  const handleGoToVoucher = () => {
+  const handleGoToVouchers = () =>
     navigate("/voucher-list", { state: { user } });
-  };
-
-  const handleGoToCostManagement = () => {
-    navigate("/cost-management", { state: { user } });
-  };
 
   const handleGoToContract = () => {
     navigate("/contract", { state: { user } });
   };
+
   const handleGoToTCB = () => {
     navigate("/tcb-person", { state: { user } });
   };
 
-  const handleGoToOnlLT = () => {
+  const handleGoToOnlKT = () => {
     navigate("/onl-schedules", { state: { user } });
   };
 
-  const handleGoToAddress = () => {
-    navigate("/address", { state: { user } });
-  };
+  const [showAddSchedule, setShowAddSchedule] = useState(false);
 
-  const handleGoToCustomer2 = () => {
-    navigate("/customer2", { state: { user } });
-  };
-
-  const handleGoToMngOil = () => {
-    navigate("/manage-oil", { state: { user } });
-  };
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const handleExport = async () => {
     if (!selectedDate) return alert("Vui lòng chọn ngày.");
@@ -116,8 +90,8 @@ const KeToanPage = () => {
 
       const url =
         dateMode === "createdAt"
-          ? `${API}/schedules/export-by-created-date`
-          : `${API}/schedules/export`;
+          ? `${API}/user-schedules/export-by-created-date`
+          : `${API}/user-schedules/export`;
 
       const response = await axios.get(url, {
         params: { ngay: formattedDate },
@@ -131,8 +105,8 @@ const KeToanPage = () => {
       const [year, month, day] = formattedDate.split("-");
       const fileName =
         dateMode === "createdAt"
-          ? `lichtrinh_ngaytao_${day}_${month}_${year}.xlsx`
-          : `lichtrinh_${day}_${month}_${year}.xlsx`;
+          ? `lichtrinh_ngaytao_${day}_${month}_${year}_KT.xlsx`
+          : `lichtrinh_${day}_${month}_${year}_KT.xlsx`;
 
       link.setAttribute("download", fileName);
       document.body.appendChild(link);
@@ -152,8 +126,8 @@ const KeToanPage = () => {
 
       const url =
         dateMode === "createdAt"
-          ? `${API}/schedules/by-created-date`
-          : `${API}/schedules`;
+          ? `${API}/user-schedules/by-created-date`
+          : `${API}/user-schedules`;
 
       const response = await axios.get(url, {
         params: { ngay: formattedDate },
@@ -179,7 +153,7 @@ const KeToanPage = () => {
 
     try {
       const formattedDate = new Date(selectedDate).toISOString().split("T")[0];
-      await axios.delete(`${API}/schedules?ngay=${formattedDate}`);
+      await axios.delete(`${API}/user-schedules?ngay=${formattedDate}`);
       alert("Đã xóa thành công!");
       setFilteredData([]);
     } catch (err) {
@@ -204,8 +178,8 @@ const KeToanPage = () => {
 
       const url =
         dateMode === "createdAt"
-          ? `${API}/schedules/by-created-range`
-          : `${API}/schedules/range`;
+          ? `${API}/user-schedules/by-created-range`
+          : `${API}/user-schedules/range`;
 
       const response = await axios.get(url, {
         params: { from, to },
@@ -234,7 +208,7 @@ const KeToanPage = () => {
     try {
       const from = new Date(startDate).toISOString().split("T")[0];
       const to = new Date(endDate).toISOString().split("T")[0];
-      await axios.delete(`${API}/schedules/range?from=${from}&to=${to}`);
+      await axios.delete(`${API}/user-schedules/range?from=${from}&to=${to}`);
       alert("Đã xóa thành công!");
       setFilteredData([]);
     } catch (err) {
@@ -259,8 +233,8 @@ const KeToanPage = () => {
 
       const url =
         dateMode === "createdAt"
-          ? `${API}/schedules/export-by-created-range`
-          : `${API}/schedules/export-range`;
+          ? `${API}/user-schedules/export-by-created-range`
+          : `${API}/user-schedules/export-range`;
 
       const response = await axios.get(url, {
         params: { from, to },
@@ -273,8 +247,8 @@ const KeToanPage = () => {
 
       const fileName =
         dateMode === "createdAt"
-          ? `lichtrinh_ngaytao_tu_${from}_den_${to}.xlsx`
-          : `lichtrinh_tu_${from}_den_${to}.xlsx`;
+          ? `lichtrinh_ngaytao_tu_${from}_den_${to}_KT.xlsx`
+          : `lichtrinh_tu_${from}_den_${to}_KT.xlsx`;
 
       link.setAttribute("download", fileName);
       document.body.appendChild(link);
@@ -309,155 +283,120 @@ const KeToanPage = () => {
 
     return matchDriver || matchMaLT;
   });
-
   return (
     <div className="p-4 text-xs">
-      {/* Header hiển thị user và các nút */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-xl font-bold">TRANG QUẢN LÝ CỦA KẾ TOÁN</h1>
-        {user && (
-          <div className="flex items-center gap-3">
-            <img
-              src={currentUserState.avatar || null}
-              alt="avatar"
-              className="w-10 h-10 rounded-full object-cover"
-            />
-            <span className="font-medium">
-              Xin chào, {currentUserState.fullname}
-            </span>
+      <div className="flex gap-2 items-center mb-4">
+        <button
+          onClick={() => navigate("/ke-toan")}
+          className="px-3 py-1 rounded text-white bg-blue-500"
+        >
+          Trang chính
+        </button>
 
-            <button
-              onClick={() => setShowProfileModal(true)}
-              className="bg-yellow-400 rounded-full border"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="size-6"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                />
-              </svg>
-            </button>
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white px-3 py-1 rounded"
-            >
-              Đăng xuất
-            </button>
-          </div>
-        )}
-      </div>
-      <div className="flex gap-2 items-center mb-4 mt-10">
         <button
           onClick={handleGoToDrivers}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-driver") ? "bg-green-600" : "bg-blue-500"}
+    `}
         >
           Danh sách lái xe
         </button>
+
         <button
           onClick={handleGoToCustomers}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-customer") ? "bg-green-600" : "bg-blue-500"}
+    `}
         >
           Danh sách khách hàng
         </button>
+
         <button
           onClick={handleGoToVehicles}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-vehicle") ? "bg-green-600" : "bg-blue-500"}
+    `}
         >
           Danh sách xe
         </button>
+
         <button
           onClick={handleGoToTrips}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-trip") ? "bg-green-600" : "bg-blue-500"}
+    `}
         >
           Danh sách chuyến phụ trách
         </button>
+
         <button
           onClick={() => {
-            if (!storedUser?.permissions?.includes("edit_trip")) {
+            if (!currentUser?.permissions?.includes("edit_trip")) {
               alert("Bạn không có quyền truy cập!");
               return;
             }
             handleGoToAllTrips();
           }}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-all-trip") ? "bg-green-600" : "bg-blue-500"}
+    `}
         >
           Tất cả các chuyến
         </button>
 
         <button
           onClick={handleGoToAllCustomers}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/customer-debt") ? "bg-green-600" : "bg-blue-500"}
+    `}
         >
           Công nợ KH
         </button>
 
         <button
           onClick={handleGoToCustomer26}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/customer-debt-26") ? "bg-green-600" : "bg-blue-500"}
+    `}
         >
           Công nợ khách lẻ
         </button>
         <button
-          onClick={handleGoToVoucher}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          onClick={handleGoToVouchers}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/voucher-list") ? "bg-green-600" : "bg-blue-500"
+          }`}
         >
           Sổ phiếu chi
         </button>
         <button
           onClick={handleGoToContract}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/contract") ? "bg-green-600" : "bg-blue-500"
+          }`}
         >
           Hợp đồng vận chuyển
         </button>
         <button
           onClick={handleGoToTCB}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/tcb-person") ? "bg-green-600" : "bg-blue-500"
+          }`}
         >
           TCB cá nhân
         </button>
-
         <button
-          onClick={handleGoToOnlLT}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          onClick={handleGoToOnlKT}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
         >
           KT - Lịch trình
         </button>
-        <button
-          onClick={handleGoToAddress}
-          className="bg-purple-500 text-white px-3 py-1 rounded"
-        >
-          Địa chỉ
-        </button>
-        <button
-          onClick={handleGoToCustomer2}
-          className="bg-purple-500 text-white px-3 py-1 rounded"
-        >
-          KH điểm giao
-        </button>
-        <button
-          onClick={handleGoToMngOil}
-          className="bg-purple-500 text-white px-3 py-1 rounded"
-        >
-          Trạm dầu
-        </button>
-
-        <button
-          onClick={handleGoToCostManagement}
-          className="ml-auto bg-blue-500 text-white px-3 py-1 rounded"
-        >
-          Các mục chi phí
-        </button>
       </div>
-
-      <h4 className="text-sm font-bold">LỊCH TRÌNH LÁI XE NHẬP</h4>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">LỊCH TRÌNH LX KẾ TOÁN NHẬP</h1>
+      </div>
 
       {/* Bộ lọc ngày */}
       <div className="flex flex-wrap items-center gap-6 mb-4 mt-2">
@@ -499,6 +438,13 @@ const KeToanPage = () => {
             />
             Theo khoảng
           </label>
+
+          <button
+            onClick={() => setShowAddSchedule(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow"
+          >
+            + Thêm lịch trình
+          </button>
         </div>
       </div>
 
@@ -791,7 +737,12 @@ const KeToanPage = () => {
                         {schedule.tongTienLichTrinh} k
                       </td>
                     )}
-                    <td className="border p-1">{row.maLichTrinh}</td>
+                    <td
+                      className="border p-1 cursor-help"
+                      title={`Người thêm: ${schedule.nguoiTao || "Không xác định"}`}
+                    >
+                      {row.maLichTrinh}
+                    </td>
                   </tr>
                 )),
               )}
@@ -800,18 +751,13 @@ const KeToanPage = () => {
         </div>
       )}
 
-      {showProfileModal && (
-        <ProfileModal
-          user={currentUserState}
-          onClose={() => setShowProfileModal(false)}
-          onUpdate={(updatedUser) => {
-            localStorage.setItem("user", JSON.stringify(updatedUser));
-            setCurrentUserState(updatedUser); // 🔄 live update avatar + tên
-          }}
-        />
-      )}
+      <AddUserScheduleModal
+        open={showAddSchedule}
+        onClose={() => setShowAddSchedule(false)}
+        user={user}
+      />
     </div>
   );
 };
 
-export default KeToanPage;
+export default ManageOnlineSchedule;
