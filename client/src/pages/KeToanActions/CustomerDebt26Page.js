@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { BsUnlock, BsLock } from "react-icons/bs";
 import axios from "axios";
-import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { format } from "date-fns";
 import API from "../../api";
@@ -49,6 +48,18 @@ export default function CustomerDebt26Page() {
   const [trips, setTrips] = useState([]);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [highlightSelectTrip, setHighlightSelectTrip] = useState(null);
+
+  const [selectPaymentMode, setSelectPaymentMode] = useState(false);
+  const [selectedForPayment, setSelectedForPayment] = useState([]);
+  const [showBulkPaymentModal, setShowBulkPaymentModal] = useState(false);
+
+  const [paymentMethod, setPaymentMethod] = useState("COMPANY_VCB");
+  const [paymentDate, setPaymentDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [paymentNote, setPaymentNote] = useState("");
+
+  const fileInputImportRef = useRef(null);
 
   const getFirstDayOfMonth = () => {
     const now = new Date();
@@ -503,6 +514,79 @@ export default function CustomerDebt26Page() {
     } finally {
       setSyncingToBase(false);
     }
+  };
+
+  const handleBulkPayment = async () => {
+    try {
+      await axios.post(
+        `${API}/odd-debt/trip-payment/bulk`,
+        {
+          createdDay: paymentDate,
+          method: paymentMethod,
+          note: paymentNote,
+          createdBy: user.username,
+          maChuyenList: selectedForPayment,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+
+      alert("Thanh toán thành công");
+
+      setShowBulkPaymentModal(false);
+      setSelectedForPayment([]);
+      setSelectPaymentMode(false);
+      setPaymentNote("");
+
+      loadData(page);
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.error || "Thanh toán thất bại");
+    }
+  };
+
+  const handleImportTripFee = async (e) => {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await axios.post(
+        `${API}/odd-debt/import-trip-fee`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      const data = res.data;
+
+      let msg =
+        `Import thành công.\n\n` + `Đã cập nhật: ${data.modified} chuyến`;
+
+      if (data.skipped?.length) {
+        msg += `\nBỏ qua: ${data.skipped.length} chuyến`;
+      }
+
+      alert(msg);
+
+      loadData(page);
+    } catch (err) {
+      console.error(err);
+
+      alert(err.response?.data?.error || "Import thất bại");
+    }
+
+    e.target.value = "";
   };
 
   const [exporting, setExporting] = useState(false);
@@ -1167,6 +1251,51 @@ export default function CustomerDebt26Page() {
             >
               Khoá tất cả
             </button>
+
+            <button
+              className={`px-4 py-2 text-white rounded text-xs ${
+                selectPaymentMode
+                  ? "bg-red-500 hover:bg-red-600"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
+              onClick={() => {
+                setSelectPaymentMode((v) => !v);
+                setSelectedForPayment([]);
+              }}
+            >
+              {selectPaymentMode ? "Huỷ tích chọn" : "Tích chọn TT"}
+            </button>
+
+            {selectPaymentMode && (
+              <button
+                className="px-4 py-2 text-white rounded text-xs bg-green-600 hover:bg-green-700"
+                onClick={() => {
+                  if (!selectedForPayment.length) {
+                    alert("Chưa chọn chuyến nào");
+                    return;
+                  }
+
+                  setShowBulkPaymentModal(true);
+                }}
+              >
+                Thanh toán tất cả
+              </button>
+            )}
+
+            <button
+              onClick={() => fileInputImportRef.current?.click()}
+              className="px-4 py-2 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700"
+            >
+              Nhập từ Excel
+            </button>
+
+            <input
+              ref={fileInputImportRef}
+              type="file"
+              accept=".xlsx,.xls"
+              hidden
+              onChange={handleImportTripFee}
+            />
           </div>
           <div className="flex justify-between items-center gap-4 mb-3">
             {/* LEFT – update nameCustomer */}
@@ -1301,6 +1430,25 @@ export default function CustomerDebt26Page() {
             <table className="table-fixed border-separate border-spacing-0">
               <thead className="bg-gray-100">
                 <tr>
+                  {selectPaymentMode && (
+                    <th className="border w-16 min-w-[30px] sticky left-0 bg-white z-30">
+                      TT
+                      <input
+                        type="checkbox"
+                        checked={
+                          trips.length > 0 &&
+                          selectedForPayment.length === trips.length
+                        }
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedForPayment(trips.map((x) => x.maChuyen));
+                          } else {
+                            setSelectedForPayment([]);
+                          }
+                        }}
+                      />
+                    </th>
+                  )}
                   <th
                     className="border sticky top-[-1px] left-[-1px] z-50 bg-gray-100 text-center"
                     style={{ width: 32, minWidth: 32, maxWidth: 32 }}
@@ -2387,6 +2535,21 @@ export default function CustomerDebt26Page() {
                         : undefined,
                     }}
                   >
+                    {selectPaymentMode && (
+                      <td className="border text-center sticky left-0 bg-white z-20 w-20">
+                        <input
+                          type="checkbox"
+                          checked={selectedForPayment.includes(t.maChuyen)}
+                          onChange={(e) => {
+                            setSelectedForPayment((prev) =>
+                              e.target.checked
+                                ? [...prev, t.maChuyen]
+                                : prev.filter((x) => x !== t.maChuyen),
+                            );
+                          }}
+                        />
+                      </td>
+                    )}
                     {/* LEFT checkbox – nameCustomer */}
                     <td
                       className="border sticky left-[-1px] z-40 bg-white text-center"
@@ -2769,6 +2932,73 @@ export default function CustomerDebt26Page() {
         moneyFields={MONEY_FIELDS}
         onSaved={loadData}
       />
+
+      {showBulkPaymentModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-5 w-[420px]">
+            <div className="text-lg font-bold mb-4">Thanh toán hàng loạt</div>
+
+            <div className="mb-3 text-sm">
+              Đã chọn <b>{selectedForPayment.length}</b> chuyến
+            </div>
+
+            <div className="mb-3">
+              <label className="text-sm">Ngày thanh toán</label>
+
+              <input
+                type="date"
+                className="border w-full p-2"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+              />
+            </div>
+
+            <div className="mb-3">
+              <label className="text-sm">Phương thức</label>
+
+              <select
+                className="border w-full p-2"
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+              >
+                <option value="PERSONAL_VCB">VCB cá nhân</option>
+                <option value="PERSONAL_TCB">TCB cá nhân</option>
+                <option value="COMPANY_VCB">VCB công ty</option>
+                <option value="COMPANY_TCB">TCB công ty</option>
+                <option value="CASH">Tiền mặt</option>
+                <option value="OTHER">Khác</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="text-sm">Ghi chú</label>
+
+              <textarea
+                rows={3}
+                className="border w-full p-2"
+                value={paymentNote}
+                onChange={(e) => setPaymentNote(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-300 rounded"
+                onClick={() => setShowBulkPaymentModal(false)}
+              >
+                Huỷ
+              </button>
+
+              <button
+                className="px-4 py-2 bg-green-600 text-white rounded"
+                onClick={handleBulkPayment}
+              >
+                Thanh toán
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

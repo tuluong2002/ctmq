@@ -1,8 +1,14 @@
 const express = require("express");
+const multer = require("multer");
 const router = express.Router();
 
 // controller
 const oddDebtCtrl = require("../controllers/oddCustomerDebt.controller");
+
+// upload file vào memory
+const upload = multer({
+  storage: multer.memoryStorage(),
+});
 
 // ===============================
 // 📌 CÔNG NỢ KHÁCH LẺ (KH = 26)
@@ -22,6 +28,13 @@ router.get("/filter-all", oddDebtCtrl.getAllOddDebtFilterOptions);
 // GET /api/odd-debt?startDate=&endDate=&page=&limit=
 router.get("/all", oddDebtCtrl.getOddCustomerDebt);
 
+// 🔹 Import tiền từ Excel
+router.post(
+  "/import-trip-fee",
+  upload.single("file"),
+  oddDebtCtrl.importTripFee,
+);
+
 // ===============================
 // 📌 THANH TOÁN THEO CHUYẾN
 // ===============================
@@ -33,6 +46,8 @@ router.get("/payment/:maChuyenCode", oddDebtCtrl.getTripPaymentHistory);
 // 🔹 Thêm thanh toán cho chuyến
 // POST /api/odd-debt/payment
 router.post("/payment", oddDebtCtrl.addTripPayment);
+
+router.post("/trip-payment/bulk", oddDebtCtrl.addBulkTripPayment);
 
 // 🔹 Xoá 1 lần thanh toán
 // DELETE /api/odd-debt/payment/:paymentId

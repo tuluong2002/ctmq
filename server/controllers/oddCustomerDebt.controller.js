@@ -626,6 +626,87 @@ exports.addTripPayment = async (req, res) => {
 };
 
 // =====================================================
+// 📌 THANH TOÁN NHIỀU CHUYẾN (CẬP NHẬT SCHEDULEADMIN)
+// =====================================================
+exports.addBulkTripPayment = async (req, res) => {
+  try {
+    const { createdDay, method, note, createdBy, maChuyenList } = req.body;
+
+    if (!Array.isArray(maChuyenList) || !maChuyenList.length) {
+      return res.status(400).json({
+        error: "Danh sách chuyến không hợp lệ",
+      });
+    }
+
+    const createdDayDate = createdDay
+      ? new Date(createdDay + "T00:00:00.000Z")
+      : new Date();
+
+    const trips = await SchCustomerOdd.find({
+      maChuyen: { $in: maChuyenList },
+      isLocked: { $ne: true },
+    });
+
+    const payments = [];
+    const updateOps = [];
+    const skipped = [];
+
+    for (const trip of trips) {
+      const remain = Number(trip.conLai);
+
+      if (remain <= 0) {
+        skipped.push({
+          maChuyen: trip.maChuyen,
+          reason: "Đã thanh toán đủ",
+        });
+        continue;
+      }
+
+      payments.push({
+        maChuyenCode: trip.maChuyen,
+        amount: remain,
+        method,
+        note,
+        createdBy,
+        createdDay: createdDayDate,
+      });
+
+      updateOps.push({
+        updateOne: {
+          filter: { _id: trip._id },
+          update: {
+            $set: {
+              daThanhToan: String(Number(trip.tongTien)),
+              conLai: 0,
+              status: "HOAN_TAT",
+            },
+          },
+        },
+      });
+    }
+
+    if (payments.length) {
+      await TripPayment.insertMany(payments);
+    }
+
+    if (updateOps.length) {
+      await SchCustomerOdd.bulkWrite(updateOps);
+    }
+
+    res.json({
+      message: "Đã tạo phiếu thanh toán",
+      success: payments.length,
+      skipped,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: "Không thể thêm thanh toán hàng loạt",
+    });
+  }
+};
+
+// =====================================================
 // 📌 XOÁ THANH TOÁN THEO CHUYẾN (CẬP NHẬT LẠI ScheduleAdmin)
 // =====================================================
 exports.deleteTripPayment = async (req, res) => {
@@ -1182,5 +1263,149 @@ exports.exportOddDebtByDateRange = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Lỗi xuất Excel công nợ KH lẻ" });
+  }
+};
+
+// ==========================================
+// NHẬP DATA TỪ FILE EXCEL CÔNG NỢ KHÁCH LẺ
+// ==========================================
+const XLSX = require("xlsx");
+
+exports.importTripFee = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        error: "Chưa chọn file",
+      });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, {
+      type: "buffer",
+    });
+
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      header: 1,
+      range: 1, // bắt đầu từ dòng 2
+      defval: "",
+    });
+
+    // Lấy danh sách mã chuyến trong file
+    const maChuyenList = rows
+      .map((r) => String(r[1] || "").trim())
+      .filter(Boolean);
+
+    // Query 1 lần
+    const trips = await SchCustomerOdd.find({
+      maChuyen: { $in: maChuyenList },
+    }).select("_id maChuyen isLocked daThanhToan");
+
+    const tripMap = new Map(trips.map((t) => [t.maChuyen, t]));
+
+    const bulkOps = [];
+    const skipped = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+
+      const maChuyen = String(row[1] || "").trim();
+
+      if (!maChuyen) continue;
+
+      const trip = tripMap.get(maChuyen);
+
+      if (!trip) {
+        skipped.push({
+          row: i + 2,
+          maChuyen,
+          reason: "Không tồn tại",
+        });
+        continue;
+      }
+
+      if (trip.isLocked) {
+        skipped.push({
+          row: i + 2,
+          maChuyen,
+          reason: "Đã khóa",
+        });
+        continue;
+      }
+
+      const cuocPhi = String(Number(row[12] || 0));
+      const themDiem = String(Number(row[13] || 0));
+      const bocXep = String(Number(row[14] || 0));
+      const ve = String(Number(row[15] || 0));
+      const hangVe = String(Number(row[16] || 0));
+      const luuCa = String(Number(row[17] || 0));
+      const luatChiPhiKhac = String(Number(row[18] || 0));
+
+      const tongTien =
+        parseMoneyStr(cuocPhi) +
+        parseMoneyStr(themDiem) +
+        parseMoneyStr(bocXep) +
+        parseMoneyStr(ve) +
+        parseMoneyStr(hangVe) +
+        parseMoneyStr(luuCa) +
+        parseMoneyStr(luatChiPhiKhac);
+
+      const daThanhToan = parseMoneyStr(trip.daThanhToan);
+
+      const conLai = tongTien - daThanhToan;
+
+      let status = "CHUA_TRA";
+
+      if (conLai < 0) {
+        status = "TRA_THUA";
+      } else if (conLai === 0) {
+        status = "HOAN_TAT";
+      } else if (daThanhToan > 0) {
+        status = "TRA_MOT_PHAN";
+      }
+
+      bulkOps.push({
+        updateOne: {
+          filter: {
+            _id: trip._id,
+          },
+          update: {
+            $set: {
+              cuocPhi,
+              themDiem,
+              bocXep,
+              ve,
+              hangVe,
+              luuCa,
+              luatChiPhiKhac,
+
+              tongTien,
+              conLai,
+              status,
+            },
+          },
+        },
+      });
+    }
+
+    let modified = 0;
+
+    if (bulkOps.length) {
+      const rs = await SchCustomerOdd.bulkWrite(bulkOps);
+      modified = rs.modifiedCount;
+    }
+
+    return res.json({
+      success: true,
+      totalRows: rows.length,
+      imported: bulkOps.length,
+      modified,
+      skipped,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      error: "Import thất bại",
+    });
   }
 };
