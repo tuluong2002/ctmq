@@ -94,6 +94,11 @@ export default function VoucherListPage() {
     JSON.parse(localStorage.getItem("user") || "null") || location.state?.user;
   const isActive = (path) => location.pathname === path;
 
+  const currentUsername = user.username || "";
+  const canPrintTransferredVoucher = currentUsername === "doanthuy";
+
+  const [allYear, setAllYear] = useState(false);
+
   // navigation helpers (mirrors ManageCustomer)
   const handleGoToDrivers = () =>
     navigate("/manage-driver", { state: { user } });
@@ -218,11 +223,16 @@ export default function VoucherListPage() {
   // Load danh sách phiếu
   const load = async () => {
     setLoading(true);
+
     try {
       const res = await axios.get(`${API}/vouchers`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { month, year },
+        params: {
+          year,
+          ...(allYear ? { allYear: true } : { month }),
+        },
       });
+
       setList(res.data);
     } catch (err) {
       console.error(err);
@@ -234,7 +244,7 @@ export default function VoucherListPage() {
 
   useEffect(() => {
     load();
-  }, [month, year]);
+  }, [month, year, allYear]);
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -973,22 +983,32 @@ export default function VoucherListPage() {
         <h1 className="text-lg font-bold">SỔ PHIẾU CHI</h1>{" "}
       </div>
       {/* Bộ lọc tháng/năm */}
-      <div className="mb-4">
+      <div className="mb-4 flex items-center flex-wrap gap-2">
         <select
-          value={month}
-          onChange={(e) => setMonth(Number(e.target.value))}
-          className="border px-2 py-1 rounded mr-2"
+          value={allYear ? "all" : month}
+          onChange={(e) => {
+            if (e.target.value === "all") {
+              setAllYear(true);
+            } else {
+              setAllYear(false);
+              setMonth(Number(e.target.value));
+            }
+          }}
+          className="border px-2 py-1 rounded"
         >
+          <option value="all">Cả năm</option>
+
           {[...Array(12)].map((_, i) => (
             <option key={i} value={i + 1}>
               Tháng {i + 1}
             </option>
           ))}
         </select>
+
         <select
           value={year}
           onChange={(e) => setYear(Number(e.target.value))}
-          className="border px-2 py-1 rounded mr-2"
+          className="border px-2 py-1 rounded"
         >
           {YEARS.map((y) => (
             <option key={y} value={y}>
@@ -996,18 +1016,21 @@ export default function VoucherListPage() {
             </option>
           ))}
         </select>
+
         <button
           onClick={() => {
+            setAllYear(false);
             setMonth(now.getMonth() + 1);
             setYear(now.getFullYear());
           }}
-          className="px-3 py-1 rounded bg-blue-500 text-white mr-2"
+          className="px-3 py-1 rounded bg-blue-500 text-white"
         >
           RESET
         </button>
+
         <button
           onClick={() => setShowExportModal(true)}
-          className="px-3 py-1 rounded bg-gray-700 text-white mr-2"
+          className="px-3 py-1 rounded bg-gray-700 text-white"
         >
           Xuất Excel
         </button>
@@ -1327,16 +1350,53 @@ export default function VoucherListPage() {
                                   >
                                     <FiEye size={14} />
                                   </button>
+
+                                  {/* IN PHIẾU */}
                                   <button
-                                    className="text-red-600 ml-1"
+                                    className={`ml-1 ${
+                                      v.transferDate &&
+                                      !canPrintTransferredVoucher
+                                        ? "text-gray-300 cursor-not-allowed"
+                                        : "text-red-600"
+                                    }`}
+                                    disabled={
+                                      !!v.transferDate &&
+                                      !canPrintTransferredVoucher
+                                    }
+                                    title={
+                                      v.transferDate &&
+                                      !canPrintTransferredVoucher
+                                        ? `Phiếu đã chuyển tiền ngày ${new Date(
+                                            v.transferDate,
+                                          ).toLocaleDateString(
+                                            "vi-VN",
+                                          )}, không được in lại`
+                                        : "In phiếu"
+                                    }
                                     onClick={async () => {
+                                      // Đã chuyển tiền thì không cho in,
+                                      // trừ username doanthuy
+                                      if (
+                                        v.transferDate &&
+                                        !canPrintTransferredVoucher
+                                      ) {
+                                        alert(
+                                          `Phiếu này đã chuyển tiền ngày ${new Date(
+                                            v.transferDate,
+                                          ).toLocaleDateString(
+                                            "vi-VN",
+                                          )} nên không được in lại.`,
+                                        );
+                                        return;
+                                      }
+
                                       try {
-                                        // 1️⃣ GỌI API IN → AUTO APPROVE NẾU waiting_check
+                                        // GỌI API IN → AUTO APPROVE NẾU waiting_check
                                         await axios.post(
                                           `${API}/vouchers/${v._id}/print`,
                                         );
 
-                                        // 2️⃣ MỞ TRANG IN (GET – KHÔNG SIDE EFFECT)
+                                        // MỞ TRANG IN
                                         window.open(
                                           `/voucher/${v._id}/print`,
                                           "_blank",

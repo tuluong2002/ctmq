@@ -108,6 +108,10 @@ const KeToanPage = () => {
     navigate("/manage-oil", { state: { user } });
   };
 
+  const handleGoToScheErr = () => {
+    navigate("/schedule-errors", { state: { user } });
+  };
+
   const handleExport = async () => {
     if (!selectedDate) return alert("Vui lòng chọn ngày.");
 
@@ -359,7 +363,7 @@ const KeToanPage = () => {
           </div>
         )}
       </div>
-      <div className="flex gap-2 items-center mb-4 mt-10">
+      <div className="flex gap-2 items-center mb-2 mt-10">
         <button
           onClick={handleGoToDrivers}
           className="bg-blue-500 text-white px-3 py-1 rounded"
@@ -459,6 +463,15 @@ const KeToanPage = () => {
           className="ml-auto bg-blue-500 text-white px-3 py-1 rounded"
         >
           Các mục chi phí
+        </button>
+      </div>
+
+      <div className="flex gap-2 items-center mb-6">
+        <button
+          onClick={handleGoToScheErr}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          DS chuyến sai sót
         </button>
       </div>
 

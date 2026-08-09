@@ -35,9 +35,7 @@ exports.createVoucher = async (req, res) => {
     const prefix = getVoucherPrefix(data.paymentSource);
 
     // ví dụ: ^PCCN\.09\.26\.\d{3}$
-    const regex = new RegExp(
-      `^${prefix}\\.${monthStr}\\.${yearStr}\\.\\d{3}$`,
-    );
+    const regex = new RegExp(`^${prefix}\\.${monthStr}\\.${yearStr}\\.\\d{3}$`);
 
     let voucherCode;
     let retry = 0;
@@ -94,35 +92,57 @@ exports.createVoucher = async (req, res) => {
 // =========================
 exports.getAllVouchers = async (req, res) => {
   try {
-    const { month, year } = req.query;
+    const { month, year, allYear } = req.query;
 
     let filter = {};
 
-    // Nếu có truyền month + year thì tạo khoảng ngày
-    if (month && year) {
-      const start = new Date(year, month - 1, 1, 0, 0, 0);
-      const end = new Date(year, month, 0, 23, 59, 59);
-      // month,0 là ngày cuối của tháng
+    // Nếu allYear=true + có year → lấy toàn bộ phiếu trong năm
+    if (allYear === "true" && year) {
+      const start = new Date(Number(year), 0, 1, 0, 0, 0);
+      const end = new Date(Number(year) + 1, 0, 1, 0, 0, 0);
 
-      filter.dateCreated = { $gte: start, $lte: end };
+      filter.dateCreated = {
+        $gte: start,
+        $lt: end,
+      };
     }
 
-    const list = await Voucher.find(filter).sort({ dateCreated: -1 }).lean(); // chuyển thành object thường để sửa thêm
+    // Nếu không lấy cả năm → lọc theo tháng + năm như cũ
+    else if (month && year) {
+      const start = new Date(Number(year), Number(month) - 1, 1, 0, 0, 0);
+
+      const end = new Date(Number(year), Number(month), 1, 0, 0, 0);
+
+      filter.dateCreated = {
+        $gte: start,
+        $lt: end,
+      };
+    }
+
+    const list = await Voucher.find(filter).sort({ dateCreated: -1 }).lean();
 
     // Thêm voucherCode của phiếu gốc nếu có
     const listWithOrig = await Promise.all(
       list.map(async (v) => {
         if (v.adjustedFrom) {
           const orig = await Voucher.findById(v.adjustedFrom);
-          if (orig) v.origVoucherCode = orig.voucherCode;
+
+          if (orig) {
+            v.origVoucherCode = orig.voucherCode;
+          }
         }
+
         return v;
       }),
     );
 
     res.json(listWithOrig);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("GET ALL VOUCHERS ERROR:", err);
+
+    res.status(500).json({
+      error: err.message,
+    });
   }
 };
 
@@ -494,6 +514,7 @@ exports.exportVouchers = async (req, res) => {
       // ✅ chuyển status sang tiếng Việt
       row.getCell("L").value = STATUS_LABEL[v.status] || v.status;
       row.getCell("M").value = v.receiverBankAccount || null;
+      row.getCell("N").value = v.createByName || null;
 
       row.commit();
     });

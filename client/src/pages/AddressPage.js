@@ -45,6 +45,36 @@ export default function AddressPage() {
     fetchData(page);
   }, [page]);
 
+  const handleExport = async () => {
+    try {
+      const response = await axios.get(`${API}/address/export-excel`, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `Danh_sach_dia_chi_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      );
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("EXPORT ADDRESS ERROR:", err);
+      alert("Lỗi xuất Excel");
+    }
+  };
+
   const handleImport = async () => {
     if (!file || importing) return;
 
@@ -169,6 +199,15 @@ export default function AddressPage() {
             </div>
           </div>
         )}
+
+        <button
+          onClick={handleExport}
+          disabled={loading || importing}
+          className="px-4 py-2 rounded text-xs text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+        >
+          {" "}
+         Xuất Excel{" "}
+        </button>
 
         <button
           onClick={handleClear}

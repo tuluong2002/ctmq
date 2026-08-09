@@ -481,9 +481,9 @@ export default function VoucherCreateModal({
             type="date"
             name="dateCreated"
             value={form.dateCreated}
-            onChange={change}
-            onClick={(e) => e.target.showPicker()}
-            className="border border-gray-300 rounded-md outline-none p-2 w-40"
+            readOnly
+            disabled
+            className="border border-gray-300 rounded-md outline-none p-2 w-40 bg-gray-100 text-gray-600 cursor-not-allowed"
           />
         </div>
 

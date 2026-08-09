@@ -39,6 +39,8 @@ import ManageTCBperson from "./pages/KeToanActions/ManageTCBperson";
 import ManageOil from "./pages/KeToanActions/ManageOil";
 import ManageOnlineSchedule from "./pages/KeToanActions/ManageOnlineSchedule";
 
+import ScheduleErrorPage from "./pages/KeToanActions/ScheduleErrorPage";
+
 import AddressPage from "./pages/AddressPage";
 import Customer2Page from "./pages/Customer2Page";
 
@@ -285,6 +287,15 @@ function App() {
           element={
             <PrivateRoute roles={["keToan"]}>
               <ManageAllTrip user={user} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/schedule-errors"
+          element={
+            <PrivateRoute roles={["keToan"]}>
+              <ScheduleErrorPage user={user} />
             </PrivateRoute>
           }
         />

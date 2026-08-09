@@ -10,10 +10,12 @@ const {
   getAllAddresses,          
   importAddressExcel,
   clearAllAddresses,
+  exportAddressExcel
 } = require("../controllers/address.controller");
 
 // ⚠️ Đặt /all TRƯỚC / (nếu sau này có route động)
 router.get("/all", getAllAddresses);     // ✅ GET ALL DATA
+router.get("/export-excel",  exportAddressExcel);
 router.get("/", getAddressesPaginated);
 
 router.post("/import-excel", upload.single("file"), importAddressExcel);

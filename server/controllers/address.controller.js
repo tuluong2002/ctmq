@@ -281,3 +281,116 @@ exports.clearAllAddresses = async (req, res) => {
     res.status(500).json({ message: "Lỗi xoá địa chỉ" });
   }
 };
+
+
+/**
+ * =========================
+ * EXPORT EXCEL
+ * =========================
+ * GET /api/addresses/export-excel
+ */
+exports.exportAddressExcel = async (req, res) => {
+  try {
+    const data = await Address.find()
+      .sort({ diaChi: 1 })
+      .lean();
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Danh sách địa chỉ");
+
+    // Header
+    worksheet.columns = [
+      {
+        header: "Địa chỉ",
+        key: "diaChi",
+        width: 80,
+      },
+      {
+        header: "Địa chỉ mới",
+        key: "diaChiMoi",
+        width: 80,
+      },
+      {
+        header: "Ghi chú",
+        key: "ghiChu",
+        width: 60,
+      },
+    ];
+
+    // Thêm dữ liệu
+    data.forEach((item) => {
+      worksheet.addRow({
+        diaChi: item.diaChi || "",
+        diaChiMoi: item.diaChiMoi || "",
+        ghiChu: item.ghiChu || "",
+      });
+    });
+
+    // Style header
+    const headerRow = worksheet.getRow(1);
+
+    headerRow.font = {
+      bold: true,
+    };
+
+    headerRow.alignment = {
+      vertical: "middle",
+      horizontal: "center",
+    };
+
+    headerRow.height = 25;
+
+    // Căn giữa theo chiều dọc
+    worksheet.eachRow((row) => {
+      row.alignment = {
+        vertical: "middle",
+        wrapText: true,
+      };
+    });
+
+    // Freeze header
+    worksheet.views = [
+      {
+        state: "frozen",
+        ySplit: 1,
+      },
+    ];
+
+    // Border cho bảng
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" },
+        };
+      });
+    });
+
+    // Tên file
+    const fileName = `Danh_sach_dia_chi_${new Date()
+      .toISOString()
+      .slice(0, 10)}.xlsx`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName}"`
+    );
+
+    await workbook.xlsx.write(res);
+
+    res.end();
+  } catch (err) {
+    console.error("EXPORT ADDRESS ERROR:", err);
+
+    res.status(500).json({
+      message: "Lỗi xuất Excel",
+    });
+  }
+};

@@ -346,9 +346,10 @@ export default function VoucherEditModal({ id, customers, voucher, onClose }) {
             <input
               type="date"
               name="dateCreated"
-              value={form.dateCreated?.slice(0, 10)}
-              onChange={change}
-              className="border p-2 rounded"
+              value={form.dateCreated?.slice(0, 10) || ""}
+              readOnly
+              disabled
+              className="mt-2 border p-2 rounded bg-gray-100 text-gray-600 cursor-not-allowed"
             />
           </div>
 

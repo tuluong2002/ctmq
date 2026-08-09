@@ -216,7 +216,7 @@ export default function VoucherAdjustModal({
 
       fd.append(
         "amountInWords",
-        numberToVietnameseWords(Number(form.amount || 0))
+        numberToVietnameseWords(Number(form.amount || 0)),
       );
 
       fd.append("createByName", user?.fullname || user?.username);
@@ -257,6 +257,8 @@ export default function VoucherAdjustModal({
             name="dateCreated"
             value={form.dateCreated}
             onChange={change}
+            readOnly
+            disabled
             className="border border-gray-300 rounded-md outline-none p-2 w-40"
           />
         </div>
@@ -305,8 +307,8 @@ export default function VoucherAdjustModal({
                 if (!text) return setNameSuggestions([]);
                 const match = customers.filter((c) =>
                   removeVietnameseTone(c.name || "").includes(
-                    removeVietnameseTone(text)
-                  )
+                    removeVietnameseTone(text),
+                  ),
                 );
                 setNameSuggestions(match.slice(0, 8));
               }}
