@@ -18,11 +18,33 @@ const ScheduleErrorPage = ({ user }) => {
   // =========================================================
   const [scheduleErrors, setScheduleErrors] = useState([]);
 
+  // =========================================================
+  // PHÂN TRANG
+  // =========================================================
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+
+  // Trang muốn chuyển đến
+  const [pageInput, setPageInput] = useState("1");
+
+  // =========================================================
+  // THỐNG KÊ - TÍNH TRÊN TOÀN BỘ KẾT QUẢ THEO BỘ LỌC
+  // KHÔNG PHỤ THUỘC TRANG
+  // =========================================================
+  const [summary, setSummary] = useState({
+    totalErrors: 0,
+    totalUnprocessed: 0,
+    totalAdjustmentUnprocessed: 0,
+  });
+
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+
+  const canEditScheduleError = user?.permissions?.includes("edit_sche_err");
 
   const navigate = useNavigate();
 
@@ -132,66 +154,121 @@ const ScheduleErrorPage = ({ user }) => {
   // =========================================================
   // LẤY DANH SÁCH
   // =========================================================
-  const fetchScheduleErrors = useCallback(
-    async (customFilters = appliedFilters) => {
-      try {
-        setLoading(true);
+  const fetchScheduleErrors = useCallback(async (customFilters, page) => {
+    try {
+      setLoading(true);
 
-        const params = {};
+      const params = {
+        page: Number(page) || 1,
+        limit: 50,
+      };
 
-        if (customFilters.maChuyen?.trim()) {
-          params.maChuyen = customFilters.maChuyen.trim();
-        }
-
-        if (customFilters.maKH?.trim()) {
-          params.maKH = customFilters.maKH.trim();
-        }
-
-        if (customFilters.khachHang?.trim()) {
-          params.khachHang = customFilters.khachHang.trim();
-        }
-
-        if (customFilters.keToanPhuTrach?.trim()) {
-          params.keToanPhuTrach = customFilters.keToanPhuTrach.trim();
-        }
-
-        if (customFilters.trangThai) {
-          params.trangThai = customFilters.trangThai;
-        }
-
-        if (customFilters.fromDate) {
-          params.fromDate = customFilters.fromDate;
-        }
-
-        if (customFilters.toDate) {
-          params.toDate = customFilters.toDate;
-        }
-
-        const response = await axios.get(`${API}/schedule-errors`, {
-          params,
-        });
-
-        setScheduleErrors(response.data?.data || []);
-      } catch (error) {
-        console.error("fetchScheduleErrors error:", error);
-
-        alert(
-          error.response?.data?.message ||
-            "Không thể lấy danh sách chuyến sai sót",
-        );
-      } finally {
-        setLoading(false);
+      // -----------------------------------------
+      // MÃ CHUYẾN
+      // -----------------------------------------
+      if (customFilters.maChuyen?.trim()) {
+        params.maChuyen = customFilters.maChuyen.trim();
       }
-    },
-    [appliedFilters],
-  );
+
+      // -----------------------------------------
+      // MÃ KH
+      // -----------------------------------------
+      if (customFilters.maKH?.trim()) {
+        params.maKH = customFilters.maKH.trim();
+      }
+
+      // -----------------------------------------
+      // KHÁCH HÀNG
+      // -----------------------------------------
+      if (customFilters.khachHang?.trim()) {
+        params.khachHang = customFilters.khachHang.trim();
+      }
+
+      // -----------------------------------------
+      // KẾ TOÁN PHỤ TRÁCH
+      // -----------------------------------------
+      if (customFilters.keToanPhuTrach?.trim()) {
+        params.keToanPhuTrach = customFilters.keToanPhuTrach.trim();
+      }
+
+      // -----------------------------------------
+      // TRẠNG THÁI
+      // -----------------------------------------
+      if (customFilters.trangThai) {
+        params.trangThai = customFilters.trangThai;
+      }
+
+      // -----------------------------------------
+      // TỪ NGÀY
+      // -----------------------------------------
+      if (customFilters.fromDate) {
+        params.fromDate = customFilters.fromDate;
+      }
+
+      // -----------------------------------------
+      // ĐẾN NGÀY
+      // -----------------------------------------
+      if (customFilters.toDate) {
+        params.toDate = customFilters.toDate;
+      }
+
+      console.log("FILTER GỬI BE:", params);
+
+      const response = await axios.get(`${API}/schedule-errors`, {
+        params,
+      });
+
+      // =====================================================
+      // DATA
+      // =====================================================
+      setScheduleErrors(response.data?.data || []);
+
+      // =====================================================
+      // PAGINATION
+      // =====================================================
+      const pagination = response.data?.pagination || {};
+
+      const loadedPage = Number(pagination.page) || 1;
+
+      setCurrentPage(loadedPage);
+      setPageInput(String(loadedPage));
+
+      setTotalPages(Math.max(Number(pagination.totalPages) || 1, 1));
+
+      setTotalRecords(Number(pagination.total) || 0);
+
+      // =====================================================
+      // SUMMARY
+      // TOÀN BỘ KẾT QUẢ SAU FILTER
+      // =====================================================
+      const serverSummary = response.data?.summary || {};
+
+      setSummary({
+        totalErrors: Number(serverSummary.totalErrors) || 0,
+
+        totalUnprocessed: Number(serverSummary.totalUnprocessed) || 0,
+
+        totalAdjustmentUnprocessed:
+          Number(serverSummary.totalAdjustmentUnprocessed) || 0,
+      });
+    } catch (error) {
+      console.error("fetchScheduleErrors error:", error);
+
+      alert(
+        error.response?.data?.message ||
+          "Không thể lấy danh sách chuyến sai sót",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // =========================================================
-  // LOAD LẦN ĐẦU
+  // TỰ ĐỘNG LOAD KHI ĐỔI FILTER HOẶC ĐỔI TRANG
   // =========================================================
   useEffect(() => {
-    fetchScheduleErrors();
-  }, [fetchScheduleErrors]);
+    fetchScheduleErrors(appliedFilters, currentPage);
+  }, [appliedFilters, currentPage, fetchScheduleErrors]);
 
   // =========================================================
   // THAY ĐỔI FILTER
@@ -209,8 +286,17 @@ const ScheduleErrorPage = ({ user }) => {
   // TÌM KIẾM
   // =========================================================
   const handleSearch = () => {
+    setCurrentPage(1);
+    setPageInput("1");
+
     setAppliedFilters({
-      ...filters,
+      maChuyen: filters.maChuyen.trim(),
+      maKH: filters.maKH.trim(),
+      khachHang: filters.khachHang.trim(),
+      keToanPhuTrach: filters.keToanPhuTrach.trim(),
+      trangThai: filters.trangThai,
+      fromDate: filters.fromDate,
+      toDate: filters.toDate,
     });
   };
 
@@ -237,6 +323,8 @@ const ScheduleErrorPage = ({ user }) => {
       toDate: "",
     };
 
+    setCurrentPage(1);
+
     setFilters(emptyFilters);
     setAppliedFilters(emptyFilters);
   };
@@ -245,7 +333,7 @@ const ScheduleErrorPage = ({ user }) => {
   // REFRESH
   // =========================================================
   const handleRefresh = () => {
-    fetchScheduleErrors(appliedFilters);
+    fetchScheduleErrors(appliedFilters, currentPage);
   };
 
   // =========================================================
@@ -271,7 +359,7 @@ const ScheduleErrorPage = ({ user }) => {
     setShowModal(false);
     setEditingItem(null);
 
-    await fetchScheduleErrors(appliedFilters);
+    await fetchScheduleErrors(appliedFilters, currentPage);
   };
 
   // =========================================================
@@ -305,7 +393,7 @@ const ScheduleErrorPage = ({ user }) => {
 
       alert("Xóa chuyến sai sót thành công");
 
-      await fetchScheduleErrors(appliedFilters);
+      await fetchScheduleErrors(appliedFilters, currentPage);
     } catch (error) {
       console.error("deleteScheduleError error:", error);
 
@@ -323,22 +411,57 @@ const ScheduleErrorPage = ({ user }) => {
   }, [scheduleErrors]);
 
   // =========================================================
-  // TỔNG TIỀN ĐIỀU CHỈNH
+  // THỐNG KÊ TOÀN BỘ THEO BỘ LỌC
   // =========================================================
-  const totalAdjustment = useMemo(() => {
-    return displayData.reduce(
-      (sum, item) => sum + Number(item.soTienDieuChinh || 0),
-      0,
+  const totalErrors = summary.totalErrors;
+
+  const totalUnprocessed = summary.totalUnprocessed;
+
+  const totalProcessed = Math.max(totalErrors - totalUnprocessed, 0);
+
+  const totalAdjustmentUnprocessed = summary.totalAdjustmentUnprocessed;
+
+  // =========================================================
+  // CHUYỂN TRANG
+  // =========================================================
+  const goToPage = (page) => {
+    const targetPage = Math.min(
+      Math.max(Number(page) || 1, 1),
+      Math.max(totalPages, 1),
     );
-  }, [displayData]);
 
-  const totalUnprocessed = useMemo(() => {
-    return displayData.filter((item) => item.trangThai === "chuaXuLy").length;
-  }, [displayData]);
+    setCurrentPage(targetPage);
+    setPageInput(String(targetPage));
 
-  const totalProcessed = useMemo(() => {
-    return displayData.filter((item) => item.trangThai === "daXuLy").length;
-  }, [displayData]);
+    fetchScheduleErrors(appliedFilters, targetPage);
+  };
+
+  // =========================================================
+  // NHẬP TRANG
+  // =========================================================
+  const handlePageInputChange = (e) => {
+    const value = e.target.value;
+
+    // Cho phép xóa ô để nhập lại
+    if (value === "") {
+      setPageInput("");
+      return;
+    }
+
+    // Chỉ cho nhập số
+    if (/^\d+$/.test(value)) {
+      setPageInput(value);
+    }
+  };
+
+  // =========================================================
+  // ENTER ĐỂ ĐẾN TRANG
+  // =========================================================
+  const handlePageInputKeyDown = (e) => {
+    if (e.key === "Enter") {
+      goToPage(pageInput);
+    }
+  };
 
   // =========================================================
   // RENDER
@@ -487,7 +610,8 @@ const ScheduleErrorPage = ({ user }) => {
             <button
               type="button"
               onClick={handleAdd}
-              className="inline-flex items-center gap-2 px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              disabled={!canEditScheduleError}
+              className="inline-flex items-center gap-2 px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <FiPlus />
               Thêm chuyến
@@ -500,43 +624,47 @@ const ScheduleErrorPage = ({ user }) => {
       {/* THỐNG KÊ */}
       {/* =================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        {/* TỔNG SAI SÓT */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
           <div className="text-sm text-gray-500">Tổng số sai sót</div>
 
           <div className="text-2xl font-bold text-gray-800 mt-1">
-            {displayData.length}
+            {totalErrors.toLocaleString("vi-VN")}
           </div>
         </div>
 
+        {/* CHƯA XỬ LÝ */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
           <div className="text-sm text-gray-500">Chưa xử lý</div>
 
           <div className="text-2xl font-bold text-yellow-600 mt-1">
-            {totalUnprocessed}
+            {totalUnprocessed.toLocaleString("vi-VN")}
           </div>
         </div>
 
+        {/* ĐÃ XỬ LÝ */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
           <div className="text-sm text-gray-500">Đã xử lý</div>
 
           <div className="text-2xl font-bold text-green-600 mt-1">
-            {totalProcessed}
+            {totalProcessed.toLocaleString("vi-VN")}
           </div>
         </div>
 
+        {/* TỔNG TIỀN CHƯA XỬ LÝ */}
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-          <div className="text-sm text-gray-500">Tổng tiền điều chỉnh</div>
+          <div className="text-sm text-gray-500">Tổng tiền cần điều chỉnh</div>
 
           <div
             className={`text-xl font-bold mt-1 ${
-              totalAdjustment < 0
+              totalAdjustmentUnprocessed < 0
                 ? "text-red-600"
-                : totalAdjustment > 0
+                : totalAdjustmentUnprocessed > 0
                   ? "text-green-600"
                   : "text-gray-800"
             }`}
           >
-            {formatMoney(totalAdjustment)}
+            {formatMoney(totalAdjustmentUnprocessed)}
           </div>
         </div>
       </div>
@@ -626,7 +754,8 @@ const ScheduleErrorPage = ({ user }) => {
               name="fromDate"
               value={filters.fromDate}
               onChange={handleFilterChange}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+              onClick={(e) => e.target.showPicker()}
+              className="w-full h-10 px-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
 
@@ -641,7 +770,8 @@ const ScheduleErrorPage = ({ user }) => {
               name="toDate"
               value={filters.toDate}
               onChange={handleFilterChange}
-              className="w-full h-10 px-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+              onClick={(e) => e.target.showPicker()}
+              className="w-full h-10 px-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
             />
           </div>
 
@@ -673,14 +803,26 @@ const ScheduleErrorPage = ({ user }) => {
       {/* =================================================== */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-auto max-h-[calc(100vh-330px)]">
-          <table className="min-w-[2200px] w-full border-collapse text-xs">
+          <table className="min-w-[2200px] w-full border-separate border-spacing-0 text-xs">
             <thead className="sticky top-0 z-20 bg-gray-100">
               <tr>
-                <th className="border border-gray-300 px-3 py-2 text-center whitespace-nowrap sticky left-0 z-30 bg-gray-100">
+                <th
+                  className="sticky left-0 z-40 bg-gray-100 border border-gray-300 border-r border-solid px-3 py-2 text-center whitespace-nowrap"
+                  style={{
+                    width: "40px",
+                    minWidth: "40px",
+                  }}
+                >
                   STT
                 </th>
 
-                <th className="border border-gray-300 px-3 py-2 text-center whitespace-nowrap">
+                <th
+                  className="sticky left-[47px] z-40 bg-gray-100 border border-gray-300 border-l-0 border-r border-solid px-3 py-2 text-center whitespace-nowrap"
+                  style={{
+                    width: "100px",
+                    minWidth: "100px",
+                  }}
+                >
                   MÃ CHUYẾN
                 </th>
 
@@ -781,19 +923,34 @@ const ScheduleErrorPage = ({ user }) => {
                     colSpan={21}
                     className="border border-gray-300 px-4 py-12 text-center text-gray-500"
                   >
-                    Không có chuyến sai sót
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <span className="text-6xl mb-2">😺</span>
+                      <span>~ Không có chuyến sai sót nào cả ^^ ~</span>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 displayData.map((item, index) => (
                   <tr key={item._id} className="hover:bg-blue-50">
                     {/* STT */}
-                    <td className="border border-gray-300 px-3 py-2 text-center sticky left-0 z-10 bg-white">
+                    <td
+                      className="sticky left-0 z-30 bg-white group-hover:bg-blue-50 border border-gray-300 border-r border-solid px-3 py-2 text-center"
+                      style={{
+                        width: "40px",
+                        minWidth: "40px",
+                      }}
+                    >
                       {index + 1}
                     </td>
 
                     {/* MÃ CHUYẾN */}
-                    <td className="border border-gray-300 px-3 py-2 font-semibold whitespace-nowrap">
+                    <td
+                      className="sticky left-[47px] z-30 bg-white group-hover:bg-blue-50 border border-gray-300 border-l-0 border-r border-solid px-3 py-2 font-semibold whitespace-nowrap"
+                      style={{
+                        width: "100px",
+                        minWidth: "100px",
+                      }}
+                    >
                       {item.maChuyen || ""}
                     </td>
 
@@ -914,7 +1071,10 @@ const ScheduleErrorPage = ({ user }) => {
                           type="button"
                           title="Sửa"
                           onClick={() => handleEdit(item)}
-                          className="p-2 rounded-lg text-blue-600 hover:bg-blue-100"
+                          disabled={
+                            !canEditScheduleError || item.trangThai === "daXuLy"
+                          }
+                          className="p-2 rounded-lg text-blue-600 hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <FiEdit2 />
                         </button>
@@ -922,9 +1082,13 @@ const ScheduleErrorPage = ({ user }) => {
                         <button
                           type="button"
                           title="Xóa"
-                          disabled={deletingId === item._id}
+                          disabled={
+                            !canEditScheduleError ||
+                            item.trangThai === "daXuLy" ||
+                            deletingId === item._id
+                          }
                           onClick={() => handleDelete(item)}
-                          className="p-2 rounded-lg text-red-600 hover:bg-red-100 disabled:opacity-50"
+                          className="p-2 rounded-lg text-red-600 hover:bg-red-100 disabled:opacity-50 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           {deletingId === item._id ? (
                             <FiRefreshCw className="animate-spin" />
@@ -941,26 +1105,117 @@ const ScheduleErrorPage = ({ user }) => {
           </table>
         </div>
 
-        {/* FOOTER TABLE */}
-        <div className="border-t border-gray-200 px-4 py-3 flex items-center justify-between text-sm text-gray-600">
-          <span>
-            Hiển thị <strong>{displayData.length}</strong> chuyến sai sót
-          </span>
+        {/* =================================================== */}
+        {/* FOOTER + PHÂN TRANG */}
+        {/* =================================================== */}
+        <div className="border-t border-gray-200 px-4 py-2">
+          {/* THÔNG TIN */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 text-sm text-gray-600">
+            {/* BÊN TRÁI */}
+            <span>
+              Hiển thị <strong>{displayData.length}</strong> /{" "}
+              <strong>{totalRecords.toLocaleString("vi-VN")}</strong> chuyến sai
+              sót
+            </span>
 
-          <span>
-            Tổng điều chỉnh:{" "}
-            <strong
-              className={
-                totalAdjustment < 0
-                  ? "text-red-600"
-                  : totalAdjustment > 0
-                    ? "text-green-600"
-                    : ""
-              }
-            >
-              {formatMoney(totalAdjustment)}
-            </strong>
-          </span>
+            {/* PHÂN TRANG CHÍNH GIỮA */}
+            <div className="px-4 py-2 flex items-center justify-center">
+              <div className="flex items-center gap-2">
+                {/* TRANG TRƯỚC */}
+                <button
+                  type="button"
+                  disabled={currentPage <= 1 || loading}
+                  onClick={() => {
+                    setCurrentPage((prev) => Math.max(Number(prev) - 1, 1));
+                  }}
+                  className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Trước
+                </button>
+
+                {/* A / TỔNG SỐ TRANG */}
+                <div className="flex items-center gap-1 text-sm text-gray-700">
+                  <input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={pageInput}
+                    disabled={loading}
+                    onChange={(e) => {
+                      setPageInput(e.target.value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        let page = Number(pageInput);
+
+                        if (!page || page < 1) {
+                          page = 1;
+                        }
+
+                        if (page > totalPages) {
+                          page = totalPages;
+                        }
+
+                        setPageInput(String(page));
+                        setCurrentPage(page);
+                      }
+                    }}
+                    onBlur={() => {
+                      let page = Number(pageInput);
+
+                      if (!page || page < 1) {
+                        page = 1;
+                      }
+
+                      if (page > totalPages) {
+                        page = totalPages;
+                      }
+
+                      setPageInput(String(page));
+                      setCurrentPage(page);
+                    }}
+                    className="w-16 h-9 px-2 text-center border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+
+                  <span>/</span>
+
+                  <span className="min-w-[30px] text-center font-medium">
+                    {totalPages}
+                  </span>
+                </div>
+
+                {/* TRANG SAU */}
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages || loading}
+                  onClick={() => {
+                    setCurrentPage((prev) =>
+                      Math.min(Number(prev) + 1, totalPages),
+                    );
+                  }}
+                  className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
+
+            {/* BÊN PHẢI */}
+            <span className="text-center lg:text-right">
+              Tổng tiền chưa xử lý:{" "}
+              <strong
+                className={
+                  totalAdjustmentUnprocessed < 0
+                    ? "text-red-600"
+                    : totalAdjustmentUnprocessed > 0
+                      ? "text-green-600"
+                      : ""
+                }
+              >
+                {formatMoney(totalAdjustmentUnprocessed)}
+              </strong>
+            </span>
+          </div>
         </div>
       </div>
 

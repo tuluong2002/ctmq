@@ -112,6 +112,10 @@ const KeToanPage = () => {
     navigate("/schedule-errors", { state: { user } });
   };
 
+  const handleGoToVehicleProfit = () => {
+    navigate("/vehicle-profit", { state: { user } });
+  };
+
   const handleExport = async () => {
     if (!selectedDate) return alert("Vui lòng chọn ngày.");
 
@@ -472,6 +476,13 @@ const KeToanPage = () => {
           className="bg-blue-500 text-white px-3 py-1 rounded"
         >
           DS chuyến sai sót
+        </button>
+
+        <button
+          onClick={handleGoToVehicleProfit}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Doanh thu theo tháng
         </button>
       </div>
 

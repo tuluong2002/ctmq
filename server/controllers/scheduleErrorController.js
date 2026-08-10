@@ -161,6 +161,7 @@ exports.createScheduleError = async (req, res) => {
 
 // =====================================================
 // LẤY DANH SÁCH CHUYẾN SAI SÓT
+// CÓ PHÂN TRANG + THỐNG KÊ
 // =====================================================
 exports.getScheduleErrors = async (req, res) => {
   try {
@@ -172,14 +173,26 @@ exports.getScheduleErrors = async (req, res) => {
       trangThai,
       fromDate,
       toDate,
+      page = 1,
+      limit = 50,
     } = req.query;
 
+    // =====================================================
+    // PHÂN TRANG
+    // =====================================================
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const pageSize = 50; // CỐ ĐỊNH 50 DATA / TRANG
+    const skip = (currentPage - 1) * pageSize;
+
+    // =====================================================
+    // FILTER
+    // =====================================================
     const filter = {};
 
     // -----------------------------------------
     // Lọc theo mã chuyến
     // -----------------------------------------
-    if (maChuyen) {
+    if (maChuyen?.trim()) {
       filter.maChuyen = {
         $regex: maChuyen.trim(),
         $options: "i",
@@ -189,7 +202,7 @@ exports.getScheduleErrors = async (req, res) => {
     // -----------------------------------------
     // Lọc theo mã KH
     // -----------------------------------------
-    if (maKH) {
+    if (maKH?.trim()) {
       filter.maKH = {
         $regex: maKH.trim(),
         $options: "i",
@@ -199,7 +212,7 @@ exports.getScheduleErrors = async (req, res) => {
     // -----------------------------------------
     // Lọc theo khách hàng
     // -----------------------------------------
-    if (khachHang) {
+    if (khachHang?.trim()) {
       filter.khachHang = {
         $regex: khachHang.trim(),
         $options: "i",
@@ -209,7 +222,7 @@ exports.getScheduleErrors = async (req, res) => {
     // -----------------------------------------
     // Lọc theo kế toán phụ trách
     // -----------------------------------------
-    if (keToanPhuTrach) {
+    if (keToanPhuTrach?.trim()) {
       filter.keToanPhuTrach = {
         $regex: keToanPhuTrach.trim(),
         $options: "i",
@@ -219,8 +232,8 @@ exports.getScheduleErrors = async (req, res) => {
     // -----------------------------------------
     // Lọc theo trạng thái
     // -----------------------------------------
-    if (trangThai) {
-      filter.trangThai = trangThai;
+    if (trangThai?.trim()) {
+      filter.trangThai = trangThai.trim();
     }
 
     // -----------------------------------------
@@ -244,19 +257,119 @@ exports.getScheduleErrors = async (req, res) => {
       }
     }
 
-    // -----------------------------------------
-    // Lấy dữ liệu
-    // -----------------------------------------
-    const data = await ScheduleError.find(filter)
-      .sort({
-        ngayTao: -1,
-        createdAt: -1,
-      })
-      .lean();
+    // =====================================================
+    // FILTER CHƯA XỬ LÝ THEO BỘ LỌC
+    // =====================================================
+    let unprocessedFilter = null;
 
+    // Chỉ tạo filter chưa xử lý khi:
+    // - Không lọc trạng thái
+    // - Hoặc đang lọc "chưa xử lý"
+    if (!trangThai || trangThai.trim() === "chuaXuLy") {
+      unprocessedFilter = {
+        ...filter,
+        trangThai: "chuaXuLy",
+      };
+    }
+
+    // =====================================================
+    // CHẠY SONG SONG
+    // =====================================================
+    const [data, total, totalUnprocessed, adjustmentResult] = await Promise.all(
+      [
+        // -----------------------------------------
+        // Lấy data theo đúng filter
+        // -----------------------------------------
+        ScheduleError.find(filter)
+          .sort({
+            ngayTao: -1,
+            createdAt: -1,
+          })
+          .skip(skip)
+          .limit(pageSize)
+          .lean(),
+
+        // -----------------------------------------
+        // Tổng số theo đúng filter
+        // -----------------------------------------
+        ScheduleError.countDocuments(filter),
+
+        // -----------------------------------------
+        // Tổng chưa xử lý
+        // -----------------------------------------
+        unprocessedFilter
+          ? ScheduleError.countDocuments(unprocessedFilter)
+          : Promise.resolve(0),
+
+        // -----------------------------------------
+        // Tổng tiền chưa xử lý
+        // -----------------------------------------
+        unprocessedFilter
+          ? ScheduleError.aggregate([
+              {
+                $match: unprocessedFilter,
+              },
+              {
+                $group: {
+                  _id: null,
+                  total: {
+                    $sum: {
+                      $convert: {
+                        input: "$soTienDieuChinh",
+                        to: "double",
+                        onError: 0,
+                        onNull: 0,
+                      },
+                    },
+                  },
+                },
+              },
+            ])
+          : Promise.resolve([]),
+      ],
+    );
+
+    // =====================================================
+    // TỔNG TIỀN CHƯA XỬ LÝ
+    // =====================================================
+    const totalAdjustmentUnprocessed =
+      adjustmentResult.length > 0 ? Number(adjustmentResult[0].total) || 0 : 0;
+
+    // =====================================================
+    // TỔNG SỐ TRANG
+    // =====================================================
+    const totalPages = Math.ceil(total / pageSize);
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
     return res.status(200).json({
       message: "Lấy danh sách chuyến sai sót thành công",
-      total: data.length,
+
+      // -----------------------------------------
+      // PHÂN TRANG
+      // -----------------------------------------
+      pagination: {
+        page: currentPage,
+        limit: pageSize,
+        total,
+        totalPages,
+        hasNextPage: currentPage < totalPages,
+        hasPrevPage: currentPage > 1,
+      },
+
+      // -----------------------------------------
+      // THỐNG KÊ THEO BỘ LỌC
+      // -----------------------------------------
+      summary: {
+        totalErrors: total,
+        totalUnprocessed,
+        totalAdjustmentUnprocessed,
+      },
+
+      // -----------------------------------------
+      // DATA TRANG HIỆN TẠI
+      // -----------------------------------------
       data,
     });
   } catch (error) {

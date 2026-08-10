@@ -39,6 +39,8 @@ const ScheduleErrorModal = ({ data, onClose, onSaved }) => {
 
   const [tripFound, setTripFound] = useState(false);
 
+  const [showOriginalTrip, setShowOriginalTrip] = useState(false);
+
   // =========================================================
   // FORMAT DATE
   // =========================================================
@@ -64,6 +66,8 @@ const ScheduleErrorModal = ({ data, onClose, onSaved }) => {
   // LOAD DATA KHI SỬA
   // =========================================================
   useEffect(() => {
+    setShowOriginalTrip(false);
+
     if (!data) {
       setForm({
         ...EMPTY_FORM,
@@ -76,37 +80,21 @@ const ScheduleErrorModal = ({ data, onClose, onSaved }) => {
 
     setForm({
       maChuyen: data.maChuyen || "",
-
       keToanPhuTrach: data.keToanPhuTrach || "",
-
       maKH: data.maKH || "",
-
       khachHang: data.khachHang || "",
-
       dienGiai: data.dienGiai || "",
-
       ngayBocHang: formatDateInput(data.ngayBocHang),
-
       ngayGiaoHang: formatDateInput(data.ngayGiaoHang),
-
       diemXepHang: data.diemXepHang || "",
-
       diemDoHang: data.diemDoHang || "",
-
       soDiem: data.soDiem || "",
-
       trongLuong: data.trongLuong || "",
-
       bienSoXe: data.bienSoXe || "",
-
       soTienDieuChinh: data.soTienDieuChinh ?? "",
-
       loaiLoi: data.loaiLoi || "",
-
       ghiChu: data.ghiChu || "",
-
       phuongAnXuLy: data.phuongAnXuLy || "",
-
       ngayXuLy: formatDateInput(data.ngayXuLy),
     });
 
@@ -249,15 +237,15 @@ const ScheduleErrorModal = ({ data, onClose, onSaved }) => {
 
       alert(
         isEdit
-          ? "Sửa chuyến sai sót thành công"
-          : "Thêm chuyến sai sót thành công",
+          ? "Sửa thành công"
+          : "Thêm thành công",
       );
 
       onSaved();
     } catch (error) {
       console.error("handleSubmit error:", error);
 
-      alert(error.response?.data?.message || "Không thể lưu chuyến sai sót");
+      alert(error.response?.data?.message || "Không thể lưu");
     } finally {
       setLoading(false);
     }
@@ -379,41 +367,71 @@ const ScheduleErrorModal = ({ data, onClose, onSaved }) => {
           {/* THÔNG TIN CHUYẾN GỐC */}
           {/* ================================================= */}
           <div className="border border-gray-200 rounded-xl p-4 mb-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-800">
-                THÔNG TIN CHUYẾN GỐC
-              </h3>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-800">
+                  THÔNG TIN CHUYẾN GỐC
+                </h3>
 
-              <span className="text-xs text-gray-500">Không thể chỉnh sửa</span>
+                <p className="text-xs text-gray-500 mt-1">
+                  Thông tin được lấy từ chuyến gốc và không thể chỉnh sửa
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowOriginalTrip((prev) => !prev)}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+              >
+                {showOriginalTrip ? (
+                  <>
+                    <FiX size={16} />
+                    Ẩn thông tin
+                  </>
+                ) : (
+                  <>
+                    <FiSearch size={16} />
+                    Hiện thông tin
+                  </>
+                )}
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {renderReadonly("Kế toán phụ trách", form.keToanPhuTrach)}
+            {showOriginalTrip && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {renderReadonly("Kế toán phụ trách", form.keToanPhuTrach)}
 
-              {renderReadonly("Mã KH", form.maKH)}
+                  {renderReadonly("Mã KH", form.maKH)}
 
-              {renderReadonly("Khách hàng", form.khachHang)}
+                  {renderReadonly("Khách hàng", form.khachHang)}
 
-              {renderReadonly("Biển số xe", form.bienSoXe)}
+                  {renderReadonly("Biển số xe", form.bienSoXe)}
 
-              {renderReadonly("Ngày bốc hàng", form.ngayBocHang)}
+                  {renderReadonly("Ngày bốc hàng", form.ngayBocHang)}
 
-              {renderReadonly("Ngày giao hàng", form.ngayGiaoHang)}
+                  {renderReadonly("Ngày giao hàng", form.ngayGiaoHang)}
 
-              {renderReadonly("Số điểm", form.soDiem)}
+                  {renderReadonly("Số điểm", form.soDiem)}
 
-              {renderReadonly("Trọng lượng", form.trongLuong)}
+                  {renderReadonly("Trọng lượng", form.trongLuong)}
 
-              {renderReadonly(
-                "Điểm xếp hàng",
-                form.diemXepHang,
-                "lg:col-span-2",
-              )}
+                  {renderReadonly(
+                    "Điểm xếp hàng",
+                    form.diemXepHang,
+                    "lg:col-span-2",
+                  )}
 
-              {renderReadonly("Điểm dỡ hàng", form.diemDoHang, "lg:col-span-2")}
+                  {renderReadonly(
+                    "Điểm dỡ hàng",
+                    form.diemDoHang,
+                    "lg:col-span-2",
+                  )}
 
-              {renderReadonly("Diễn giải", form.dienGiai, "lg:col-span-4")}
-            </div>
+                  {renderReadonly("Diễn giải", form.dienGiai, "lg:col-span-4")}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ================================================= */}
@@ -432,16 +450,45 @@ const ScheduleErrorModal = ({ data, onClose, onSaved }) => {
                 </label>
 
                 <input
-                  type="number"
+                  type="text"
                   name="soTienDieuChinh"
-                  value={form.soTienDieuChinh}
-                  onChange={handleChange}
-                  step="1"
-                  placeholder="Ví dụ: -500000"
-                  className="w-full h-10 px-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  value={
+                    form.soTienDieuChinh === "" || form.soTienDieuChinh === null
+                      ? ""
+                      : Number(form.soTienDieuChinh).toLocaleString("vi-VN")
+                  }
+                  onChange={(e) => {
+                    let value = e.target.value;
+
+                    // Cho phép số âm
+                    const isNegative = value.startsWith("-");
+
+                    // Bỏ tất cả ký tự không phải số
+                    value = value.replace(/\D/g, "");
+
+                    if (!value) {
+                      setForm((prev) => ({
+                        ...prev,
+                        soTienDieuChinh: isNegative ? "-" : "",
+                      }));
+                      return;
+                    }
+
+                    const numberValue = Number(value);
+
+                    setForm((prev) => ({
+                      ...prev,
+                      soTienDieuChinh: isNegative ? -numberValue : numberValue,
+                    }));
+                  }}
+                  placeholder="Ví dụ: -500.000"
+                  inputMode="numeric"
+                  className="w-full h-10 px-3 border border-gray-300 font-semibold rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                 />
 
-                <p className="text-xs text-gray-500 mt-1">Có thể nhập số âm.</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Có thể nhập số âm. Ví dụ: -500.000
+                </p>
               </div>
 
               {/* LOẠI LỖI */}
@@ -473,7 +520,7 @@ const ScheduleErrorModal = ({ data, onClose, onSaved }) => {
               {/* GHI CHÚ */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ghi chú
+                  Mô tả lỗi / Ghi chú thêm
                 </label>
 
                 <textarea
@@ -513,7 +560,8 @@ const ScheduleErrorModal = ({ data, onClose, onSaved }) => {
                   name="ngayXuLy"
                   value={form.ngayXuLy}
                   onChange={handleChange}
-                  className="w-full h-10 px-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                  onClick={(e) => e.target.showPicker()}
+                  className="w-full h-10 px-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 />
 
                 <p className="text-xs text-gray-500 mt-1">

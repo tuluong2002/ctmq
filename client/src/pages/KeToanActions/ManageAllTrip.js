@@ -2357,6 +2357,16 @@ export default function ManageTrip({ user, onLogout }) {
                               <button
                                 className="flex-1 bg-blue-600 text-white px-2 py-1 rounded"
                                 onClick={() => {
+                                  // Tự động chọn tất cả biển số đang hiển thị
+                                  setExcelSelected((prev) => ({
+                                    ...prev,
+                                    khachHang: [
+                                      ...prev.khachHang,
+                                      ...filteredKhachHang.filter(
+                                        (x) => !prev.khachHang.includes(x),
+                                      ),
+                                    ],
+                                  }));
                                   setPage(1);
                                   setOpenFilter(null);
                                 }}
@@ -2458,6 +2468,16 @@ export default function ManageTrip({ user, onLogout }) {
                               <button
                                 className="flex-1 bg-blue-600 text-white px-2 py-1 rounded"
                                 onClick={() => {
+                                  // Tự động chọn tất cả biển số đang hiển thị
+                                  setExcelSelected((prev) => ({
+                                    ...prev,
+                                    maKH: [
+                                      ...prev.maKH,
+                                      ...filteredMaKH.filter(
+                                        (x) => !prev.maKH.includes(x),
+                                      ),
+                                    ],
+                                  }));
                                   setPage(1);
                                   setOpenFilter(null);
                                 }}
@@ -2560,6 +2580,16 @@ export default function ManageTrip({ user, onLogout }) {
                               <button
                                 className="flex-1 bg-blue-600 text-white px-2 py-1 rounded"
                                 onClick={() => {
+                                  // Tự động chọn tất cả biển số đang hiển thị
+                                  setExcelSelected((prev) => ({
+                                    ...prev,
+                                    tenLaiXe: [
+                                      ...prev.tenLaiXe,
+                                      ...filteredTenLaiXe.filter(
+                                        (x) => !prev.tenLaiXe.includes(x),
+                                      ),
+                                    ],
+                                  }));
                                   setPage(1);
                                   setOpenFilter(null);
                                 }}
@@ -2662,6 +2692,16 @@ export default function ManageTrip({ user, onLogout }) {
                               <button
                                 className="flex-1 bg-blue-600 text-white px-2 py-1 rounded"
                                 onClick={() => {
+                                  // Tự động chọn tất cả biển số đang hiển thị
+                                  setExcelSelected((prev) => ({
+                                    ...prev,
+                                    bienSoXe: [
+                                      ...prev.bienSoXe,
+                                      ...filteredBienSoXe.filter(
+                                        (x) => !prev.bienSoXe.includes(x),
+                                      ),
+                                    ],
+                                  }));
                                   setPage(1);
                                   setOpenFilter(null);
                                 }}
@@ -2769,6 +2809,16 @@ export default function ManageTrip({ user, onLogout }) {
                               <button
                                 className="flex-1 bg-blue-600 text-white px-2 py-1 rounded"
                                 onClick={() => {
+                                  // Tự động chọn tất cả biển số đang hiển thị
+                                  setExcelSelected((prev) => ({
+                                    ...prev,
+                                    dienGiai: [
+                                      ...prev.dienGiai,
+                                      ...filteredDienGiai.filter(
+                                        (x) => !prev.dienGiai.includes(x),
+                                      ),
+                                    ],
+                                  }));
                                   setPage(1);
                                   setOpenFilter(null);
                                 }}
@@ -2871,6 +2921,16 @@ export default function ManageTrip({ user, onLogout }) {
                               <button
                                 className="flex-1 bg-blue-600 text-white px-2 py-1 rounded"
                                 onClick={() => {
+                                  // Tự động chọn tất cả biển số đang hiển thị
+                                  setExcelSelected((prev) => ({
+                                    ...prev,
+                                    cuocPhi: [
+                                      ...prev.cuocPhi,
+                                      ...filteredCuocPhi.filter(
+                                        (x) => !prev.cuocPhi.includes(x),
+                                      ),
+                                    ],
+                                  }));
                                   setPage(1);
                                   setOpenFilter(null);
                                 }}
@@ -2978,6 +3038,16 @@ export default function ManageTrip({ user, onLogout }) {
                               <button
                                 className="flex-1 bg-blue-600 text-white px-2 py-1 rounded"
                                 onClick={() => {
+                                  // Tự động chọn tất cả biển số đang hiển thị
+                                  setExcelSelected((prev) => ({
+                                    ...prev,
+                                    maHoaDon: [
+                                      ...prev.maHoaDon,
+                                      ...filteredMaHoaDon.filter(
+                                        (x) => !prev.maHoaDon.includes(x),
+                                      ),
+                                    ],
+                                  }));
                                   setPage(1);
                                   setOpenFilter(null);
                                 }}
@@ -3085,6 +3155,16 @@ export default function ManageTrip({ user, onLogout }) {
                               <button
                                 className="flex-1 bg-blue-600 text-white px-2 py-1 rounded"
                                 onClick={() => {
+                                  // Tự động chọn tất cả biển số đang hiển thị
+                                  setExcelSelected((prev) => ({
+                                    ...prev,
+                                    debtCode: [
+                                      ...prev.debtCode,
+                                      ...filteredDebtCode.filter(
+                                        (x) => !prev.debtCode.includes(x),
+                                      ),
+                                    ],
+                                  }));
                                   setPage(1);
                                   setOpenFilter(null);
                                 }}

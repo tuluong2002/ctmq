@@ -40,6 +40,7 @@ import ManageOil from "./pages/KeToanActions/ManageOil";
 import ManageOnlineSchedule from "./pages/KeToanActions/ManageOnlineSchedule";
 
 import ScheduleErrorPage from "./pages/KeToanActions/ScheduleErrorPage";
+import VehicleProfitPage from "./pages/KeToanActions/VehicleProfitPage";
 
 import AddressPage from "./pages/AddressPage";
 import Customer2Page from "./pages/Customer2Page";
@@ -299,6 +300,16 @@ function App() {
             </PrivateRoute>
           }
         />
+
+        <Route
+          path="/vehicle-profit"
+          element={
+            <PrivateRoute roles={["keToan"]}>
+              <VehicleProfitPage user={user} />
+            </PrivateRoute>
+          }
+        />
+
         <Route
           path="/voucher/:id/print"
           element={

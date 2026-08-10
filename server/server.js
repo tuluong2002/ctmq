@@ -18,6 +18,7 @@ const expenseRoutes = require("./routes/expenseRoutes");
 const oilRoutes = require("./routes/oilRoutes")
 const userScheduleRoutes = require("./routes/userScheduleRoutes")
 const scheduleErrorRoutes = require("./routes/scheduleErrorRoutes");
+const vehicleProfitRoutes = require("./routes/vehicleProfitRoutes");
 
 require("./models/cron");
 
@@ -48,6 +49,7 @@ app.use("/api/vouchers", voucherRoutes);
 app.use("/api/expense", expenseRoutes);
 app.use("/api/oil", oilRoutes);
 app.use("/api/schedule-errors", scheduleErrorRoutes);
+app.use("/api/vehicle-profit", vehicleProfitRoutes);
 
 app.use("/api/fuel-vinh-khuc", require("./routes/fuelVinhKhuc.routes"));
 app.use("/api/fuel-ngoc-long", require("./routes/fuelNgocLong.routes"));
