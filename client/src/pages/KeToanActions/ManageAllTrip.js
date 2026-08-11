@@ -2319,6 +2319,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     };
                                   });
                                   setPage(1);
+                                  setOpenFilter(null);
                                 }}
                               />
                               Chọn tất cả ({filteredKhachHang.length})
@@ -2335,14 +2336,16 @@ export default function ManageTrip({ user, onLogout }) {
                                     checked={excelSelected.khachHang.includes(
                                       c,
                                     )}
-                                    onChange={() =>
+                                    onChange={() => {
                                       setExcelSelected((p) => ({
                                         ...p,
                                         khachHang: p.khachHang.includes(c)
                                           ? p.khachHang.filter((x) => x !== c)
                                           : [...p.khachHang, c],
-                                      }))
-                                    }
+                                      }));
+
+                                      setOpenFilter(null);
+                                    }}
                                   />
                                   <span className="truncate">
                                     {c === "__EMPTY__"
@@ -2371,7 +2374,7 @@ export default function ManageTrip({ user, onLogout }) {
                                   setOpenFilter(null);
                                 }}
                               >
-                                Áp dụng
+                                Chọn tất cả
                               </button>
 
                               <button
@@ -2432,6 +2435,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     };
                                   });
                                   setPage(1);
+                                  setOpenFilter(null);
                                 }}
                               />
                               Chọn tất cả ({filteredMaKH.length})
@@ -2446,14 +2450,15 @@ export default function ManageTrip({ user, onLogout }) {
                                   <input
                                     type="checkbox"
                                     checked={excelSelected.maKH.includes(c)}
-                                    onChange={() =>
+                                    onChange={() => {
                                       setExcelSelected((p) => ({
                                         ...p,
                                         maKH: p.maKH.includes(c)
                                           ? p.maKH.filter((x) => x !== c)
                                           : [...p.maKH, c],
-                                      }))
-                                    }
+                                      }));
+                                      setOpenFilter(null);
+                                    }}
                                   />
                                   <span className="truncate">
                                     {c === "__EMPTY__"
@@ -2482,7 +2487,7 @@ export default function ManageTrip({ user, onLogout }) {
                                   setOpenFilter(null);
                                 }}
                               >
-                                Áp dụng
+                                Chọn tất cả
                               </button>
 
                               <button
@@ -2544,6 +2549,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     };
                                   });
                                   setPage(1);
+                                  setOpenFilter(null);
                                 }}
                               />
                               Chọn tất cả ({filteredTenLaiXe.length})
@@ -2558,14 +2564,15 @@ export default function ManageTrip({ user, onLogout }) {
                                   <input
                                     type="checkbox"
                                     checked={excelSelected.tenLaiXe.includes(d)}
-                                    onChange={() =>
+                                    onChange={() => {
                                       setExcelSelected((p) => ({
                                         ...p,
                                         tenLaiXe: p.tenLaiXe.includes(d)
                                           ? p.tenLaiXe.filter((x) => x !== d)
                                           : [...p.tenLaiXe, d],
-                                      }))
-                                    }
+                                      }));
+                                      setOpenFilter(null);
+                                    }}
                                   />
                                   <span className="truncate">
                                     {d === "__EMPTY__"
@@ -2594,7 +2601,7 @@ export default function ManageTrip({ user, onLogout }) {
                                   setOpenFilter(null);
                                 }}
                               >
-                                Áp dụng
+                                Chọn tất cả
                               </button>
 
                               <button
@@ -2656,6 +2663,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     };
                                   });
                                   setPage(1);
+                                  setOpenFilter(null);
                                 }}
                               />
                               Chọn tất cả ({filteredBienSoXe.length})
@@ -2670,14 +2678,15 @@ export default function ManageTrip({ user, onLogout }) {
                                   <input
                                     type="checkbox"
                                     checked={excelSelected.bienSoXe.includes(p)}
-                                    onChange={() =>
+                                    onChange={() => {
                                       setExcelSelected((s) => ({
                                         ...s,
                                         bienSoXe: s.bienSoXe.includes(p)
                                           ? s.bienSoXe.filter((x) => x !== p)
                                           : [...s.bienSoXe, p],
-                                      }))
-                                    }
+                                      }));
+                                      setOpenFilter(null);
+                                    }}
                                   />
                                   <span className="truncate">
                                     {p === "__EMPTY__"
@@ -2706,7 +2715,7 @@ export default function ManageTrip({ user, onLogout }) {
                                   setOpenFilter(null);
                                 }}
                               >
-                                Áp dụng
+                                Chọn tất cả
                               </button>
 
                               <button
@@ -2768,6 +2777,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     };
                                   });
                                   setPage(1);
+                                  setOpenFilter(null);
                                 }}
                               />
                               Chọn tất cả ({filteredDienGiai.length})
@@ -2784,7 +2794,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     checked={excelSelected.dienGiai.includes(
                                       dg,
                                     )}
-                                    onChange={() =>
+                                    onChange={() => {
                                       setExcelSelected((prev) => ({
                                         ...prev,
                                         dienGiai: prev.dienGiai.includes(dg)
@@ -2792,8 +2802,9 @@ export default function ManageTrip({ user, onLogout }) {
                                               (x) => x !== dg,
                                             )
                                           : [...prev.dienGiai, dg],
-                                      }))
-                                    }
+                                      }));
+                                      setOpenFilter(null);
+                                    }}
                                   />
                                   <span className="truncate">
                                     {" "}
@@ -2823,7 +2834,7 @@ export default function ManageTrip({ user, onLogout }) {
                                   setOpenFilter(null);
                                 }}
                               >
-                                Áp dụng
+                                Chọn tất cả
                               </button>
 
                               <button
@@ -2885,6 +2896,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     };
                                   });
                                   setPage(1);
+                                  setOpenFilter(null);
                                 }}
                               />
                               Chọn tất cả ({filteredCuocPhi.length})
@@ -2899,14 +2911,15 @@ export default function ManageTrip({ user, onLogout }) {
                                   <input
                                     type="checkbox"
                                     checked={excelSelected.cuocPhi.includes(cp)}
-                                    onChange={() =>
+                                    onChange={() => {
                                       setExcelSelected((prev) => ({
                                         ...prev,
                                         cuocPhi: prev.cuocPhi.includes(cp)
                                           ? prev.cuocPhi.filter((x) => x !== cp)
                                           : [...prev.cuocPhi, cp],
-                                      }))
-                                    }
+                                      }));
+                                      setOpenFilter(null);
+                                    }}
                                   />
                                   <span className="truncate">
                                     {cp === "__EMPTY__"
@@ -2935,7 +2948,7 @@ export default function ManageTrip({ user, onLogout }) {
                                   setOpenFilter(null);
                                 }}
                               >
-                                Áp dụng
+                                Chọn tất cả
                               </button>
 
                               <button
@@ -2998,6 +3011,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     };
                                   });
                                   setPage(1);
+                                  setOpenFilter(null);
                                 }}
                               />
                               Chọn tất cả ({filteredMaHoaDon.length})
@@ -3014,7 +3028,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     checked={excelSelected.maHoaDon.includes(
                                       cp,
                                     )}
-                                    onChange={() =>
+                                    onChange={() => {
                                       setExcelSelected((prev) => ({
                                         ...prev,
                                         maHoaDon: prev.maHoaDon.includes(cp)
@@ -3022,8 +3036,9 @@ export default function ManageTrip({ user, onLogout }) {
                                               (x) => x !== cp,
                                             )
                                           : [...prev.maHoaDon, cp],
-                                      }))
-                                    }
+                                      }));
+                                      setOpenFilter(null);
+                                    }}
                                   />
                                   <span className="truncate">
                                     {cp === "__EMPTY__"
@@ -3052,7 +3067,7 @@ export default function ManageTrip({ user, onLogout }) {
                                   setOpenFilter(null);
                                 }}
                               >
-                                Áp dụng
+                                Chọn tất cả
                               </button>
 
                               <button
@@ -3084,6 +3099,7 @@ export default function ManageTrip({ user, onLogout }) {
                                 setSearchDebtCode(e.target.value)
                               }
                             />
+
                             <label className="flex gap-1 items-center mb-1 font-semibold">
                               <input
                                 type="checkbox"
@@ -3099,6 +3115,7 @@ export default function ManageTrip({ user, onLogout }) {
                                       filteredDebtCode.every((d) =>
                                         prev.debtCode.includes(d),
                                       );
+
                                     return {
                                       ...prev,
                                       debtCode: isAllSelected
@@ -3114,7 +3131,9 @@ export default function ManageTrip({ user, onLogout }) {
                                           ],
                                     };
                                   });
+
                                   setPage(1);
+                                  setOpenFilter(null); // ✅ Tự động đóng filter
                                 }}
                               />
                               Chọn tất cả ({filteredDebtCode.length})
@@ -3131,7 +3150,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     checked={excelSelected.debtCode.includes(
                                       cp,
                                     )}
-                                    onChange={() =>
+                                    onChange={() => {
                                       setExcelSelected((prev) => ({
                                         ...prev,
                                         debtCode: prev.debtCode.includes(cp)
@@ -3139,9 +3158,12 @@ export default function ManageTrip({ user, onLogout }) {
                                               (x) => x !== cp,
                                             )
                                           : [...prev.debtCode, cp],
-                                      }))
-                                    }
+                                      }));
+
+                                      setOpenFilter(null); // ✅ Tích 1 mã cũng đóng filter
+                                    }}
                                   />
+
                                   <span className="truncate">
                                     {cp === "__EMPTY__"
                                       ? "(Trống / chưa có)"
@@ -3155,7 +3177,6 @@ export default function ManageTrip({ user, onLogout }) {
                               <button
                                 className="flex-1 bg-blue-600 text-white px-2 py-1 rounded"
                                 onClick={() => {
-                                  // Tự động chọn tất cả biển số đang hiển thị
                                   setExcelSelected((prev) => ({
                                     ...prev,
                                     debtCode: [
@@ -3165,11 +3186,12 @@ export default function ManageTrip({ user, onLogout }) {
                                       ),
                                     ],
                                   }));
+
                                   setPage(1);
                                   setOpenFilter(null);
                                 }}
                               >
-                                Áp dụng
+                                Chọn tất car
                               </button>
 
                               <button
@@ -3179,6 +3201,7 @@ export default function ManageTrip({ user, onLogout }) {
                                     ...prev,
                                     debtCode: [],
                                   }));
+
                                   setSearchDebtCode("");
                                   setPage(1);
                                   setOpenFilter(null);

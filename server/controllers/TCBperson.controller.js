@@ -37,7 +37,7 @@ const updateFutureBalances = async (
   fromMaGD,
   delta,
   session,
-  excludeId = null
+  excludeId = null,
 ) => {
   if (!delta) return;
 
@@ -65,7 +65,7 @@ const updateFutureBalances = async (
         soDu: delta,
       },
     },
-    { session }
+    { session },
   );
 };
 
@@ -87,7 +87,7 @@ exports.create = async (req, res) => {
     const lastInMonth = await TCBperson.findOne(
       { maGD: { $regex: `^${prefix}` } },
       {},
-      { sort: { maGD: -1 }, session }
+      { sort: { maGD: -1 }, session },
     );
 
     let stt = 1;
@@ -102,7 +102,7 @@ exports.create = async (req, res) => {
       const lastBefore = await TCBperson.findOne(
         { maGD: { $lt: `${prefix}.9999` } },
         {},
-        { sort: { maGD: -1 }, session }
+        { sort: { maGD: -1 }, session },
       );
 
       stt = 1;
@@ -123,14 +123,14 @@ exports.create = async (req, res) => {
           maChuyen,
         },
       ],
-      { session }
+      { session },
     );
 
     await updateFutureBalances(
       date,
       newItem[0].maGD,
       parseNumber(soTien),
-      session
+      session,
     );
 
     await session.commitTransaction();
@@ -181,7 +181,7 @@ exports.insertAfter = async (req, res) => {
       {
         sort: { maGD: -1 },
         session,
-      }
+      },
     );
 
     for (const r of laterRecords) {
@@ -217,7 +217,7 @@ exports.insertAfter = async (req, res) => {
           maChuyen,
         },
       ],
-      { session }
+      { session },
     );
 
     // =============================
@@ -228,7 +228,7 @@ exports.insertAfter = async (req, res) => {
       anchor.maGD,
       amount,
       session,
-      newItem[0]._id
+      newItem[0]._id,
     );
 
     await session.commitTransaction();
@@ -259,13 +259,16 @@ exports.update = async (req, res) => {
 
   try {
     const { id } = req.params;
+
     const { timePay, noiDungCK, soTien, khachHang, keToan, ghiChu, maChuyen } =
       req.body;
 
     const record = await TCBperson.findById(id).session(session);
+
     if (!record) {
       throw new Error("Không tìm thấy giao dịch");
     }
+
     if (record.isLocked) {
       throw new Error("Giao dịch đã bị khoá, không thể sửa");
     }
@@ -278,6 +281,7 @@ exports.update = async (req, res) => {
      * 1. UPDATE GIAO DỊCH HIỆN TẠI
      ====================== */
     record.timePay = timePay ? parseExcelDate(timePay) : record.timePay;
+
     record.noiDungCK = noiDungCK;
     record.soTien = newSoTien;
     record.khachHang = khachHang;
@@ -285,20 +289,40 @@ exports.update = async (req, res) => {
     record.ghiChu = ghiChu;
     record.maChuyen = maChuyen;
 
+    /** ======================
+     * 2. TỰ ĐỘNG KHOÁ
+     * Chỉ khoá khi:
+     * - keToan có giá trị thực
+     * - maChuyen có giá trị thực
+     * - không phải chuỗi rỗng / toàn dấu cách
+     ====================== */
+    record.isLocked =
+      String(keToan ?? "").trim() !== "" &&
+      String(maChuyen ?? "").trim() !== "";
+
     record.soDu += delta;
+
     await record.save({ session });
 
     /** ======================
-     * 2. REBUILD PHÍA SAU
+     * 3. REBUILD PHÍA SAU
      ====================== */
     await updateFutureBalances(record.timePay, record.maGD, delta, session);
 
     await session.commitTransaction();
-    res.json({ success: true, data: record });
+
+    res.json({
+      success: true,
+      data: record,
+    });
   } catch (err) {
     await session.abortTransaction();
+
     console.error(err);
-    res.status(500).json({ message: err.message });
+
+    res.status(500).json({
+      message: err.message,
+    });
   } finally {
     session.endSession();
   }
@@ -334,7 +358,7 @@ exports.deleteOne = async (req, res) => {
       record.timePay,
       record.maGD,
       -record.soTien,
-      session
+      session,
     );
 
     // ======================
@@ -353,7 +377,7 @@ exports.deleteOne = async (req, res) => {
         },
       },
       {},
-      { sort: { maGD: 1 }, session }
+      { sort: { maGD: 1 }, session },
     );
 
     for (const r of laterRecords) {
@@ -559,7 +583,7 @@ exports.importExcel = async (req, res) => {
     const lastRecord = await TCBperson.findOne(
       {},
       {},
-      { sort: { timePay: -1 }, session }
+      { sort: { timePay: -1 }, session },
     );
 
     let runningSoDu = lastRecord?.soDu || 0;
@@ -595,7 +619,7 @@ exports.importExcel = async (req, res) => {
         const lastInMonth = await TCBperson.findOne(
           { maGD: { $regex: `^${prefix}` } },
           {},
-          { sort: { maGD: -1 }, session }
+          { sort: { maGD: -1 }, session },
         );
 
         stt = lastInMonth ? parseSTT(lastInMonth.maGD) : 0;
@@ -662,7 +686,7 @@ exports.exportExcel = async (req, res) => {
     // 2️⃣ LOAD FORM MẪU
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(
-      path.join(__dirname, "../templates/SAO_KE_TCB.xlsx")
+      path.join(__dirname, "../templates/SAO_KE_TCB.xlsx"),
     );
 
     const sheet = workbook.getWorksheet("Sheet1");
@@ -693,11 +717,11 @@ exports.exportExcel = async (req, res) => {
     // 4️⃣ TRẢ FILE
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=SAO_KE_TCB.xlsx"
+      "attachment; filename=SAO_KE_TCB.xlsx",
     );
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     // QUAN TRỌNG
@@ -759,7 +783,7 @@ exports.lockByDateRange = async (req, res) => {
       },
       {
         $set: { isLocked: true },
-      }
+      },
     );
 
     res.json({

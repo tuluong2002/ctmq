@@ -642,7 +642,7 @@ const VehicleProfitPage = ({ user }) => {
           >
             <FiUpload />
 
-            {importing ? "Đang nhập..." : "Nhập Excel"}
+            {importing ? "Đang nhập..." : "Nhập chi phí"}
 
             <input
               type="file"
