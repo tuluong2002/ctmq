@@ -28,6 +28,9 @@ router.get("/filter-all", oddDebtCtrl.getAllOddDebtFilterOptions);
 // GET /api/odd-debt?startDate=&endDate=&page=&limit=
 router.get("/all", oddDebtCtrl.getOddCustomerDebt);
 
+// 🔹 Lấy danh sách công nợ KH lẻ quá hạn
+router.get("/overdue-trips", oddDebtCtrl.getOverdueTrips);
+
 // 🔹 Import tiền từ Excel
 router.post(
   "/import-trip-fee",

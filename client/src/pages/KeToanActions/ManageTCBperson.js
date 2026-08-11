@@ -111,6 +111,13 @@ export default function ManageTCBperson() {
   const handleGoToOnlKT = () => {
     navigate("/onl-schedules", { state: { user } });
   };
+  const handleGoToScheErr = () => {
+    navigate("/schedule-errors", { state: { user } });
+  };
+
+  const handleGoToCNKLQH = () => {
+    navigate("/overdue-customer-debt", { state: { user } });
+  };
 
   const [customerList, setCustomerList] = useState([]);
   const [accountantList, setAccountantList] = useState([]);
@@ -570,6 +577,22 @@ export default function ManageTCBperson() {
           }`}
         >
           KT - Lịch trình
+        </button>
+        <button
+          onClick={handleGoToScheErr}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/schedule-errors") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          DS chuyến sai sót
+        </button>
+        <button
+          onClick={handleGoToCNKLQH}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/overdue-customer-debt") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          CN khách lẻ quá hạn
         </button>
       </div>
       <div className="flex gap-2 items-center mb-4">

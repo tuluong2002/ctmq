@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   FiRefreshCw,
@@ -15,6 +16,19 @@ import {
 import API from "../../api";
 
 const VehicleProfitPage = ({ user }) => {
+  const navigate = useNavigate();
+  // =====================================================
+  // PHÂN QUYỀN DOANH THU / LỢI NHUẬN
+  // =====================================================
+
+  const permissions = user?.permissions || [];
+
+  const canViewAllDoanhThu = permissions.includes("all_doanh_thu");
+
+  const canImportChiPhi = permissions.includes("add_cp_doanh_thu");
+
+  const canAccessDoanhThuPage = canViewAllDoanhThu || canImportChiPhi;
+
   // =====================================================
   // STATE
   // =====================================================
@@ -473,12 +487,43 @@ const VehicleProfitPage = ({ user }) => {
   // =====================================================
   // RENDER
   // =====================================================
+  if (!canAccessDoanhThuPage) {
+    return (
+      <div className="p-6">
+        <div className="flex gap-2 items-center mb-4 text-xs">
+          <button
+            onClick={() => navigate("/ke-toan")}
+            className="px-3 py-1 rounded text-white bg-blue-500"
+          >
+            Trang chính
+          </button>
+        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-600 text-lg font-semibold">
+            Bạn không có quyền truy cập
+          </div>
+
+          <div className="text-red-500 text-sm mt-1">
+            Bạn không có quyền xem dữ liệu doanh thu của xe.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
       {/* =================================================
           HEADER
       ================================================= */}
+      <div className="flex gap-2 items-center mb-4 text-xs">
+        <button
+          onClick={() => navigate("/ke-toan")}
+          className="px-3 py-1 rounded text-white bg-blue-500"
+        >
+          Trang chính
+        </button>
+      </div>
 
       <div className="bg-white rounded-lg shadow-sm border p-4 mb-4">
         <div>
@@ -553,105 +598,112 @@ const VehicleProfitPage = ({ user }) => {
             onClick={fetchProfit}
             disabled={loading || !monthYear}
             className="
-              flex items-center gap-2
-              px-4 py-2
-              rounded-md
-              bg-blue-600
-              text-white
-              hover:bg-blue-700
-              disabled:opacity-50
-            "
+    flex items-center gap-2
+    px-4 py-2
+    rounded-md
+    bg-blue-600
+    text-white
+    hover:bg-blue-700
+    disabled:opacity-50
+  "
           >
             <FiSearch />
-
             {loading ? "Đang tải..." : "Xem"}
           </button>
 
           {/* TẠO */}
 
-          <button
-            onClick={handleCreate}
-            disabled={creating || !monthYear}
-            className="
-              flex items-center gap-2
-              px-4 py-2
-              rounded-md
-              bg-green-600
-              text-white
-              hover:bg-green-700
-              disabled:opacity-50
-            "
-          >
-            <FiPlus />
+          {canViewAllDoanhThu && (
+            <button
+              onClick={handleCreate}
+              disabled={creating || !monthYear}
+              className="
+      flex items-center gap-2
+      px-4 py-2
+      rounded-md
+      bg-green-600
+      text-white
+      hover:bg-green-700
+      disabled:opacity-50
+    "
+            >
+              <FiPlus />
 
-            {creating ? "Đang tạo..." : "Tạo kỳ"}
-          </button>
+              {creating ? "Đang tạo..." : "Tạo kỳ"}
+            </button>
+          )}
 
           {/* TÍNH LẠI */}
 
-          <button
-            onClick={handleRecalculate}
-            disabled={recalculating || !monthYear || data.length === 0}
-            className="
-              flex items-center gap-2
-              px-4 py-2
-              rounded-md
-              bg-orange-500
-              text-white
-              hover:bg-orange-600
-              disabled:opacity-50
-            "
-          >
-            <FiRefreshCw />
+          {canViewAllDoanhThu && (
+            <button
+              onClick={handleRecalculate}
+              disabled={recalculating || !monthYear || data.length === 0}
+              className="
+      flex items-center gap-2
+      px-4 py-2
+      rounded-md
+      bg-orange-500
+      text-white
+      hover:bg-orange-600
+      disabled:opacity-50
+    "
+            >
+              <FiRefreshCw />
 
-            {recalculating ? "Đang tính..." : "Tính lại"}
-          </button>
+              {recalculating ? "Đang tính..." : "Tính lại"}
+            </button>
+          )}
 
           {/* XUẤT EXCEL */}
 
-          <button
-            onClick={handleExportExcel}
-            disabled={!monthYear || data.length === 0}
-            className="
-    flex items-center gap-2
-    px-4 py-2
-    rounded-md
-    bg-indigo-600
-    text-white
-    hover:bg-indigo-700
-    disabled:opacity-50
-  "
-          >
-            <FiDownload />
-            Xuất Excel
-          </button>
+          {canViewAllDoanhThu && (
+            <button
+              onClick={handleExportExcel}
+              disabled={!monthYear || data.length === 0}
+              className="
+      flex items-center gap-2
+      px-4 py-2
+      rounded-md
+      bg-indigo-600
+      text-white
+      hover:bg-indigo-700
+      disabled:opacity-50
+    "
+            >
+              <FiDownload />
+              Xuất Excel
+            </button>
+          )}
 
           {/* NHẬP EXCEL */}
 
-          <label
-            className={`
-    flex items-center gap-2
-    px-4 py-2
-    rounded-md
-    bg-teal-600
-    text-white
-    hover:bg-teal-700
-    cursor-pointer
-    ${importing || !monthYear ? "opacity-50 cursor-not-allowed" : ""}
-  `}
-          >
-            <FiUpload />
+          {canImportChiPhi && (
+            <label
+              className={`
+      flex items-center gap-2
+      px-4 py-2
+      rounded-md
+      bg-teal-600
+      text-white
+      hover:bg-teal-700
+      cursor-pointer
+      ${importing || !monthYear ? "opacity-50 cursor-not-allowed" : ""}
+    `}
+            >
+              <FiUpload />
 
-            {importing ? "Đang nhập..." : "Nhập chi phí"}
+              {importing ? "Đang nhập..." : "Nhập chi phí"}
 
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              className="hidden"
-              disabled={importing || !monthYear}
-              onChange={handleImportExcel}
-            />
-          </label>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                disabled={importing || !monthYear}
+                onChange={handleImportExcel}
+              />
+            </label>
+          )}
         </div>
 
         {/* MESSAGE */}
@@ -673,65 +725,64 @@ const VehicleProfitPage = ({ user }) => {
           SUMMARY
       ================================================= */}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        {/* DOANH THU */}
+      {canViewAllDoanhThu && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          {/* DOANH THU */}
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Tổng doanh thu</p>
 
-        <div className="bg-white rounded-lg shadow-sm border p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Tổng doanh thu</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">
+                  {formatMoney(totals.doanhThu)} VNĐ
+                </p>
+              </div>
 
-              <p className="text-2xl font-bold text-blue-600 mt-1">
-                {formatMoney(totals.doanhThu)} VNĐ
-              </p>
+              <div className="p-3 rounded-full bg-blue-50">
+                <FiTrendingUp size={22} className="text-blue-600" />
+              </div>
             </div>
+          </div>
 
-            <div className="p-3 rounded-full bg-blue-50">
-              <FiTrendingUp size={22} className="text-blue-600" />
+          {/* CHI PHÍ */}
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Tổng chi phí</p>
+
+                <p className="text-2xl font-bold text-orange-600 mt-1">
+                  {formatMoney(totals.chiPhi)} VNĐ
+                </p>
+              </div>
+
+              <div className="p-3 rounded-full bg-orange-50">
+                <FiDollarSign size={22} className="text-orange-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* LỢI NHUẬN */}
+          <div className="bg-white rounded-lg shadow-sm border p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Tổng lợi nhuận</p>
+
+                <p
+                  className={`text-2xl font-bold mt-1 ${
+                    totals.loiNhuan >= 0 ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {formatMoney(totals.loiNhuan)} VNĐ
+                </p>
+              </div>
+
+              <div className="p-3 rounded-full bg-green-50">
+                <FiBarChart2 size={22} className="text-green-600" />
+              </div>
             </div>
           </div>
         </div>
-
-        {/* CHI PHÍ */}
-
-        <div className="bg-white rounded-lg shadow-sm border p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Tổng chi phí</p>
-
-              <p className="text-2xl font-bold text-orange-600 mt-1">
-                {formatMoney(totals.chiPhi)} VNĐ
-              </p>
-            </div>
-
-            <div className="p-3 rounded-full bg-orange-50">
-              <FiDollarSign size={22} className="text-orange-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* LỢI NHUẬN */}
-
-        <div className="bg-white rounded-lg shadow-sm border p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Tổng lợi nhuận</p>
-
-              <p
-                className={`text-2xl font-bold mt-1 ${
-                  totals.loiNhuan >= 0 ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {formatMoney(totals.loiNhuan)} VNĐ
-              </p>
-            </div>
-
-            <div className="p-3 rounded-full bg-green-50">
-              <FiBarChart2 size={22} className="text-green-600" />
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* =================================================
           TABLE
@@ -779,7 +830,7 @@ const VehicleProfitPage = ({ user }) => {
         {/* TABLE */}
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs">
             <thead className="bg-gray-100">
               <tr>
                 <th className="border px-3 py-3 text-center w-16">STT</th>
@@ -832,7 +883,9 @@ const VehicleProfitPage = ({ user }) => {
                       {/* DOANH THU */}
 
                       <td className="border px-3 py-2 text-right font-medium text-blue-600">
-                        {formatMoney(item.doanhThu)} VNĐ
+                        {canViewAllDoanhThu
+                          ? `${formatMoney(item.doanhThu)} VNĐ`
+                          : "0 VNĐ"}
                       </td>
 
                       {/* CHI PHÍ */}
@@ -871,12 +924,17 @@ const VehicleProfitPage = ({ user }) => {
 
                       <td
                         className={`border px-3 py-2 text-right font-bold ${
-                          loiNhuan >= 0 ? "text-green-600" : "text-red-600"
+                          canViewAllDoanhThu
+                            ? loiNhuan >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                            : "text-gray-500"
                         }`}
                       >
-                        {formatMoney(loiNhuan)} VNĐ
+                        {canViewAllDoanhThu
+                          ? `${formatMoney(loiNhuan)} VNĐ`
+                          : "0 VNĐ"}
                       </td>
-
                       {/* MÃ */}
 
                       <td className="border px-3 py-2 text-center font-medium">

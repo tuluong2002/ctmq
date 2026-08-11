@@ -41,6 +41,7 @@ import ManageOnlineSchedule from "./pages/KeToanActions/ManageOnlineSchedule";
 
 import ScheduleErrorPage from "./pages/KeToanActions/ScheduleErrorPage";
 import VehicleProfitPage from "./pages/KeToanActions/VehicleProfitPage";
+import OverdueCustomerDebtPage from "./pages/KeToanActions/OverdueCustomerDebtPage";
 
 import AddressPage from "./pages/AddressPage";
 import Customer2Page from "./pages/Customer2Page";
@@ -306,6 +307,15 @@ function App() {
           element={
             <PrivateRoute roles={["keToan"]}>
               <VehicleProfitPage user={user} />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/overdue-customer-debt"
+          element={
+            <PrivateRoute roles={["keToan"]}>
+              <OverdueCustomerDebtPage user={user} />
             </PrivateRoute>
           }
         />

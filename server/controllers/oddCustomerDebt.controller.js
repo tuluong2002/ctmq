@@ -1409,3 +1409,85 @@ exports.importTripFee = async (req, res) => {
     });
   }
 };
+
+// =====================================================
+// LẤY CÁC CHUYẾN KHÁCH LẺ QUÁ HẠN CHƯA THANH TOÁN
+// FE gửi: ?soNgay=7
+//
+// CHỈ LẤY:
+// - KH lẻ: maKH = "26"
+// - CHƯA TRẢ
+// - TRẢ MỘT PHẦN
+// - Ngày giao hàng đã quá số ngày quy định
+// =====================================================
+exports.getOverdueTrips = async (req, res) => {
+  try {
+    const { soNgay } = req.query;
+
+    const days = Number(soNgay);
+
+    if (!Number.isFinite(days) || days < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Số ngày không hợp lệ",
+      });
+    }
+
+    // =====================================================
+    // TÍNH NGÀY QUÁ HẠN
+    // =====================================================
+
+    const overdueDate = new Date();
+
+    overdueDate.setDate(overdueDate.getDate() - days);
+
+    // =====================================================
+    // LẤY CHUYẾN QUÁ HẠN
+    // =====================================================
+
+    const trips = await SchCustomerOdd.find({
+      // Chỉ khách lẻ
+      maKH: "26",
+
+      // Chưa trả hoặc trả một phần
+      status: {
+        $in: ["CHUA_TRA", "TRA_MOT_PHAN"],
+      },
+
+      // Ngày giao đã quá hạn
+      ngayGiaoHang: {
+        $lte: overdueDate,
+      },
+    })
+      .sort({
+        ngayGiaoHang: 1,
+      })
+      .lean();
+
+    // =====================================================
+    // TỔNG CÔNG NỢ
+    // =====================================================
+
+    const totalConLai = trips.reduce(
+      (sum, trip) => sum + Number(trip.conLai || 0),
+      0,
+    );
+
+    return res.json({
+      success: true,
+      soNgay: days,
+      ngayQuaHan: overdueDate,
+      total: trips.length,
+      totalConLai,
+      data: trips,
+    });
+  } catch (error) {
+    console.error("getOverdueTrips error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi khi lấy danh sách chuyến quá hạn",
+      error: error.message,
+    });
+  }
+};

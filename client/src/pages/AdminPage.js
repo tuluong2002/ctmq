@@ -322,6 +322,12 @@ export default function AdminPage({ onLogout }) {
                 <th className="px-4 py-2 border-b text-center">
                   DS sai sót
                 </th>
+                <th className="px-4 py-2 border-b text-center">
+                  Toàn quyền doanh thu
+                </th>
+                <th className="px-4 py-2 border-b text-center">
+                  Thêm CP doanh thu
+                </th>
                 <th className="px-4 py-2 border-b text-center">Thao tác</th>
               </tr>
             </thead>
@@ -355,7 +361,9 @@ export default function AdminPage({ onLogout }) {
                     "lock_kcn",
                     "lock_tcb",
                     "cuoc_tra_xe_ngoai",
-                    "edit_sche_err"
+                    "edit_sche_err",
+                    "all_doanh_thu",
+                    "add_cp_doanh_thu"
                   ].map((perm) => (
                     <td key={perm} className="px-4 py-2 border-b text-center">
                       <input

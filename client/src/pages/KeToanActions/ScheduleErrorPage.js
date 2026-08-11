@@ -98,6 +98,10 @@ const ScheduleErrorPage = ({ user }) => {
     navigate("/schedule-errors", { state: { user } });
   };
 
+  const handleGoToCNKLQH = () => {
+    navigate("/overdue-customer-debt", { state: { user } });
+  };
+
   // Bộ lọc
   const [filters, setFilters] = useState({
     maChuyen: "",
@@ -514,7 +518,7 @@ const ScheduleErrorPage = ({ user }) => {
 
         <button
           onClick={() => {
-            if (!currentUser?.permissions?.includes("edit_trip")) {
+            if (!user?.permissions?.includes("edit_trip")) {
               alert("Bạn không có quyền truy cập!");
               return;
             }
@@ -583,6 +587,14 @@ const ScheduleErrorPage = ({ user }) => {
           }`}
         >
           DS chuyến sai sót
+        </button>
+        <button
+          onClick={handleGoToCNKLQH}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/overdue-customer-debt") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          CN khách lẻ quá hạn
         </button>
       </div>
       {/* =================================================== */}

@@ -34,7 +34,7 @@ const SchCustomerOddSchema = new mongoose.Schema(
 
     debtCode: {
       type: String,
-      default: null, // kỳ được chuyển sang
+      default: "", // kỳ được chuyển sang
     },
 
     nameCustomer: { type: String, default: "" },
