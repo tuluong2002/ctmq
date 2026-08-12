@@ -1422,9 +1422,14 @@ exports.importTripFee = async (req, res) => {
 // =====================================================
 exports.getOverdueTrips = async (req, res) => {
   try {
-    const { soNgay } = req.query;
+    const { soNgay, nam } = req.query;
 
     const days = Number(soNgay);
+    const year = Number(nam);
+
+    // =====================================================
+    // VALIDATE
+    // =====================================================
 
     if (!Number.isFinite(days) || days < 0) {
       return res.status(400).json({
@@ -1433,13 +1438,32 @@ exports.getOverdueTrips = async (req, res) => {
       });
     }
 
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      return res.status(400).json({
+        success: false,
+        message: "Năm không hợp lệ",
+      });
+    }
+
     // =====================================================
-    // TÍNH NGÀY QUÁ HẠN
+    // NGÀY HIỆN TẠI
     // =====================================================
 
-    const overdueDate = new Date();
+    const now = new Date();
+
+    // =====================================================
+    // NGÀY QUÁ HẠN
+    // =====================================================
+
+    const overdueDate = new Date(now);
 
     overdueDate.setDate(overdueDate.getDate() - days);
+
+    // =====================================================
+    // TỪ ĐẦU NĂM ĐẾN HIỆN TẠI
+    // =====================================================
+
+    const fromDate = new Date(year, 0, 1);
 
     // =====================================================
     // LẤY CHUYẾN QUÁ HẠN
@@ -1454,9 +1478,15 @@ exports.getOverdueTrips = async (req, res) => {
         $in: ["CHUA_TRA", "TRA_MOT_PHAN"],
       },
 
-      // Ngày giao đã quá hạn
+      // ===================================================
+      // NGÀY GIAO:
+      // - Từ 01/01 của năm FE gửi
+      // - Đến hiện tại
+      // - Đồng thời phải quá hạn
+      // ===================================================
       ngayGiaoHang: {
-        $lte: overdueDate,
+        $gte: fromDate,
+        $lte: overdueDate < now ? overdueDate : now,
       },
     })
       .sort({
@@ -1475,7 +1505,10 @@ exports.getOverdueTrips = async (req, res) => {
 
     return res.json({
       success: true,
+      nam: year,
       soNgay: days,
+      tuNgay: fromDate,
+      denNgay: now,
       ngayQuaHan: overdueDate,
       total: trips.length,
       totalConLai,

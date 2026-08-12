@@ -16,7 +16,18 @@ const OverdueCustomerDebtPage = ({ user }) => {
   // STATE
   // =====================================================
 
+  const YEAR_STORAGE_KEY = "overdue_customer_debt_year";
+
+  const currentYear = new Date().getFullYear();
+
   const [soNgay, setSoNgay] = useState(60);
+
+  const [nam, setNam] = useState(() => {
+    const savedYear = localStorage.getItem(YEAR_STORAGE_KEY);
+
+    return savedYear ? Number(savedYear) : currentYear;
+  });
+
   const [data, setData] = useState([]);
   const [searchMaChuyen, setSearchMaChuyen] = useState("");
 
@@ -112,11 +123,20 @@ const OverdueCustomerDebtPage = ({ user }) => {
 
   const fetchOverdueTrips = async () => {
     const days = Number(soNgay);
+    const year = Number(nam);
 
     if (!Number.isFinite(days) || days < 0) {
       setError("Số ngày quá hạn không hợp lệ");
       return;
     }
+
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      setError("Năm không hợp lệ");
+      return;
+    }
+
+    // Lưu năm đã chọn vào localStorage
+    localStorage.setItem(YEAR_STORAGE_KEY, String(year));
 
     try {
       setLoading(true);
@@ -125,6 +145,7 @@ const OverdueCustomerDebtPage = ({ user }) => {
       const res = await axios.get(`${API}/odd-debt/overdue-trips`, {
         params: {
           soNgay: days,
+          nam: year,
         },
       });
 
@@ -356,6 +377,41 @@ const OverdueCustomerDebtPage = ({ user }) => {
           ===================================================== */}
 
           <div className="flex items-center gap-2 flex-wrap">
+            {/* LỌC NĂM */}
+            <label className="text-sm font-medium text-gray-700">Từ năm:</label>
+
+            <input
+              type="number"
+              min="2000"
+              max="2100"
+              value={nam}
+              onChange={(e) => {
+                const value = e.target.value;
+                setNam(value);
+
+                if (value) {
+                  localStorage.setItem(YEAR_STORAGE_KEY, value);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  fetchOverdueTrips();
+                }
+              }}
+              className="
+      w-24
+      border
+      border-gray-300
+      rounded-md
+      px-3
+      py-2
+      outline-none
+      focus:ring-2
+      focus:ring-blue-400
+    "
+            />
+
+            {/* QUÁ HẠN */}
             <label className="text-sm font-medium text-gray-700">
               Quá hạn:
             </label>
@@ -389,7 +445,7 @@ const OverdueCustomerDebtPage = ({ user }) => {
               </span>
             </div>
 
-            {/* LỌC MÃ CHUYẾN */}
+            {/* MÃ CHUYẾN */}
             <input
               type="text"
               placeholder="Tìm mã chuyến..."
@@ -408,6 +464,7 @@ const OverdueCustomerDebtPage = ({ user }) => {
     "
             />
 
+            {/* LỌC */}
             <button
               onClick={fetchOverdueTrips}
               disabled={loading}
@@ -428,6 +485,7 @@ const OverdueCustomerDebtPage = ({ user }) => {
               {loading ? "Đang lọc..." : "Lọc"}
             </button>
 
+            {/* REFRESH */}
             <button
               onClick={fetchOverdueTrips}
               disabled={loading}
@@ -520,6 +578,8 @@ const OverdueCustomerDebtPage = ({ user }) => {
 
                 <th className="border px-3 py-3 text-center">KHÁCH HÀNG</th>
 
+                <th className="border px-3 py-3 text-center">DIỄN GIẢI</th>
+
                 <th className="border px-3 py-3 text-center">NGÀY ĐÓNG HÀNG</th>
 
                 <th className="border px-3 py-3 text-center">NGÀY GIAO HÀNG</th>
@@ -576,7 +636,13 @@ const OverdueCustomerDebtPage = ({ user }) => {
 
                     {/* KHÁCH HÀNG */}
 
-                    <td className="border px-3 py-2">{item.khachHang || ""}</td>
+                    <td className="border px-3 py-2">
+                      {item.nameCustomer || ""}
+                    </td>
+
+                    {/* DIỄN GIẢI */}
+
+                    <td className="border px-3 py-2">{item.dienGiai || ""}</td>
 
                     {/* NGÀY ĐÓNG */}
 
