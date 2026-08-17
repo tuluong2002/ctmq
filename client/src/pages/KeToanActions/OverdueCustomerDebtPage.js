@@ -6,6 +6,7 @@ import {
   FiSearch,
   FiAlertCircle,
   FiDollarSign,
+  FiX,
 } from "react-icons/fi";
 
 import API from "../../api";
@@ -30,6 +31,7 @@ const OverdueCustomerDebtPage = ({ user }) => {
 
   const [data, setData] = useState([]);
   const [searchMaChuyen, setSearchMaChuyen] = useState("");
+  const [searchKhachHang, setSearchKhachHang] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -177,11 +179,17 @@ const OverdueCustomerDebtPage = ({ user }) => {
     fetchOverdueTrips();
   }, []);
 
-  const filteredData = data.filter((item) =>
-    String(item.maChuyen || "")
+  const filteredData = data.filter((item) => {
+    const matchMaChuyen = String(item.maChuyen || "")
       .toLowerCase()
-      .includes(searchMaChuyen.trim().toLowerCase()),
-  );
+      .includes(searchMaChuyen.trim().toLowerCase());
+
+    const matchKhachHang = String(item.nameCustomer || "")
+      .toLowerCase()
+      .includes(searchKhachHang.trim().toLowerCase());
+
+    return matchMaChuyen && matchKhachHang;
+  });
 
   // =====================================================
   // TỔNG
@@ -446,23 +454,89 @@ const OverdueCustomerDebtPage = ({ user }) => {
             </div>
 
             {/* MÃ CHUYẾN */}
-            <input
-              type="text"
-              placeholder="Tìm mã chuyến..."
-              value={searchMaChuyen}
-              onChange={(e) => setSearchMaChuyen(e.target.value)}
-              className="
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Tìm mã chuyến..."
+                value={searchMaChuyen}
+                onChange={(e) => setSearchMaChuyen(e.target.value)}
+                className="
       w-40
       border
       border-gray-300
       rounded-md
       px-3
       py-2
+      pr-8
       outline-none
       focus:ring-2
       focus:ring-blue-400
     "
-            />
+              />
+
+              {searchMaChuyen && (
+                <button
+                  type="button"
+                  onClick={() => setSearchMaChuyen("")}
+                  className="
+        absolute
+        right-2
+        top-1/2
+        -translate-y-1/2
+        text-gray-400
+        hover:text-red-500
+      "
+                  title="Xóa"
+                >
+                  <FiX size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* KHÁCH HÀNG */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Tìm khách hàng..."
+                value={searchKhachHang}
+                onChange={(e) => setSearchKhachHang(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    fetchOverdueTrips();
+                  }
+                }}
+                className="
+      w-48
+      border
+      border-gray-300
+      rounded-md
+      px-3
+      py-2
+      pr-8
+      outline-none
+      focus:ring-2
+      focus:ring-blue-400
+    "
+              />
+
+              {searchKhachHang && (
+                <button
+                  type="button"
+                  onClick={() => setSearchKhachHang("")}
+                  className="
+        absolute
+        right-2
+        top-1/2
+        -translate-y-1/2
+        text-gray-400
+        hover:text-red-500
+      "
+                  title="Xóa"
+                >
+                  <FiX size={16} />
+                </button>
+              )}
+            </div>
 
             {/* LỌC */}
             <button
