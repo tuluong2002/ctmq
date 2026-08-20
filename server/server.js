@@ -15,10 +15,14 @@ const paymentHistoryRoutes = require("./routes/paymentHistoryRoutes");
 const oddCustomerDebtRoutes = require("./routes/oddCustomerDebt.routes");
 const voucherRoutes = require("./routes/voucherRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
-const oilRoutes = require("./routes/oilRoutes")
-const userScheduleRoutes = require("./routes/userScheduleRoutes")
+const oilRoutes = require("./routes/oilRoutes");
+const userScheduleRoutes = require("./routes/userScheduleRoutes");
 const scheduleErrorRoutes = require("./routes/scheduleErrorRoutes");
 const vehicleProfitRoutes = require("./routes/vehicleProfitRoutes");
+
+const employeeLeaveRoutes = require("./routes/employeeLeaveRoutes");
+const employeeAdvanceRoutes = require("./routes/employeeAdvanceRoutes");
+const employeeLeaveAdvanceSummaryRoutes = require("./routes/employeeLeaveAdvanceSummaryRoutes");
 
 require("./models/cron");
 
@@ -65,17 +69,23 @@ app.use("/api/salary", require("./routes/salary.routes"));
 app.use("/api/trip-payment-kt", require("./routes/tripPaymentKT.routes"));
 app.use(
   "/api/transportation-contract",
-  require("./routes/transportationContract.routes")
+  require("./routes/transportationContract.routes"),
 );
 app.use("/api/tcb-person", require("./routes/TCBperson.routes"));
 
 app.use("/api/address", require("./routes/address.routes"));
 app.use("/api/customer2", require("./routes/customer2.routes"));
 
+
+//Quản lý NV/LX nghỉ và ứng tiền
+app.use("/api/employee-leave", employeeLeaveRoutes);
+app.use("/api/employee-advance", employeeAdvanceRoutes);
+app.use("/api/employee-leave-advance/summary", employeeLeaveAdvanceSummaryRoutes);
+
 app.get("/", (req, res) => {
   res.send("Server hoạt động!");
 });
 
 app.listen(process.env.PORT, () =>
-  console.log(`🚀 Server chạy ở cổng ${process.env.PORT}`)
+  console.log(`🚀 Server chạy ở cổng ${process.env.PORT}`),
 );

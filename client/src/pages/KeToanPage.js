@@ -120,6 +120,10 @@ const KeToanPage = () => {
     navigate("/overdue-customer-debt", { state: { user } });
   };
 
+  const handleGoToEmployee = () => {
+    navigate("/employee-leave-advance", { state: { user } });
+  };
+
   const handleExport = async () => {
     if (!selectedDate) return alert("Vui lòng chọn ngày.");
 
@@ -483,17 +487,24 @@ const KeToanPage = () => {
         </button>
 
         <button
-          onClick={handleGoToVehicleProfit}
+          onClick={handleGoToCNKLQH}
           className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          CN khách lẻ quá hạn
+        </button>
+
+                <button
+          onClick={handleGoToVehicleProfit}
+          className="bg-yellow-600 text-white px-3 py-1 rounded"
         >
           Doanh thu theo tháng
         </button>
 
         <button
-          onClick={handleGoToCNKLQH}
-          className="bg-blue-500 text-white px-3 py-1 rounded"
+          onClick={handleGoToEmployee}
+          className="bg-yellow-600 text-white px-3 py-1 rounded"
         >
-          CN khách lẻ quá hạn
+          Theo dõi LX/NV nghỉ và ứng tiền
         </button>
       </div>
 
