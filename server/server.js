@@ -24,6 +24,8 @@ const employeeLeaveRoutes = require("./routes/employeeLeaveRoutes");
 const employeeAdvanceRoutes = require("./routes/employeeAdvanceRoutes");
 const employeeLeaveAdvanceSummaryRoutes = require("./routes/employeeLeaveAdvanceSummaryRoutes");
 
+const tripActualCostRoutes = require("./routes/tripActualCostRoutes");
+
 require("./models/cron");
 
 const app = express();
@@ -81,6 +83,8 @@ app.use("/api/customer2", require("./routes/customer2.routes"));
 app.use("/api/employee-leave", employeeLeaveRoutes);
 app.use("/api/employee-advance", employeeAdvanceRoutes);
 app.use("/api/employee-leave-advance/summary", employeeLeaveAdvanceSummaryRoutes);
+
+app.use("/api/trip-actual-cost", tripActualCostRoutes);
 
 app.get("/", (req, res) => {
   res.send("Server hoạt động!");

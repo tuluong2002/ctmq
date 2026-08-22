@@ -124,6 +124,10 @@ const KeToanPage = () => {
     navigate("/employee-leave-advance", { state: { user } });
   };
 
+  const handleGoToTripActualCost = () => {
+    navigate("/trip-actual-cost", { state: { user } });
+  };
+
   const handleExport = async () => {
     if (!selectedDate) return alert("Vui lòng chọn ngày.");
 
@@ -505,6 +509,13 @@ const KeToanPage = () => {
           className="bg-yellow-600 text-white px-3 py-1 rounded"
         >
           Theo dõi LX/NV nghỉ và ứng tiền
+        </button>
+
+        <button
+          onClick={handleGoToTripActualCost}
+          className="bg-yellow-600 text-white px-3 py-1 rounded"
+        >
+          Chênh lệch chuyến thực tế
         </button>
       </div>
 

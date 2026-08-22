@@ -328,6 +328,9 @@ export default function AdminPage({ onLogout }) {
                 <th className="px-4 py-2 border-b text-center">
                   Thêm CP doanh thu
                 </th>
+                <th className="px-4 py-2 border-b text-center">
+                  CP chuyến thực tế
+                </th>
                 <th className="px-4 py-2 border-b text-center">Thao tác</th>
               </tr>
             </thead>
@@ -363,7 +366,8 @@ export default function AdminPage({ onLogout }) {
                     "cuoc_tra_xe_ngoai",
                     "edit_sche_err",
                     "all_doanh_thu",
-                    "add_cp_doanh_thu"
+                    "add_cp_doanh_thu",
+                    "manage_CP_thucte"
                   ].map((perm) => (
                     <td key={perm} className="px-4 py-2 border-b text-center">
                       <input

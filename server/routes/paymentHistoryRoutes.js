@@ -15,6 +15,7 @@ const {
   addTripToDebtPeriod,
   getCustomerDebtPeriodsByYear,
   exportCustomerDebtByMonth,
+  recalculateDebtPeriod,
 
   // ===== PHIẾU THU CÔNG NỢ =====
   addPaymentReceipt,
@@ -39,6 +40,9 @@ router.get("/debt-period/export", exportCustomerDebtByMonth);
 // Tạo kỳ công nợ
 // POST /api/payment/debt-period
 router.post("/debt-period", createDebtPeriod);
+
+// TÍNH LẠI TIỀN CÁC CHUYẾN + CÔNG NỢ CỦA KỲ
+router.post("/debt-period/:debtCode/recalculate", recalculateDebtPeriod);
 
 // ✏️ SỬA KỲ CÔNG NỢ
 // PUT /api/payment/debt-period/CN.BM.11.25

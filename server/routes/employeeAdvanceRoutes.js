@@ -2,31 +2,31 @@ const express = require("express");
 
 const router = express.Router();
 
+const authMiddleware = require("../middleware/authMiddleware");
+
 const {
   createAdvance,
   getAdvances,
   getAdvanceById,
   updateAdvance,
   deleteAdvance,
+  getAdvanceHistory,
 } = require("../controllers/employeeLeaveAdvanceController");
 
 // =====================================================
 // QUẢN LÝ ỨNG TIỀN
 // =====================================================
 
-// Danh sách
 router.get("/", getAdvances);
 
-// Thêm
-router.post("/", createAdvance);
+router.post("/", authMiddleware(), createAdvance);
 
-// Chi tiết
 router.get("/:id", getAdvanceById);
 
-// Sửa
-router.put("/:id", updateAdvance);
+router.put("/:id", authMiddleware(), updateAdvance);
 
-// Xóa
 router.delete("/:id", deleteAdvance);
+
+router.get("/:id/history", getAdvanceHistory);
 
 module.exports = router;

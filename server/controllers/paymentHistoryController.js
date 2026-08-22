@@ -1310,3 +1310,141 @@ exports.exportCustomerDebtByMonth = async (req, res) => {
     res.status(500).json({ message: "Lỗi xuất file công nợ" });
   }
 };
+
+
+// =====================================================
+// 🔄 HÀM TÍNH LẠI TOÀN BỘ TIỀN CỦA 1 KỲ CÔNG NỢ
+// =====================================================
+const recalculateDebtPeriod = async (debtCode) => {
+  if (!debtCode) {
+    throw new Error("Thiếu debtCode");
+  }
+
+  // =================================================
+  // 1. LẤY KỲ CÔNG NỢ
+  // =================================================
+  const period = await CustomerDebtPeriod.findOne({
+    debtCode,
+  });
+
+  if (!period) {
+    throw new Error("Không tìm thấy kỳ công nợ");
+  }
+
+  // =================================================
+  // 2. LẤY TOÀN BỘ CHUYẾN THUỘC KỲ
+  // =================================================
+  const trips = await ScheduleAdmin.find({
+    debtCode,
+  });
+
+  // =================================================
+  // 3. TÍNH LẠI TIỀN TỪ CÁC CHUYẾN
+  // =================================================
+  const money = calcPeriodMoneyFromTrips(
+    trips,
+    Number(period.vatPercent || 0)
+  );
+
+  // =================================================
+  // 4. GIỮ NGUYÊN TIỀN ĐÃ THANH TOÁN
+  // =================================================
+  const paidAmount = Math.round(Number(period.paidAmount || 0));
+
+  // =================================================
+  // 5. TÍNH LẠI CÔNG NỢ
+  // =================================================
+  const totalAmount = Math.round(Number(money.totalAmount || 0));
+
+  const remainAmount = Math.round(
+    totalAmount - paidAmount
+  );
+
+  // =================================================
+  // 6. CẬP NHẬT KỲ
+  // =================================================
+  period.totalAmountInvoice = Math.round(
+    Number(money.totalAmountInvoice || 0)
+  );
+
+  period.totalAmountCash = Math.round(
+    Number(money.totalAmountCash || 0)
+  );
+
+  period.totalOther = Math.round(
+    Number(money.totalOther || 0)
+  );
+
+  period.vatAmount = Math.round(
+    Number(money.vatAmount || 0)
+  );
+
+  period.totalAmount = totalAmount;
+
+  period.paidAmount = paidAmount;
+
+  period.remainAmount = remainAmount;
+
+  period.tripCount = trips.length;
+
+  period.status = calcStatus(
+    totalAmount,
+    paidAmount,
+    remainAmount
+  );
+
+  await period.save();
+
+  return {
+    period,
+    trips,
+    money: {
+      totalAmountInvoice: period.totalAmountInvoice,
+      totalAmountCash: period.totalAmountCash,
+      totalOther: period.totalOther,
+      vatAmount: period.vatAmount,
+      totalAmount: period.totalAmount,
+      paidAmount: period.paidAmount,
+      remainAmount: period.remainAmount,
+      tripCount: period.tripCount,
+      status: period.status,
+    },
+  };
+};
+
+// =====================================================
+// 🔄 TÍNH LẠI TIỀN CÁC CHUYẾN + CÔNG NỢ CỦA KỲ
+// =====================================================
+exports.recalculateDebtPeriod = async (req, res) => {
+  try {
+    const { debtCode } = req.params;
+
+    if (!debtCode) {
+      return res.status(400).json({
+        error: "Thiếu debtCode",
+      });
+    }
+
+    const result = await recalculateDebtPeriod(debtCode);
+
+    res.json({
+      message: "Đã tính lại tiền các chuyến và công nợ của kỳ",
+      debtCode,
+      tripCount: result.trips.length,
+      money: result.money,
+      period: result.period,
+    });
+  } catch (err) {
+    console.error("❌ recalculateDebtPeriod:", err);
+
+    if (err.message === "Không tìm thấy kỳ công nợ") {
+      return res.status(404).json({
+        error: err.message,
+      });
+    }
+
+    res.status(500).json({
+      error: "Không thể tính lại công nợ",
+    });
+  }
+};

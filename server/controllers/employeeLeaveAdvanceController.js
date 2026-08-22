@@ -176,8 +176,14 @@ exports.getLeaves = async (req, res) => {
       })
       .lean();
 
+    // Thêm số lần chỉnh sửa
+    const result = data.map((item) => ({
+      ...item,
+      soLanChinhSua: Array.isArray(item.lichSuSua) ? item.lichSuSua.length : 0,
+    }));
+
     return res.json({
-      data,
+      data: result,
     });
   } catch (error) {
     console.error("getLeaves:", error);
@@ -228,8 +234,13 @@ exports.updateLeave = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const { ngayThang, nguoiId, tenNguoi, loaiNghi, soGioNghi, lyDo } =
-      req.body;
+    const {
+      ngayThang,
+      // Không nhận nguoiId, tenNguoi để tránh đổi người khi sửa
+      loaiNghi,
+      soGioNghi,
+      lyDo,
+    } = req.body;
 
     const record = await EmployeeLeave.findById(id);
 
@@ -239,6 +250,23 @@ exports.updateLeave = async (req, res) => {
       });
     }
 
+    // =====================================================
+    // LƯU DỮ LIỆU CŨ VÀO BIẾN
+    // Chỉ push vào lịch sử sau khi validate thành công
+    // =====================================================
+    const oldData = {
+      ngayThang: record.ngayThang,
+      nguoiId: record.nguoiId,
+      tenNguoi: record.tenNguoi,
+      loaiNghi: record.loaiNghi,
+      soNgayNghi: record.soNgayNghi,
+      soGioNghi: record.soGioNghi,
+      lyDo: record.lyDo,
+    };
+
+    // =====================================================
+    // NGÀY THÁNG
+    // =====================================================
     if (ngayThang !== undefined) {
       const date = normalizeDate(ngayThang);
 
@@ -251,20 +279,18 @@ exports.updateLeave = async (req, res) => {
       record.ngayThang = date;
     }
 
-    if (nguoiId !== undefined) {
-      record.nguoiId = nguoiId || null;
-    }
+    // =====================================================
+    // KHÔNG CHO THAY ĐỔI NGƯỜI
+    // =====================================================
+    // Không xử lý:
+    // req.body.nguoiId
+    // req.body.tenNguoi
+    //
+    // record.nguoiId và record.tenNguoi được giữ nguyên.
 
-    if (tenNguoi !== undefined) {
-      if (!tenNguoi.trim()) {
-        return res.status(400).json({
-          message: "Tên nhân viên/lái xe không được trống",
-        });
-      }
-
-      record.tenNguoi = tenNguoi.trim();
-    }
-
+    // =====================================================
+    // LOẠI NGHỈ
+    // =====================================================
     if (loaiNghi !== undefined) {
       const validTypes = ["ALL_DAY", "HALF_DAY", "LATE", "EARLY"];
 
@@ -277,7 +303,9 @@ exports.updateLeave = async (req, res) => {
       record.loaiNghi = loaiNghi;
     }
 
-    // Tính lại số ngày
+    // =====================================================
+    // TÍNH LẠI SỐ NGÀY / SỐ GIỜ
+    // =====================================================
     if (record.loaiNghi === "ALL_DAY") {
       record.soNgayNghi = 1;
       record.soGioNghi = 0;
@@ -285,7 +313,7 @@ exports.updateLeave = async (req, res) => {
       record.soNgayNghi = 0.5;
       record.soGioNghi = 0;
     } else {
-      const hours = Number(soGioNghi || 0);
+      const hours = Number(soGioNghi);
 
       if (!Number.isFinite(hours) || hours <= 0) {
         return res.status(400).json({
@@ -297,10 +325,34 @@ exports.updateLeave = async (req, res) => {
       record.soGioNghi = hours;
     }
 
+    // =====================================================
+    // LÝ DO
+    // =====================================================
     if (lyDo !== undefined) {
-      record.lyDo = lyDo || "";
+      record.lyDo = String(lyDo || "").trim();
     }
 
+    // =====================================================
+    // LƯU LỊCH SỬ SAU KHI VALIDATE THÀNH CÔNG
+    // =====================================================
+    record.lichSuSua.push({
+      thoiGianSua: new Date(),
+
+      nguoiSua:
+        req.user?.fullname || req.user?.username || req.body?.updatedBy || "",
+
+      ngayThang: oldData.ngayThang,
+      nguoiId: oldData.nguoiId,
+      tenNguoi: oldData.tenNguoi,
+      loaiNghi: oldData.loaiNghi,
+      soNgayNghi: oldData.soNgayNghi,
+      soGioNghi: oldData.soGioNghi,
+      lyDo: oldData.lyDo,
+    });
+
+    // =====================================================
+    // LƯU DATABASE
+    // =====================================================
     await record.save();
 
     return res.json({
@@ -472,8 +524,14 @@ exports.getAdvances = async (req, res) => {
       })
       .lean();
 
+    // Thêm số lần chỉnh sửa
+    const result = data.map((item) => ({
+      ...item,
+      soLanChinhSua: Array.isArray(item.lichSuSua) ? item.lichSuSua.length : 0,
+    }));
+
     return res.json({
-      data,
+      data: result,
     });
   } catch (error) {
     console.error("getAdvances:", error);
@@ -526,8 +584,7 @@ exports.updateAdvance = async (req, res) => {
 
     const {
       ngayThang,
-      nguoiId,
-      tenNguoi,
+      // Không nhận nguoiId, tenNguoi để tránh đổi người khi sửa
       soTienUng,
       lyDo,
       phuongAnXuLy,
@@ -542,6 +599,23 @@ exports.updateAdvance = async (req, res) => {
       });
     }
 
+    // =====================================================
+    // LƯU DỮ LIỆU CŨ VÀO BIẾN
+    // Chỉ push vào lịch sử sau khi validate thành công
+    // =====================================================
+    const oldData = {
+      ngayThang: record.ngayThang,
+      nguoiId: record.nguoiId,
+      tenNguoi: record.tenNguoi,
+      soTienUng: record.soTienUng,
+      lyDo: record.lyDo,
+      phuongAnXuLy: record.phuongAnXuLy,
+      noiDungKhac: record.noiDungKhac,
+    };
+
+    // =====================================================
+    // NGÀY THÁNG
+    // =====================================================
     if (ngayThang !== undefined) {
       const date = normalizeDate(ngayThang);
 
@@ -554,20 +628,18 @@ exports.updateAdvance = async (req, res) => {
       record.ngayThang = date;
     }
 
-    if (nguoiId !== undefined) {
-      record.nguoiId = nguoiId || null;
-    }
+    // =====================================================
+    // KHÔNG CHO THAY ĐỔI NGƯỜI
+    // =====================================================
+    // Không xử lý:
+    // req.body.nguoiId
+    // req.body.tenNguoi
+    //
+    // record.nguoiId và record.tenNguoi được giữ nguyên.
 
-    if (tenNguoi !== undefined) {
-      if (!tenNguoi.trim()) {
-        return res.status(400).json({
-          message: "Tên nhân viên/lái xe không được trống",
-        });
-      }
-
-      record.tenNguoi = tenNguoi.trim();
-    }
-
+    // =====================================================
+    // SỐ TIỀN
+    // =====================================================
     if (soTienUng !== undefined) {
       const amount = Number(soTienUng);
 
@@ -580,10 +652,16 @@ exports.updateAdvance = async (req, res) => {
       record.soTienUng = amount;
     }
 
+    // =====================================================
+    // LÝ DO
+    // =====================================================
     if (lyDo !== undefined) {
-      record.lyDo = lyDo || "";
+      record.lyDo = String(lyDo || "").trim();
     }
 
+    // =====================================================
+    // PHƯƠNG ÁN XỬ LÝ
+    // =====================================================
     if (phuongAnXuLy !== undefined) {
       const validMethods = ["SALARY", "TRIP_PAYMENT", "OTHER"];
 
@@ -596,20 +674,46 @@ exports.updateAdvance = async (req, res) => {
       record.phuongAnXuLy = phuongAnXuLy;
     }
 
+    // =====================================================
+    // PHƯƠNG ÁN KHÁC
+    // =====================================================
     if (record.phuongAnXuLy === "OTHER") {
-      if (!String(noiDungKhac || record.noiDungKhac || "").trim()) {
+      const otherText = String(
+        noiDungKhac !== undefined ? noiDungKhac : record.noiDungKhac || "",
+      ).trim();
+
+      if (!otherText) {
         return res.status(400).json({
           message: "Vui lòng nhập nội dung khi chọn phương án Khác",
         });
       }
 
-      record.noiDungKhac = String(
-        noiDungKhac || record.noiDungKhac || "",
-      ).trim();
+      record.noiDungKhac = otherText;
     } else {
       record.noiDungKhac = "";
     }
 
+    // =====================================================
+    // LƯU LỊCH SỬ SAU KHI VALIDATE THÀNH CÔNG
+    // =====================================================
+    record.lichSuSua.push({
+      thoiGianSua: new Date(),
+
+      nguoiSua:
+        req.user?.fullname || req.user?.username || req.body?.updatedBy || "",
+
+      ngayThang: oldData.ngayThang,
+      nguoiId: oldData.nguoiId,
+      tenNguoi: oldData.tenNguoi,
+      soTienUng: oldData.soTienUng,
+      lyDo: oldData.lyDo,
+      phuongAnXuLy: oldData.phuongAnXuLy,
+      noiDungKhac: oldData.noiDungKhac,
+    });
+
+    // =====================================================
+    // LƯU DATABASE
+    // =====================================================
     await record.save();
 
     return res.json({
@@ -833,6 +937,84 @@ exports.getSummary = async (req, res) => {
     });
   } catch (error) {
     console.error("getSummary:", error);
+
+    return res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// =====================================================
+// LẤY LỊCH SỬ SỬA ỨNG TIỀN
+// GET /api/employee-advance/:id/history
+// =====================================================
+
+exports.getAdvanceHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const record = await EmployeeAdvance.findById(id)
+      .select("tenNguoi lichSuSua")
+      .lean();
+
+    if (!record) {
+      return res.status(404).json({
+        message: "Không tìm thấy khoản ứng",
+      });
+    }
+
+    const history = Array.isArray(record.lichSuSua)
+      ? [...record.lichSuSua].sort(
+          (a, b) => new Date(b.thoiGianSua) - new Date(a.thoiGianSua),
+        )
+      : [];
+
+    return res.json({
+      message: "Lấy lịch sử sửa khoản ứng thành công",
+      data: history,
+    });
+  } catch (error) {
+    console.error("getAdvanceHistory:", error);
+
+    return res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// =====================================================
+// LẤY LỊCH SỬ SỬA NGHỈ
+// GET /api/employee-leave/:id/history
+// =====================================================
+
+exports.getLeaveHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const record = await EmployeeLeave.findById(id)
+      .select("tenNguoi lichSuSua")
+      .lean();
+
+    if (!record) {
+      return res.status(404).json({
+        message: "Không tìm thấy thông tin nghỉ",
+      });
+    }
+
+    const history = Array.isArray(record.lichSuSua)
+      ? [...record.lichSuSua].sort(
+          (a, b) => new Date(b.thoiGianSua) - new Date(a.thoiGianSua),
+        )
+      : [];
+
+    return res.json({
+      message: "Lấy lịch sử sửa ngày nghỉ thành công",
+      data: history,
+    });
+  } catch (error) {
+    console.error("getLeaveHistory:", error);
 
     return res.status(500).json({
       message: "Lỗi server",

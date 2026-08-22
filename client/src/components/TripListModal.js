@@ -23,7 +23,7 @@ export default function TripListModal({
     try {
       const res = await axios.get(
         `${API}/payment-history/debt-period/${debtCode}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       setTrips(res.data.trips || []);
@@ -43,6 +43,61 @@ export default function TripListModal({
 
   const [addTripCode, setAddTripCode] = useState("");
   const [adding, setAdding] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
+
+  const handleRecalculate = async () => {
+    if (!debtCode) {
+      alert("Không có mã công nợ");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn tính lại tiền của kỳ ${debtCode}?`,
+    );
+
+    if (!confirmed) return;
+
+    setRecalculating(true);
+
+    try {
+      const res = await axios.post(
+        `${API}/payment-history/debt-period/${debtCode}/recalculate`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      await loadTrips();
+
+      // 🔄 reload bảng công nợ bên ngoài
+      await onPaymentTypeChanged?.();
+
+      const money = res.data?.money;
+
+      alert(
+        `Đã tính lại công nợ ${debtCode}\n\n` +
+          `Tổng tiền: ${Number(
+            money?.totalAmount || 0,
+          ).toLocaleString()} VNĐ\n` +
+          `Đã thanh toán: ${Number(
+            money?.paidAmount || 0,
+          ).toLocaleString()} VNĐ\n` +
+          `Còn lại: ${Number(
+            money?.remainAmount || 0,
+          ).toLocaleString()} VNĐ\n` +
+          `Số chuyến: ${money?.tripCount || 0}`,
+      );
+    } catch (err) {
+      console.error("❌ Lỗi tính lại công nợ:", err);
+
+      alert(err?.response?.data?.error || "Không thể tính lại công nợ");
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   const handleAddTrip = async () => {
     if (!addTripCode || !debtCode) return;
@@ -65,7 +120,7 @@ export default function TripListModal({
           await axios.post(
             `${API}/payment-history/debt-period/${debtCode}/add-trip`,
             { maChuyen: code },
-            { headers: { Authorization: `Bearer ${token}` } }
+            { headers: { Authorization: `Bearer ${token}` } },
           );
         } catch (err) {
           console.error("❌ Lỗi thêm chuyến:", code, err);
@@ -88,7 +143,7 @@ export default function TripListModal({
     try {
       await axios.delete(
         `${API}/payment-history/debt-period/${debtCode}/remove-trip/${maChuyen}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       setTrips((prev) => prev.filter((t) => t.maChuyen !== maChuyen));
@@ -111,15 +166,15 @@ export default function TripListModal({
     // optimistic update
     setTrips((prev) =>
       prev.map((t) =>
-        t.maChuyen === maChuyen ? { ...t, paymentType: type } : t
-      )
+        t.maChuyen === maChuyen ? { ...t, paymentType: type } : t,
+      ),
     );
 
     try {
       await axios.patch(
         `${API}/payment-history/trip/${maChuyen}/toggle-payment-type`,
         { paymentType: type },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
     } catch (err) {
       console.error(err);
@@ -127,8 +182,8 @@ export default function TripListModal({
       // rollback
       setTrips((prev) =>
         prev.map((t) =>
-          t.maChuyen === maChuyen ? { ...t, paymentType: oldType } : t
-        )
+          t.maChuyen === maChuyen ? { ...t, paymentType: oldType } : t,
+        ),
       );
 
       alert("Không đổi được hình thức thanh toán");
@@ -144,9 +199,9 @@ export default function TripListModal({
           axios.patch(
             `${API}/payment-history/trip/${t.maChuyen}/toggle-payment-type`,
             { paymentType: type },
-            { headers: { Authorization: `Bearer ${token}` } }
-          )
-        )
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        ),
       );
     } catch (err) {
       console.error(err);
@@ -202,7 +257,7 @@ export default function TripListModal({
           </button>
         </div>
 
-        <div className="flex gap-2 mb-3">
+        <div className="flex gap-2 mb-3 items-center">
           <input
             value={addTripCode}
             onChange={(e) => setAddTripCode(e.target.value)}
@@ -216,6 +271,14 @@ export default function TripListModal({
             className="bg-blue-600 text-white px-3 py-1 rounded"
           >
             {adding ? "Đang thêm..." : "Thêm chuyến"}
+          </button>
+
+          <button
+            onClick={handleRecalculate}
+            disabled={recalculating || !debtCode}
+            className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white px-3 py-1 rounded font-medium"
+          >
+            {recalculating ? "Đang tính lại..." : "🔄 Tính lại công nợ"}
           </button>
         </div>
 

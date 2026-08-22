@@ -2,31 +2,31 @@ const express = require("express");
 
 const router = express.Router();
 
+const authMiddleware = require("../middleware/authMiddleware");
+
 const {
   createLeave,
   getLeaves,
   getLeaveById,
   updateLeave,
   deleteLeave,
+  getLeaveHistory,
 } = require("../controllers/employeeLeaveAdvanceController");
 
 // =====================================================
 // QUẢN LÝ NGHỈ NV/LX
 // =====================================================
 
-// Danh sách
 router.get("/", getLeaves);
 
-// Thêm
-router.post("/", createLeave);
+router.post("/", authMiddleware(), createLeave);
 
-// Chi tiết
 router.get("/:id", getLeaveById);
 
-// Sửa
-router.put("/:id", updateLeave);
+router.put("/:id", authMiddleware(), updateLeave);
 
-// Xóa
 router.delete("/:id", deleteLeave);
+
+router.get("/:id/history", getLeaveHistory);
 
 module.exports = router;

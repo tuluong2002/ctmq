@@ -1,16 +1,21 @@
 // AdvanceModal.jsx
 
-import React from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FiX } from "react-icons/fi";
 
 // =====================================================
 // FORMAT TIỀN
 // =====================================================
 const formatMoney = (value) => {
-  const number = Number(value || 0);
+  // Khi chưa nhập thì để input trống
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  const number = Number(value);
 
   if (!Number.isFinite(number)) {
-    return "0";
+    return "";
   }
 
   return new Intl.NumberFormat("vi-VN").format(number);
@@ -20,11 +25,17 @@ const formatMoney = (value) => {
 // PARSE TIỀN
 // =====================================================
 const parseMoney = (value) => {
-  if (value === null || value === undefined) {
-    return 0;
+  if (value === null || value === undefined || value === "") {
+    return "";
   }
 
-  return Number(String(value).replace(/[^\d]/g, "")) || 0;
+  const cleaned = String(value).replace(/[^\d]/g, "");
+
+  if (!cleaned) {
+    return "";
+  }
+
+  return Number(cleaned);
 };
 
 // =====================================================
@@ -64,13 +75,11 @@ const AdvanceModal = ({
   // =====================================================
   // CHỌN NHÂN VIÊN / LÁI XE
   // =====================================================
-  const handlePersonChange = (id) => {
-    const person = people.find((item) => String(item.id) === String(id));
-
+  const handlePersonChange = (person) => {
     setForm((prev) => ({
       ...prev,
-      nguoiId: id,
-      tenNguoi: person?.name || "",
+      nguoiId: person.id,
+      tenNguoi: person.name,
     }));
   };
 
@@ -140,23 +149,30 @@ const AdvanceModal = ({
               NHÂN VIÊN / LÁI XE
           ===================================================== */}
           <FormField label="Tên nhân viên / lái xe">
-            <select
-              value={form.nguoiId}
-              onChange={(e) => handlePersonChange(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">
-                {loadingPeople
-                  ? "Đang tải..."
-                  : "-- Chọn nhân viên / lái xe --"}
-              </option>
-
-              {people.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
+            {mode === "edit" ? (
+              // =================================================
+              // SỬA: KHÔNG CHO ĐỔI NGƯỜI
+              // =================================================
+              <input
+                type="text"
+                value={form.tenNguoi || ""}
+                disabled
+                className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`}
+              />
+            ) : (
+              // =================================================
+              // THÊM: INPUT + GỢI Ý
+              // =================================================
+              <PersonAutocomplete
+                people={people}
+                loadingPeople={loadingPeople}
+                value={form.tenNguoi || ""}
+                selectedId={form.nguoiId}
+                onSelect={handlePersonChange}
+                inputClass={inputClass}
+                setForm={setForm}
+              />
+            )}
           </FormField>
 
           {/* =====================================================
@@ -174,7 +190,7 @@ const AdvanceModal = ({
                     soTienUng: parseMoney(e.target.value),
                   }))
                 }
-                placeholder="1,000,000"
+                placeholder="0"
                 className={`${inputClass} pr-12 text-right font-medium`}
               />
 
@@ -238,23 +254,6 @@ const AdvanceModal = ({
               />
             </FormField>
           )}
-
-          {/* =====================================================
-              PREVIEW
-          ===================================================== */}
-          <div className="bg-gray-50 border border-gray-300 rounded-lg p-4">
-            <div className="text-xs text-gray-500">Số tiền ứng</div>
-
-            <div className="text-xl font-bold text-gray-800 mt-1">
-              {formatMoney(amount)} VNĐ
-            </div>
-
-            <div className="text-xs text-gray-500 mt-2">Phương án xử lý</div>
-
-            <div className="font-medium text-gray-800 mt-1">
-              {getAdvanceMethodText(form.phuongAnXuLy, form.noiDungKhac)}
-            </div>
-          </div>
         </div>
 
         {/* =====================================================
@@ -278,6 +277,142 @@ const AdvanceModal = ({
           </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+// =====================================================
+// AUTOCOMPLETE NHÂN VIÊN / LÁI XE
+// =====================================================
+const PersonAutocomplete = ({
+  people,
+  loadingPeople,
+  value,
+  selectedId,
+  onSelect,
+  inputClass,
+  setForm,
+}) => {
+  const [search, setSearch] = useState(value || "");
+  const [open, setOpen] = useState(false);
+
+  const wrapperRef = useRef(null);
+
+  // =====================================================
+  // ĐỒNG BỘ KHI FORM THAY ĐỔI
+  // =====================================================
+  useEffect(() => {
+    setSearch(value || "");
+  }, [value]);
+
+  // =====================================================
+  // CLICK RA NGOÀI
+  // =====================================================
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // =====================================================
+  // LỌC DANH SÁCH
+  // =====================================================
+  const filteredPeople = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+
+    if (!keyword) {
+      return people;
+    }
+
+    return people.filter((person) =>
+      String(person.name || "")
+        .toLowerCase()
+        .includes(keyword),
+    );
+  }, [people, search]);
+
+  // =====================================================
+  // NHẬP TÊN
+  // =====================================================
+  const handleChange = (e) => {
+    const text = e.target.value;
+
+    setSearch(text);
+    setOpen(true);
+
+    // Khi người dùng xóa/sửa text,
+    // bỏ ID cũ để tránh sai người
+    setForm((prev) => ({
+      ...prev,
+      nguoiId: "",
+      tenNguoi: text,
+    }));
+  };
+
+  // =====================================================
+  // CHỌN NGƯỜI
+  // =====================================================
+  const handleSelect = (person) => {
+    setSearch(person.name || "");
+    setOpen(false);
+
+    onSelect(person);
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input
+        type="text"
+        value={search}
+        onChange={handleChange}
+        onFocus={() => setOpen(true)}
+        disabled={loadingPeople}
+        autoComplete="off"
+        placeholder={
+          loadingPeople ? "Đang tải..." : "Nhập tên nhân viên / lái xe..."
+        }
+        className={inputClass}
+      />
+
+      {/* =====================================================
+          DANH SÁCH GỢI Ý
+      ===================================================== */}
+      {open && !loadingPeople && (
+        <div className="absolute z-[200] left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+          {filteredPeople.length > 0 ? (
+            filteredPeople.map((person) => {
+              const isSelected = String(person.id) === String(selectedId);
+
+              return (
+                <button
+                  key={person.id}
+                  type="button"
+                  onClick={() => handleSelect(person)}
+                  className={`block w-full text-left px-3 py-2.5 text-sm transition ${
+                    isSelected
+                      ? "bg-blue-50 text-blue-700 font-semibold"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  {person.name}
+                </button>
+              );
+            })
+          ) : (
+            <div className="px-3 py-3 text-sm text-gray-500">
+              Không tìm thấy "{search}"
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

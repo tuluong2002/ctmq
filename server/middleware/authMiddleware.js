@@ -24,6 +24,7 @@ const authMiddleware = (roles = []) => {
         id: decoded.id,
         role: decoded.role,
         username: decoded.username || decoded.name || null,
+        fullname: decoded.fullname || null,
       };
 
       next();

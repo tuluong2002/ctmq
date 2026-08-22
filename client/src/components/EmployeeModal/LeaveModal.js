@@ -1,6 +1,6 @@
 // LeaveModal.jsx
 
-import React from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FiX } from "react-icons/fi";
 
 const LeaveModal = ({
@@ -21,13 +21,11 @@ const LeaveModal = ({
   // =====================================================
   // CHỌN NHÂN VIÊN / LÁI XE
   // =====================================================
-  const handlePersonChange = (id) => {
-    const person = people.find((item) => String(item.id) === String(id));
-
+  const handlePersonChange = (person) => {
     setForm((prev) => ({
       ...prev,
-      nguoiId: id,
-      tenNguoi: person?.name || "",
+      nguoiId: person.id,
+      tenNguoi: person.name,
     }));
   };
 
@@ -65,10 +63,8 @@ const LeaveModal = ({
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
             <h2 className="text-lg font-bold text-gray-800">
-              {mode === "create" ? "Thêm ngày nghỉ" : "Sửa ngày nghỉ"}
+              {mode === "create" ? "THÊM NGÀY NGHỈ" : "SỬA NGÀY NGHỈ"}
             </h2>
-
-            <p className="text-xs text-gray-500 mt-1">Quản lý nghỉ của NV/LX</p>
           </div>
 
           <button
@@ -106,23 +102,30 @@ const LeaveModal = ({
               NHÂN VIÊN / LÁI XE
           ===================================================== */}
           <FormField label="Tên nhân viên / lái xe">
-            <select
-              value={form.nguoiId}
-              onChange={(e) => handlePersonChange(e.target.value)}
-              className={inputClass}
-            >
-              <option value="">
-                {loadingPeople
-                  ? "Đang tải..."
-                  : "-- Chọn nhân viên / lái xe --"}
-              </option>
-
-              {people.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
+            {mode === "edit" ? (
+              // =================================================
+              // SỬA: KHÔNG CHO THAY ĐỔI NGƯỜI
+              // =================================================
+              <input
+                type="text"
+                value={form.tenNguoi || ""}
+                disabled
+                className={`${inputClass} bg-gray-100 text-gray-500 cursor-not-allowed`}
+              />
+            ) : (
+              // =================================================
+              // THÊM: INPUT + DANH SÁCH GỢI Ý
+              // =================================================
+              <PersonAutocomplete
+                people={people}
+                loadingPeople={loadingPeople}
+                value={form.tenNguoi || ""}
+                selectedId={form.nguoiId}
+                onSelect={handlePersonChange}
+                inputClass={inputClass}
+                setForm={setForm}
+              />
+            )}
           </FormField>
 
           {/* =====================================================
@@ -164,23 +167,6 @@ const LeaveModal = ({
           )}
 
           {/* =====================================================
-              PREVIEW
-          ===================================================== */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 border border-gray-300 rounded-lg p-3">
-              <div className="text-xs text-gray-500">Số ngày nghỉ</div>
-
-              <div className="font-bold text-gray-800 mt-1">{soNgayNghi}</div>
-            </div>
-
-            <div className="bg-gray-50 border border-gray-300 rounded-lg p-3">
-              <div className="text-xs text-gray-500">Số giờ nghỉ</div>
-
-              <div className="font-bold text-gray-800 mt-1">{soGioNghi}</div>
-            </div>
-          </div>
-
-          {/* =====================================================
               LÝ DO
           ===================================================== */}
           <FormField label="Lý do nghỉ / Ghi chú">
@@ -220,6 +206,141 @@ const LeaveModal = ({
           </button>
         </div>
       </div>
+    </div>
+  );
+};
+
+// =====================================================
+// AUTOCOMPLETE NHÂN VIÊN / LÁI XE
+// =====================================================
+const PersonAutocomplete = ({
+  people,
+  loadingPeople,
+  value,
+  selectedId,
+  onSelect,
+  inputClass,
+  setForm,
+}) => {
+  const [search, setSearch] = useState(value || "");
+  const [open, setOpen] = useState(false);
+
+  const wrapperRef = useRef(null);
+
+  // =====================================================
+  // ĐỒNG BỘ KHI FORM THAY ĐỔI
+  // =====================================================
+  useEffect(() => {
+    setSearch(value || "");
+  }, [value]);
+
+  // =====================================================
+  // CLICK RA NGOÀI
+  // =====================================================
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // =====================================================
+  // LỌC DANH SÁCH
+  // =====================================================
+  const filteredPeople = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+
+    if (!keyword) {
+      return people;
+    }
+
+    return people.filter((person) =>
+      String(person.name || "")
+        .toLowerCase()
+        .includes(keyword),
+    );
+  }, [people, search]);
+
+  // =====================================================
+  // NHẬP TÊN
+  // =====================================================
+  const handleChange = (e) => {
+    const text = e.target.value;
+
+    setSearch(text);
+    setOpen(true);
+
+    // Khi sửa/xóa text thì bỏ ID cũ
+    setForm((prev) => ({
+      ...prev,
+      nguoiId: "",
+      tenNguoi: text,
+    }));
+  };
+
+  // =====================================================
+  // CHỌN NGƯỜI
+  // =====================================================
+  const handleSelect = (person) => {
+    setSearch(person.name || "");
+    setOpen(false);
+
+    onSelect(person);
+  };
+
+  return (
+    <div ref={wrapperRef} className="relative">
+      <input
+        type="text"
+        value={search}
+        onChange={handleChange}
+        onFocus={() => setOpen(true)}
+        disabled={loadingPeople}
+        autoComplete="off"
+        placeholder={
+          loadingPeople ? "Đang tải..." : "Nhập tên nhân viên / lái xe..."
+        }
+        className={inputClass}
+      />
+
+      {/* =====================================================
+          DANH SÁCH GỢI Ý
+      ===================================================== */}
+      {open && !loadingPeople && (
+        <div className="absolute z-[200] left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+          {filteredPeople.length > 0 ? (
+            filteredPeople.map((person) => {
+              const isSelected = String(person.id) === String(selectedId);
+
+              return (
+                <button
+                  key={person.id}
+                  type="button"
+                  onClick={() => handleSelect(person)}
+                  className={`block w-full text-left px-3 py-2.5 text-sm transition ${
+                    isSelected
+                      ? "bg-blue-50 text-blue-700 font-semibold"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  {person.name}
+                </button>
+              );
+            })
+          ) : (
+            <div className="px-3 py-3 text-sm text-gray-500">
+              Không tìm thấy "{search}"
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

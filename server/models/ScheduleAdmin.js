@@ -89,6 +89,9 @@ const scheduleAdminSchema = new mongoose.Schema(
       enum: ["INVOICE", "CASH", "OTHER"],
       default: "INVOICE", // mặc định là hoá đơn
     },
+    
+    //Cập nhật chi phí thực tế
+    isRealFact: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

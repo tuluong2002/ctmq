@@ -1,5 +1,66 @@
 const mongoose = require("mongoose");
 
+// =====================================================
+// LỊCH SỬ SỬA KHOẢN ỨNG
+// =====================================================
+const AdvanceHistorySchema = new mongoose.Schema(
+  {
+    // Thời điểm sửa
+    thoiGianSua: {
+      type: Date,
+      default: Date.now,
+    },
+
+    // Người thực hiện sửa
+    nguoiSua: {
+      type: String,
+      default: "",
+    },
+
+    // Dữ liệu cũ trước khi sửa
+    ngayThang: {
+      type: Date,
+      default: null,
+    },
+
+    nguoiId: {
+      type: String,
+      default: null,
+    },
+
+    tenNguoi: {
+      type: String,
+      default: "",
+    },
+
+    soTienUng: {
+      type: Number,
+      default: 0,
+    },
+
+    lyDo: {
+      type: String,
+      default: "",
+    },
+
+    phuongAnXuLy: {
+      type: String,
+      default: "",
+    },
+
+    noiDungKhac: {
+      type: String,
+      default: "",
+    },
+  },
+  {
+    _id: true,
+  },
+);
+
+// =====================================================
+// MODEL KHOẢN ỨNG
+// =====================================================
 const EmployeeAdvanceSchema = new mongoose.Schema(
   {
     // Ngày ứng
@@ -54,10 +115,18 @@ const EmployeeAdvanceSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    // =================================================
+    // LỊCH SỬ CÁC LẦN SỬA
+    // =================================================
+    lichSuSua: {
+      type: [AdvanceHistorySchema],
+      default: [],
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 EmployeeAdvanceSchema.index({

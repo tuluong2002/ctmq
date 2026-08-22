@@ -3667,18 +3667,28 @@ export default function ManageTrip({ user, onLogout }) {
                             ].includes(col.key)
                               ? "700"
                               : "normal",
-                            color: [
-                              "cuocPhiBS",
-                              "bocXepBS",
-                              "veBS",
-                              "hangVeBS",
-                              "luuCaBS",
-                              "cpKhacBS",
-                              "themDiem",
-                              "cuocTraXN",
-                            ].includes(col.key)
-                              ? "#1766ddff"
-                              : "black",
+                            color:
+                              r.isRealFact &&
+                              [
+                                "bocXep",
+                                "ve",
+                                "hangVe",
+                                "luuCa",
+                                "luatChiPhiKhac",
+                              ].includes(col.key)
+                                ? "red"
+                                : [
+                                      "cuocPhiBS",
+                                      "bocXepBS",
+                                      "veBS",
+                                      "hangVeBS",
+                                      "luuCaBS",
+                                      "cpKhacBS",
+                                      "themDiem",
+                                      "cuocTraXN",
+                                    ].includes(col.key)
+                                  ? "#1766ddff"
+                                  : "black",
                           }}
                         >
                           {numberColumns.includes(col.key)

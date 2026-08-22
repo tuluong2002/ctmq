@@ -4,7 +4,6 @@ import axios from "axios";
 import {
   FiPlus,
   FiEdit2,
-  FiTrash2,
   FiRefreshCw,
   FiSearch,
   FiX,
@@ -62,6 +61,25 @@ const formatDate = (date) => {
   return `${String(d.getDate()).padStart(2, "0")}/${String(
     d.getMonth() + 1,
   ).padStart(2, "0")}/${d.getFullYear()}`;
+};
+
+const formatDateTime = (date) => {
+  if (!date) return "—";
+
+  const d = new Date(date);
+
+  if (Number.isNaN(d.getTime())) {
+    return "—";
+  }
+
+  return `${String(d.getDate()).padStart(2, "0")}/${String(
+    d.getMonth() + 1,
+  ).padStart(2, "0")}/${d.getFullYear()} ${String(d.getHours()).padStart(
+    2,
+    "0",
+  )}:${String(d.getMinutes()).padStart(2, "0")}:${String(
+    d.getSeconds(),
+  ).padStart(2, "0")}`;
 };
 
 const formatDateInput = (date) => {
@@ -198,22 +216,12 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
 
   const [modal, setModal] = useState(null);
 
-  /*
-    modal:
-      null
+  // ===================================================
+  // LỊCH SỬ CHỈNH SỬA
+  // ===================================================
 
-      {
-        type: "leave",
-        mode: "create" | "edit",
-        data: {}
-      }
-
-      {
-        type: "advance",
-        mode: "create" | "edit",
-        data: {}
-      }
-  */
+  const [historyModal, setHistoryModal] = useState(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // ===================================================
   // FORM NGHỈ
@@ -244,6 +252,16 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
     noiDungKhac: "",
   });
 
+  const getAuthConfig = () => {
+    const token = localStorage.getItem("token");
+
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
+
   // ===================================================
   // LOAD PEOPLE
   // ===================================================
@@ -252,20 +270,6 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
     setLoadingPeople(true);
 
     try {
-      /*
-       * Nếu project của bạn đang có API danh sách lái xe:
-       * GET /api/drivers
-       *
-       * Dữ liệu có thể dạng:
-       * [
-       *   { _id, name },
-       *   { _id, tenLaiXe }
-       * ]
-       *
-       * hoặc:
-       * { data: [...] }
-       */
-
       const response = await axios.get(`${API}/drivers`);
 
       const result = response.data;
@@ -611,11 +615,15 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
       };
 
       if (modal.mode === "create") {
-        await axios.post(LEAVE_API, payload);
+        await axios.post(LEAVE_API, payload, getAuthConfig());
 
         alert("Thêm thông tin nghỉ thành công");
       } else {
-        await axios.put(`${LEAVE_API}/${leaveForm.id}`, payload);
+        await axios.put(
+          `${LEAVE_API}/${leaveForm.id}`,
+          payload,
+          getAuthConfig(),
+        );
 
         alert("Cập nhật thông tin nghỉ thành công");
       }
@@ -746,11 +754,15 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
       };
 
       if (modal.mode === "create") {
-        await axios.post(ADVANCE_API, payload);
+        await axios.post(ADVANCE_API, payload, getAuthConfig());
 
         alert("Thêm khoản ứng thành công");
       } else {
-        await axios.put(`${ADVANCE_API}/${advanceForm.id}`, payload);
+        await axios.put(
+          `${ADVANCE_API}/${advanceForm.id}`,
+          payload,
+          getAuthConfig(),
+        );
 
         alert("Cập nhật khoản ứng thành công");
       }
@@ -818,6 +830,76 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
   };
 
   // ===================================================
+  // XEM LỊCH SỬ NGHỈ
+  // ===================================================
+
+  const openLeaveHistory = async (item) => {
+    if (!item?._id) return;
+
+    setLoadingHistory(true);
+
+    try {
+      const response = await axios.get(`${LEAVE_API}/${item._id}/history`);
+
+      const result = response.data;
+
+      const history = Array.isArray(result)
+        ? result
+        : result?.data || result?.history || [];
+
+      setHistoryModal({
+        type: "leave",
+        title: `Lịch sử chỉnh sửa - ${item.tenNguoi}`,
+        current: item,
+        data: history,
+      });
+    } catch (error) {
+      console.error("openLeaveHistory:", error);
+
+      alert(
+        error?.response?.data?.message || "Không thể tải lịch sử chỉnh sửa",
+      );
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // ===================================================
+  // XEM LỊCH SỬ ỨNG TIỀN
+  // ===================================================
+
+  const openAdvanceHistory = async (item) => {
+    if (!item?._id) return;
+
+    setLoadingHistory(true);
+
+    try {
+      const response = await axios.get(`${ADVANCE_API}/${item._id}/history`);
+
+      const result = response.data;
+
+      const history = Array.isArray(result)
+        ? result
+        : result?.data || result?.history || [];
+
+      setHistoryModal({
+        type: "advance",
+        title: `Lịch sử chỉnh sửa - ${item.tenNguoi}`,
+        current: item,
+        data: history,
+      });
+    } catch (error) {
+      console.error("openAdvanceHistory:", error);
+
+      alert(
+        error?.response?.data?.message || "Không thể tải lịch sử chỉnh sửa",
+      );
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // ===================================================
   // REFRESH
   // ===================================================
 
@@ -856,7 +938,7 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
-            QUẢN LÝ NV/LX NGHỈ & ỨNG TIẾN
+            QUẢN LÝ NV/LX NGHỈ & ỨNG TIỀN
           </h1>
 
           <p className="text-sm text-gray-500 mt-1">
@@ -895,8 +977,7 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
             }`}
           >
             <span className="inline-flex items-center gap-2">
-              <FiCalendar />
-              Tab 1 — NV/LX nghỉ
+              <FiCalendar />1 — NV/LX nghỉ
             </span>
           </button>
 
@@ -909,8 +990,7 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
             }`}
           >
             <span className="inline-flex items-center gap-2">
-              <FiDollarSign />
-              Tab 2 — Quản lý ứng tiền
+              <FiDollarSign />2 — Quản lý ứng tiền
             </span>
           </button>
 
@@ -923,8 +1003,7 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
             }`}
           >
             <span className="inline-flex items-center gap-2">
-              <FiUsers />
-              Tab 3 — Tổng hợp
+              <FiUsers />3 — Tổng hợp
             </span>
           </button>
         </div>
@@ -1120,15 +1199,15 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
                           {index + 1}
                         </td>
 
-                        <td className="border-b px-3 py-3 whitespace-nowrap">
+                        <td className="border-b px-3 py-3 whitespace-nowrap text-center">
                           {formatDate(item.ngayThang)}
                         </td>
 
-                        <td className="border-b px-3 py-3 font-medium">
+                        <td className="border-b px-3 py-3 font-medium text-center">
                           {item.tenNguoi}
                         </td>
 
-                        <td className="border-b px-3 py-3">
+                        <td className="border-b px-3 py-3 text-center">
                           <LeaveBadge type={item.loaiNghi} />
                         </td>
 
@@ -1155,11 +1234,21 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
                             </button>
 
                             <button
-                              onClick={() => deleteLeave(item)}
-                              title="Xóa"
-                              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+                              onClick={() => openLeaveHistory(item)}
+                              title={
+                                item.soLanChinhSua > 0
+                                  ? `Đã chỉnh sửa ${item.soLanChinhSua} lần`
+                                  : "Chưa chỉnh sửa"
+                              }
+                              className="relative p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100"
                             >
-                              <FiTrash2 />
+                              <FiClock />
+
+                              {Number(item.soLanChinhSua || 0) > 0 && (
+                                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold border-2 border-white">
+                                  {item.soLanChinhSua}
+                                </span>
+                              )}
                             </button>
                           </div>
                         </td>
@@ -1387,11 +1476,21 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
                             </button>
 
                             <button
-                              onClick={() => deleteAdvance(item)}
-                              title="Xóa"
-                              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+                              onClick={() => openAdvanceHistory(item)}
+                              title={
+                                item.soLanChinhSua > 0
+                                  ? `Đã chỉnh sửa ${item.soLanChinhSua} lần`
+                                  : "Chưa chỉnh sửa"
+                              }
+                              className="relative p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100"
                             >
-                              <FiTrash2 />
+                              <FiClock />
+
+                              {Number(item.soLanChinhSua || 0) > 0 && (
+                                <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold border-2 border-white">
+                                  {item.soLanChinhSua}
+                                </span>
+                              )}
                             </button>
                           </div>
                         </td>
@@ -1637,6 +1736,20 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
           onSave={saveAdvance}
         />
       )}
+
+      {/* =================================================
+          MODAL LỊCH SỬ CHỈNH SỬA
+          ================================================= */}
+
+      {historyModal && (
+        <HistoryModal
+          type={historyModal.type}
+          title={historyModal.title}
+          data={historyModal.data}
+          loading={loadingHistory}
+          onClose={() => setHistoryModal(null)}
+        />
+      )}
     </div>
   );
 };
@@ -1675,6 +1788,211 @@ const FormField = ({ label, children }) => {
       </label>
 
       {children}
+    </div>
+  );
+};
+
+// =====================================================
+// HISTORY MODAL
+// =====================================================
+
+const HistoryModal = ({ type, title, data = [], loading, onClose }) => {
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/40 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+        {/* HEADER */}
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <h2 className="text-lg font-bold text-gray-800">{title}</h2>
+
+            <p className="text-xs text-gray-500 mt-1">
+              Theo dõi các lần thay đổi dữ liệu
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 transition"
+          >
+            <FiX size={20} />
+          </button>
+        </div>
+
+        {/* BODY */}
+        <div className="p-5 overflow-auto">
+          {loading ? (
+            <div className="py-12 text-center text-gray-500">
+              <FiRefreshCw className="animate-spin inline mr-2" />
+              Đang tải lịch sử...
+            </div>
+          ) : data.length === 0 ? (
+            <div className="py-12 text-center text-gray-500">
+              Chưa có lịch sử chỉnh sửa
+            </div>
+          ) : type === "leave" ? (
+            <LeaveHistoryTable data={data} />
+          ) : (
+            <AdvanceHistoryTable data={data} />
+          )}
+        </div>
+
+        {/* FOOTER */}
+        <div className="flex justify-end px-5 py-4 border-t bg-gray-50">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-100 transition"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// =====================================================
+// LEAVE HISTORY TABLE
+// =====================================================
+
+const LeaveHistoryTable = ({ data }) => {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-[1000px] w-full text-sm">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="border px-3 py-3 text-center">STT</th>
+
+            <th className="border px-3 py-3 text-center">Thời gian sửa</th>
+
+            <th className="border px-3 py-3 text-center">Người sửa</th>
+
+            <th className="border px-3 py-3 text-center">Ngày nghỉ</th>
+
+            <th className="border px-3 py-3 text-center">Nhân viên / LX</th>
+
+            <th className="border px-3 py-3 text-center">Loại nghỉ</th>
+
+            <th className="border px-3 py-3 text-center">Số ngày</th>
+
+            <th className="border px-3 py-3 text-center">Số giờ</th>
+
+            <th className="border px-3 py-3 text-center">Lý do</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {data.map((item, index) => (
+            <tr key={item._id || index} className="hover:bg-gray-50">
+              <td className="border px-3 py-3 text-center">{index + 1}</td>
+
+              <td className="border px-3 py-3 text-center whitespace-nowrap">
+                {formatDateTime(
+                  item.createdAt || item.updatedAt || item.thoiGianSua,
+                )}
+              </td>
+
+              <td className="border px-3 py-3 text-center">
+                {item.updatedBy || item.createdBy || item.nguoiSua || "—"}
+              </td>
+
+              <td className="border px-3 py-3 text-center">
+                {formatDate(item.ngayThang)}
+              </td>
+
+              <td className="border px-3 py-3 text-center font-medium">
+                {item.tenNguoi || "—"}
+              </td>
+
+              <td className="border px-3 py-3 text-center">
+                <LeaveBadge type={item.loaiNghi} />
+              </td>
+
+              <td className="border px-3 py-3 text-center">
+                {Number(item.soNgayNghi || 0)}
+              </td>
+
+              <td className="border px-3 py-3 text-center">
+                {Number(item.soGioNghi || 0)}
+              </td>
+
+              <td className="border px-3 py-3">{item.lyDo || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+// =====================================================
+// ADVANCE HISTORY TABLE
+// =====================================================
+
+const AdvanceHistoryTable = ({ data }) => {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-[1100px] w-full text-sm">
+        <thead className="bg-gray-100">
+          <tr>
+            <th className="border px-3 py-3 text-center">STT</th>
+
+            <th className="border px-3 py-3 text-center">Thời gian sửa</th>
+
+            <th className="border px-3 py-3 text-center">Người sửa</th>
+
+            <th className="border px-3 py-3 text-center">Ngày ứng</th>
+
+            <th className="border px-3 py-3 text-center">Nhân viên / LX</th>
+
+            <th className="border px-3 py-3 text-center">Số tiền</th>
+
+            <th className="border px-3 py-3 text-center">Phương án</th>
+
+            <th className="border px-3 py-3 text-center">Lý do</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {data.map((item, index) => (
+            <tr key={item._id || index} className="hover:bg-gray-50">
+              <td className="border px-3 py-3 text-center">{index + 1}</td>
+
+              <td className="border px-3 py-3 text-center whitespace-nowrap">
+                {formatDateTime(
+                  item.createdAt || item.updatedAt || item.thoiGianSua,
+                )}
+              </td>
+
+              <td className="border px-3 py-3 text-center">
+                {item.updatedBy || item.createdBy || item.nguoiSua || "—"}
+              </td>
+
+              <td className="border px-3 py-3 text-center">
+                {formatDate(item.ngayThang)}
+              </td>
+
+              <td className="border px-3 py-3 text-center font-medium">
+                {item.tenNguoi || "—"}
+              </td>
+
+              <td className="border px-3 py-3 text-center font-semibold whitespace-nowrap">
+                {formatMoney(item.soTienUng)} VNĐ
+              </td>
+
+              <td className="border px-3 py-3 text-center">
+                <AdvanceBadge
+                  type={item.phuongAnXuLy}
+                  otherText={item.noiDungKhac}
+                />
+              </td>
+
+              <td className="border px-3 py-3">{item.lyDo || "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
