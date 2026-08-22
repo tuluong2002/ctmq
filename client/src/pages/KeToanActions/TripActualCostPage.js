@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   FiRefreshCw,
@@ -12,6 +13,21 @@ import {
 import API from "../../api";
 
 const TripActualCostPage = ({ user }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isActive = (path) => location.pathname === path;
+
+  const handleGoToTrips = () => {
+    navigate("/manage-trip", { state: { user } });
+  };
+
+  const handleGoToAllTrips = () => {
+    navigate("/manage-all-trip", { state: { user } });
+  };
+
+  const handleGoToTripActualCost = () => {
+    navigate("/trip-actual-cost", { state: { user } });
+  };
   // =====================================================
   // STATE
   // =====================================================
@@ -462,6 +478,47 @@ const TripActualCostPage = ({ user }) => {
 
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
+      <div className="flex gap-2 items-center mb-3 text-xs">
+        <button
+          onClick={() => navigate("/ke-toan")}
+          className="px-3 py-1 rounded text-white bg-blue-500"
+        >
+          Trang chính
+        </button>
+
+        <button
+          onClick={handleGoToTrips}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-trip") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Danh sách chuyến phụ trách
+        </button>
+
+        <button
+          onClick={() => {
+            if (!user?.permissions?.includes("edit_trip")) {
+              alert("Bạn không có quyền truy cập!");
+              return;
+            }
+            handleGoToAllTrips();
+          }}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-all-trip") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Tất cả các chuyến
+        </button>
+
+        <button
+          onClick={handleGoToTripActualCost}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/trip-actual-cost") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Chênh lệch chuyến thực tế
+        </button>
+      </div>
       {/* HEADER */}
 
       <div className="mb-5">

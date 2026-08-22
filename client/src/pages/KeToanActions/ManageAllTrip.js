@@ -175,6 +175,10 @@ export default function ManageTrip({ user, onLogout }) {
     navigate("/overdue-customer-debt", { state: { user } });
   };
 
+  const handleGoToTripActualCost = () => {
+    navigate("/trip-actual-cost", { state: { user } });
+  };
+
   // 5 danh sách gợi ý
   const [drivers, setDrivers] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -1683,7 +1687,7 @@ export default function ManageTrip({ user, onLogout }) {
       ${isActive("/manage-customer") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách khách hàng
+          Danh sách KH
         </button>
 
         <button
@@ -1701,7 +1705,7 @@ export default function ManageTrip({ user, onLogout }) {
       ${isActive("/manage-trip") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách chuyến phụ trách
+          Danh sách chuyến PT
         </button>
 
         <button
@@ -1750,7 +1754,7 @@ export default function ManageTrip({ user, onLogout }) {
             isActive("/contract") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Hợp đồng vận chuyển
+          HĐ vận chuyển
         </button>
         <button
           onClick={handleGoToTCB}
@@ -1783,6 +1787,14 @@ export default function ManageTrip({ user, onLogout }) {
           }`}
         >
           CN khách lẻ quá hạn
+        </button>
+        <button
+          onClick={handleGoToTripActualCost}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/trip-actual-cost") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Chênh lệch chuyến thực tế
         </button>
       </div>
 

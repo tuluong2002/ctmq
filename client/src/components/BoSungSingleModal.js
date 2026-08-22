@@ -112,6 +112,7 @@ export default function BoSungSingleModal({
         hangVeBS: parseMoney(form.hangVeBS),
         luuCaBS: parseMoney(form.luuCaBS),
         cpKhacBS: parseMoney(form.cpKhacBS),
+        themDiem: form.themDiem === "" ? 0 : parseMoney(form.themDiem),
         cuocTraXN: form.cuocTraXN === "" ? 0 : parseMoney(form.cuocTraXN),
       };
 
