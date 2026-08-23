@@ -123,6 +123,14 @@ export default function ManageContract() {
     navigate("/overdue-customer-debt", { state: { user } });
   };
 
+  const handleGoToEmployee = () => {
+    navigate("/employee-leave-advance", { state: { user } });
+  };
+
+  const handleGoToTripActualCost = () => {
+    navigate("/trip-actual-cost", { state: { user } }); 
+  }
+
   useEffect(() => {
     if (firstColRef.current) {
       setFirstColWidth(firstColRef.current.offsetWidth);
@@ -453,7 +461,7 @@ export default function ManageContract() {
           onClick={() => navigate("/ke-toan")}
           className="px-3 py-1 rounded text-white bg-blue-500"
         >
-          Trang chính
+          Trang chủ
         </button>
 
         <button
@@ -462,7 +470,7 @@ export default function ManageContract() {
       ${isActive("/manage-driver") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách lái xe
+          Danh sách LX
         </button>
 
         <button
@@ -471,7 +479,7 @@ export default function ManageContract() {
       ${isActive("/manage-customer") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách khách hàng
+          Danh sách KH
         </button>
 
         <button
@@ -489,7 +497,7 @@ export default function ManageContract() {
       ${isActive("/manage-trip") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách chuyến phụ trách
+          Danh sách chuyến PT
         </button>
 
         <button
@@ -522,7 +530,7 @@ export default function ManageContract() {
       ${isActive("/customer-debt-26") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Công nợ khách lẻ
+          Khách lẻ
         </button>
         <button
           onClick={handleGoToVouchers}
@@ -538,7 +546,7 @@ export default function ManageContract() {
             isActive("/contract") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Hợp đồng vận chuyển
+          HĐ vận chuyển
         </button>
         <button
           onClick={handleGoToTCB}
@@ -570,7 +578,20 @@ export default function ManageContract() {
             isActive("/overdue-customer-debt") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          CN khách lẻ quá hạn
+          Khách lẻ quá hạn
+        </button>
+        <button
+          onClick={handleGoToEmployee}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          LX nghỉ & UT
+        </button>
+
+        <button
+          onClick={handleGoToTripActualCost}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Sửa chi phí LX
         </button>
       </div>
       <h1 className="text-xl font-bold">HỢP ĐỒNG VẬN CHUYỂN</h1>

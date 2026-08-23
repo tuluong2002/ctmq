@@ -139,6 +139,14 @@ export default function VoucherListPage() {
   const handleGoToCNKLQH = () => {
     navigate("/overdue-customer-debt", { state: { user } });
   };
+  
+  const handleGoToEmployee = () => {
+    navigate("/employee-leave-advance", { state: { user } });
+  };
+
+  const handleGoToTripActualCost = () => {
+    navigate("/trip-actual-cost", { state: { user } }); 
+  }
 
   const [expenseTypeOptions, setExpenseTypeOptions] = useState([]);
   const [companyOptions, setCompanyOptions] = useState([]);
@@ -886,7 +894,7 @@ export default function VoucherListPage() {
           onClick={() => navigate("/ke-toan")}
           className="px-3 py-1 rounded text-white bg-blue-500"
         >
-          Trang chính
+          Trang chủ
         </button>
 
         <button
@@ -895,7 +903,7 @@ export default function VoucherListPage() {
             isActive("/manage-driver") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Danh sách lái xe
+          Danh sách LX
         </button>
         <button
           onClick={handleGoToCustomers}
@@ -903,7 +911,7 @@ export default function VoucherListPage() {
             isActive("/manage-customer") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Danh sách khách hàng
+          Danh sách KH
         </button>
         <button
           onClick={handleGoToVehicles}
@@ -919,7 +927,7 @@ export default function VoucherListPage() {
             isActive("/manage-trip") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Danh sách chuyến phụ trách
+          Danh sách chuyến PT
         </button>
         <button
           onClick={() => {
@@ -950,7 +958,7 @@ export default function VoucherListPage() {
       ${isActive("/customer-debt-26") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Công nợ khách lẻ
+          Khách lẻ
         </button>
         <button
           onClick={handleGoToVouchers}
@@ -966,7 +974,7 @@ export default function VoucherListPage() {
             isActive("/contract") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Hợp đồng vận chuyển
+          HĐ vận chuyển
         </button>
         <button
           onClick={handleGoToTCB}
@@ -999,7 +1007,20 @@ export default function VoucherListPage() {
             isActive("/overdue-customer-debt") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          CN khách lẻ quá hạn
+          Khách lẻ quá hạn
+        </button>
+        <button
+          onClick={handleGoToEmployee}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          LX nghỉ & UT
+        </button>
+
+        <button
+          onClick={handleGoToTripActualCost}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Sửa chi phí LX
         </button>
       </div>
 

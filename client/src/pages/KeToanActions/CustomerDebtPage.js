@@ -114,6 +114,14 @@ export default function CustomerDebtPage() {
     navigate("/overdue-customer-debt", { state: { user } });
   };
 
+  const handleGoToEmployee = () => {
+    navigate("/employee-leave-advance", { state: { user } });
+  };
+
+  const handleGoToTripActualCost = () => {
+    navigate("/trip-actual-cost", { state: { user } });
+  };
+
   const [searchText, setSearchText] = useState("");
   const [autoManageMonth, setAutoManageMonth] = useState(
     `${year}-${String(month).padStart(2, "0")}`,
@@ -480,7 +488,7 @@ export default function CustomerDebtPage() {
           onClick={() => navigate("/ke-toan")}
           className="px-3 py-1 rounded text-white bg-blue-500"
         >
-          Trang chính
+          Trang chủ
         </button>
         <button
           onClick={handleGoToDrivers}
@@ -488,7 +496,7 @@ export default function CustomerDebtPage() {
             isActive("/manage-driver") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Danh sách lái xe
+          Danh sách LX
         </button>
         <button
           onClick={handleGoToCustomers}
@@ -496,7 +504,7 @@ export default function CustomerDebtPage() {
             isActive("/manage-customer") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Danh sách khách hàng
+          Danh sách KH
         </button>
         <button
           onClick={handleGoToVehicles}
@@ -512,7 +520,7 @@ export default function CustomerDebtPage() {
             isActive("/manage-trip") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Danh sách chuyến phụ trách
+          Danh sách chuyến PT
         </button>
         <button
           onClick={() => {
@@ -542,7 +550,7 @@ export default function CustomerDebtPage() {
             isActive("/customer-debt-26") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Công nợ khách lẻ
+          Khách lẻ
         </button>
         <button
           onClick={handleGoToVouchers}
@@ -558,7 +566,7 @@ export default function CustomerDebtPage() {
             isActive("/contract") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Hợp đồng vận chuyển
+          HĐ vận chuyển
         </button>
         <button
           onClick={handleGoToTCB}
@@ -591,7 +599,20 @@ export default function CustomerDebtPage() {
             isActive("/overdue-customer-debt") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          CN khách lẻ quá hạn
+          Khách lẻ quá hạn
+        </button>
+        <button
+          onClick={handleGoToEmployee}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          LX nghỉ & UT
+        </button>
+
+        <button
+          onClick={handleGoToTripActualCost}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Sửa chi phí LX
         </button>
       </div>
 

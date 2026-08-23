@@ -390,7 +390,7 @@ const KeToanPage = () => {
           onClick={handleGoToCustomers}
           className="bg-blue-500 text-white px-3 py-1 rounded"
         >
-          Danh sách khách hàng
+          Danh sách KH
         </button>
         <button
           onClick={handleGoToVehicles}
@@ -402,7 +402,7 @@ const KeToanPage = () => {
           onClick={handleGoToTrips}
           className="bg-blue-500 text-white px-3 py-1 rounded"
         >
-          Danh sách chuyến phụ trách
+          Danh sách chuyến PT
         </button>
         <button
           onClick={() => {
@@ -428,7 +428,7 @@ const KeToanPage = () => {
           onClick={handleGoToCustomer26}
           className="bg-blue-500 text-white px-3 py-1 rounded"
         >
-          Công nợ khách lẻ
+          Khách lẻ
         </button>
         <button
           onClick={handleGoToVoucher}
@@ -440,7 +440,7 @@ const KeToanPage = () => {
           onClick={handleGoToContract}
           className="bg-blue-500 text-white px-3 py-1 rounded"
         >
-          Hợp đồng vận chuyển
+          HĐ vận chuyển
         </button>
         <button
           onClick={handleGoToTCB}
@@ -494,7 +494,7 @@ const KeToanPage = () => {
           onClick={handleGoToCNKLQH}
           className="bg-blue-500 text-white px-3 py-1 rounded"
         >
-          CN khách lẻ quá hạn
+          Khách lẻ quá hạn
         </button>
 
                 <button
@@ -508,14 +508,14 @@ const KeToanPage = () => {
           onClick={handleGoToEmployee}
           className="bg-yellow-600 text-white px-3 py-1 rounded"
         >
-          Theo dõi LX/NV nghỉ và ứng tiền
+          LX/NV nghỉ & UT
         </button>
 
         <button
           onClick={handleGoToTripActualCost}
           className="bg-yellow-600 text-white px-3 py-1 rounded"
         >
-          Chênh lệch chuyến thực tế
+          Sửa chi phí LX
         </button>
       </div>
 

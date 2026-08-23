@@ -14,6 +14,59 @@ const normalizeText = (str = "") =>
     .toLowerCase()
     .trim();
 
+const AutoCompleteInline = ({
+  value,
+  onChange,
+  options = [],
+  placeholder = "",
+}) => {
+  const [show, setShow] = useState(false);
+
+  const keyword = normalizeText(value);
+
+  const filtered = options
+    .filter((item) => {
+      if (!keyword) return true;
+
+      return normalizeText(item).includes(keyword);
+    })
+    .slice(0, 8);
+
+  return (
+    <div className="relative w-full">
+      <input
+        type="text"
+        value={value || ""}
+        placeholder={placeholder}
+        onFocus={() => setShow(true)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setShow(true);
+        }}
+        onBlur={() => setTimeout(() => setShow(false), 150)}
+        className="border border-gray-300 rounded px-1 py-1 w-full bg-white outline-none focus:border-blue-500"
+      />
+
+      {show && filtered.length > 0 && (
+        <div className="absolute left-0 top-full z-[9999] bg-white border border-gray-300 rounded shadow-lg w-full max-h-48 overflow-y-auto">
+          {filtered.map((item, index) => (
+            <div
+              key={`${item}-${index}`}
+              onMouseDown={() => {
+                onChange(item);
+                setShow(false);
+              }}
+              className="px-2 py-1 hover:bg-blue-100 cursor-pointer whitespace-nowrap"
+            >
+              {item}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ManageOnlineSchedule = () => {
   const [filterType, setFilterType] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
@@ -81,7 +134,213 @@ const ManageOnlineSchedule = () => {
     navigate("/overdue-customer-debt", { state: { user } });
   };
 
+  const handleGoToEmployee = () => {
+    navigate("/employee-leave-advance", { state: { user } });
+  };
+
+  const handleGoToTripActualCost = () => {
+    navigate("/trip-actual-cost", { state: { user } });
+  };
+
   const [showAddSchedule, setShowAddSchedule] = useState(false);
+
+  // =====================================================
+  // NHẬP LỊCH TRÌNH TRỰC TIẾP TRÊN BẢNG
+  // =====================================================
+
+  const [inlineDriver, setInlineDriver] = useState("");
+  const [inlineNgayDi, setInlineNgayDi] = useState("");
+  const [inlineNgayVe, setInlineNgayVe] = useState("");
+  const [inlineTongTien, setInlineTongTien] = useState("");
+
+  const [inlineRows, setInlineRows] = useState([
+    {
+      id: Date.now(),
+      values: Array(14).fill(""),
+      laiXeThuKhach: "",
+      phuongAn: "",
+    },
+  ]);
+
+  const [inlineDrivers, setInlineDrivers] = useState([]);
+  const [inlineCustomers, setInlineCustomers] = useState([]);
+  const [inlineVehicles, setInlineVehicles] = useState([]);
+  const [inlineAddresses, setInlineAddresses] = useState([]);
+  const [inlineSaving, setInlineSaving] = useState(false);
+
+  useEffect(() => {
+    const loadInlineData = async () => {
+      try {
+        const [driverRes, customerRes, vehicleRes, addressRes] =
+          await Promise.all([
+            axios.get(`${API}/drivers/names/list`),
+            axios.get(`${API}/customers`),
+            axios.get(`${API}/vehicles/names/list`),
+            axios.get(`${API}/address/all`),
+          ]);
+
+        setInlineDrivers(driverRes.data || []);
+        setInlineCustomers(customerRes.data || []);
+        setInlineVehicles(vehicleRes.data || []);
+        setInlineAddresses(addressRes.data?.data || []);
+      } catch (error) {
+        console.error("Lỗi lấy dữ liệu gợi ý:", error);
+      }
+    };
+
+    loadInlineData();
+  }, []);
+
+  const inlineDriverNames = inlineDrivers.map((item) => item.name);
+  const inlineCustomerNames = inlineCustomers.map((item) => item.name);
+  const inlineVehiclePlates = inlineVehicles.map((item) => item.plateNumber);
+  const inlineAddressList = inlineAddresses.map((item) => item.diaChi);
+
+  const updateInlineRowValue = (rowId, index, value) => {
+    setInlineRows((prev) =>
+      prev.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              values: row.values.map((item, i) => (i === index ? value : item)),
+            }
+          : row,
+      ),
+    );
+  };
+
+  const updateInlineRowField = (rowId, field, value) => {
+    setInlineRows((prev) =>
+      prev.map((row) =>
+        row.id === rowId
+          ? {
+              ...row,
+              [field]: value,
+            }
+          : row,
+      ),
+    );
+  };
+
+  const addInlineRow = () => {
+    setInlineRows((prev) => [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+        values: Array(14).fill(""),
+        laiXeThuKhach: "",
+        phuongAn: "",
+      },
+    ]);
+  };
+
+  const deleteInlineLastRow = () => {
+    setInlineRows((prev) => {
+      if (prev.length <= 1) return prev;
+      return prev.slice(0, -1);
+    });
+  };
+
+  const resetInlineSchedule = () => {
+    setInlineDriver("");
+    setInlineNgayDi("");
+    setInlineNgayVe("");
+    setInlineTongTien("");
+
+    setInlineRows([
+      {
+        id: Date.now(),
+        values: Array(14).fill(""),
+        laiXeThuKhach: "",
+        phuongAn: "",
+      },
+    ]);
+  };
+
+  const saveInlineSchedule = async () => {
+    if (!inlineDriver.trim()) {
+      alert("Vui lòng nhập tên lái xe.");
+      return;
+    }
+
+    if (!inlineNgayDi) {
+      alert("Vui lòng nhập ngày đi.");
+      return;
+    }
+
+    if (!inlineNgayVe) {
+      alert("Vui lòng nhập ngày về.");
+      return;
+    }
+
+    if (!inlineTongTien) {
+      alert("Vui lòng nhập tổng tiền lịch trình.");
+      return;
+    }
+
+    const requiredIndexes = [0, 1, 2, 3, 4, 5, 6, 7];
+
+    const hasEmptyRequired = inlineRows.some((row) =>
+      requiredIndexes.some((index) => !String(row.values[index] || "").trim()),
+    );
+
+    if (hasEmptyRequired) {
+      alert("Vui lòng nhập đầy đủ các trường bắt buộc của chuyến.");
+      return;
+    }
+
+    try {
+      setInlineSaving(true);
+
+      const payload = {
+        userId: user?._id || currentUser?._id,
+
+        tenLaiXe: String(inlineDriver || ""),
+
+        ngayDi: inlineNgayDi,
+
+        ngayVe: inlineNgayVe,
+
+        tongTienLichTrinh: String(inlineTongTien || ""),
+
+        rows: inlineRows.map((row) => ({
+          values: row.values.map((value) => String(value || "")),
+
+          laiXeThuKhach: String(row.laiXeThuKhach || ""),
+
+          phuongAn: String(row.phuongAn || ""),
+        })),
+      };
+
+      console.log("Dữ liệu lịch trình nhập trực tiếp:", payload);
+
+      await axios.post(`${API}/user-schedules`, payload);
+
+      alert("Thêm lịch trình thành công!");
+
+      resetInlineSchedule();
+
+      // Nếu đang lọc theo ngày thì tải lại đúng bộ lọc hiện tại
+      if (filterType === "single" && selectedDate) {
+        await handleFilterByDate();
+      }
+
+      // Nếu đang lọc theo khoảng thì tải lại đúng bộ lọc hiện tại
+      else if (filterType === "range" && startDate && endDate) {
+        await handleFilterByRange();
+      }
+
+      // Nếu chưa lọc thì không đụng vào dữ liệu cũ
+    } catch (error) {
+      console.error("Lỗi thêm lịch trình trực tiếp:", error);
+
+      alert(
+        error?.response?.data?.message || "Có lỗi xảy ra khi thêm lịch trình.",
+      );
+    } finally {
+      setInlineSaving(false);
+    }
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
@@ -304,7 +563,7 @@ const ManageOnlineSchedule = () => {
           onClick={() => navigate("/ke-toan")}
           className="px-3 py-1 rounded text-white bg-blue-500"
         >
-          Trang chính
+          Trang chủ
         </button>
 
         <button
@@ -313,7 +572,7 @@ const ManageOnlineSchedule = () => {
       ${isActive("/manage-driver") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách lái xe
+          Danh sách LX
         </button>
 
         <button
@@ -322,7 +581,7 @@ const ManageOnlineSchedule = () => {
       ${isActive("/manage-customer") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách khách hàng
+          Danh sách KH
         </button>
 
         <button
@@ -340,7 +599,7 @@ const ManageOnlineSchedule = () => {
       ${isActive("/manage-trip") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách chuyến phụ trách
+          Danh sách chuyến PT
         </button>
 
         <button
@@ -373,7 +632,7 @@ const ManageOnlineSchedule = () => {
       ${isActive("/customer-debt-26") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Công nợ khách lẻ
+          Khách lẻ
         </button>
         <button
           onClick={handleGoToVouchers}
@@ -389,7 +648,7 @@ const ManageOnlineSchedule = () => {
             isActive("/contract") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Hợp đồng vận chuyển
+          HĐ vận chuyển
         </button>
         <button
           onClick={handleGoToTCB}
@@ -421,7 +680,21 @@ const ManageOnlineSchedule = () => {
             isActive("/overdue-customer-debt") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          CN khách lẻ quá hạn
+          Khách lẻ quá hạn
+        </button>
+
+        <button
+          onClick={handleGoToEmployee}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          LX nghỉ & UT
+        </button>
+
+        <button
+          onClick={handleGoToTripActualCost}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Sửa chi phí LX
         </button>
       </div>
       <div className="flex justify-between items-center mb-4">
@@ -563,223 +836,522 @@ const ManageOnlineSchedule = () => {
         />
       </div>
 
-      {/* Hiển thị dữ liệu */}
-      {filteredData.length > 0 && (
-        <div className="max-h-[700px] overflow-y-auto border">
-          <table className="w-full border text-xs border-separate border-spacing-0">
-            <thead className="bg-gray-200">
-              <tr>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  STT
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Tên lái xe
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Ngày đi
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Ngày về
-                </th>
+      {/* ===================================================== */}
+      {/* BẢNG - LUÔN HIỂN THỊ, KỂ CẢ KHI CHƯA CÓ DATA */}
+      {/* ===================================================== */}
 
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Biển số
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Khách hàng
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Giấy tờ
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Nơi đi
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Nơi đến
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  TL hàng
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Số điểm
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  2 chiều + lưu ca
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">Ăn</th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Tăng ca
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Bốc xếp
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">Vé</th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Tiền chuyến
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Chi phí khác
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  LX thu KH
-                </th>
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Phương án
-                </th>
+      <div className="max-h-[700px] min-h-[500px] overflow-auto border">
+        <table className="w-full border-collapse text-xs">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">STT</th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Tên lái xe
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Ngày đi
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Ngày về
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Biển số
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Khách hàng
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Giấy tờ
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Nơi đi
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Nơi đến
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Trọng lượng
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Số điểm
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                2 chiều + lưu ca
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">Ăn</th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Tăng ca
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Bốc xếp
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">Vé</th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Tiền chuyến
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Chi phí khác
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                LX thu KH
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Phương án
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Tổng tiền LT
+              </th>
+              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+                Mã LT
+              </th>
+            </tr>
+          </thead>
 
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Tổng tiền LT
-                </th>
+          <tbody>
+            {/* ================================================= */}
+            {/* DÒNG NHẬP TRỰC TIẾP - LUÔN CÓ */}
+            {/* ================================================= */}
 
-                <th className="border p-1 sticky top-0 bg-gray-200 z-20">
-                  Mã LT
-                </th>
-              </tr>
-            </thead>
+            {inlineRows.map((row, rowIndex) => (
+              <tr key={`inline-${row.id}`} className="bg-blue-50">
+                {rowIndex === 0 && (
+                  <>
+                    <td
+                      rowSpan={inlineRows.length}
+                      className="border p-1 text-center font-bold text-blue-600"
+                    >
+                      +
+                    </td>
 
-            <tbody>
-              {displayedData.map((schedule, scheduleIndex) =>
-                schedule.rows.map((row, rowIndex) => (
-                  <tr
-                    key={`${schedule._id}-${rowIndex}`}
-                    onClick={() =>
-                      setActiveRows((prev) => {
-                        const existed = prev.some(
-                          (r) =>
-                            r.scheduleId === schedule._id &&
-                            r.rowIndex === rowIndex,
-                        );
+                    <td
+                      rowSpan={inlineRows.length}
+                      className="border p-1 min-w-[160px]"
+                    >
+                      <AutoCompleteInline
+                        value={inlineDriver}
+                        onChange={setInlineDriver}
+                        options={inlineDriverNames}
+                        placeholder="Tên lái xe"
+                      />
+                    </td>
 
-                        if (existed) {
-                          // ❌ đã tồn tại → bỏ highlight
-                          return prev.filter(
-                            (r) =>
-                              !(
-                                r.scheduleId === schedule._id &&
-                                r.rowIndex === rowIndex
-                              ),
-                          );
-                        }
+                    <td
+                      rowSpan={inlineRows.length}
+                      className="border p-1 min-w-[155px]"
+                    >
+                      <input
+                        type="datetime-local"
+                        value={inlineNgayDi}
+                        onChange={(e) => setInlineNgayDi(e.target.value)}
+                        onClick={(e) => e.target.showPicker()}
+                        className="border border-gray-300 rounded px-1 py-1 w-full bg-white"
+                      />
+                    </td>
 
-                        // ✅ chưa có → thêm
-                        return [
-                          ...prev,
-                          { scheduleId: schedule._id, rowIndex },
-                        ];
-                      })
+                    <td
+                      rowSpan={inlineRows.length}
+                      className="border p-1 min-w-[155px]"
+                    >
+                      <input
+                        type="datetime-local"
+                        value={inlineNgayVe}
+                        onChange={(e) => setInlineNgayVe(e.target.value)}
+                        onClick={(e) => e.target.showPicker()}
+                        className="border border-gray-300 rounded px-1 py-1 w-full bg-white"
+                      />
+                    </td>
+                  </>
+                )}
+
+                <td className="border p-1 min-w-[110px]">
+                  <AutoCompleteInline
+                    value={row.values[0]}
+                    onChange={(value) => updateInlineRowValue(row.id, 0, value)}
+                    options={inlineVehiclePlates}
+                    placeholder="Biển số"
+                  />
+                </td>
+
+                <td className="border p-1 min-w-[130px]">
+                  <AutoCompleteInline
+                    value={row.values[1]}
+                    onChange={(value) => updateInlineRowValue(row.id, 1, value)}
+                    options={inlineCustomerNames}
+                    placeholder="Khách hàng"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[2]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 2, e.target.value)
                     }
-                    className={`cursor-pointer ${
-                      isActiveRow(schedule._id, rowIndex)
-                        ? "bg-yellow-100"
-                        : "hover:bg-gray-100"
+                    className="border border-gray-300 rounded px-1 py-1 w-[80px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1 min-w-[130px]">
+                  <AutoCompleteInline
+                    value={row.values[3]}
+                    onChange={(value) => updateInlineRowValue(row.id, 3, value)}
+                    options={inlineAddressList}
+                    placeholder="Nơi đi"
+                  />
+                </td>
+
+                <td className="border p-1 min-w-[130px]">
+                  <AutoCompleteInline
+                    value={row.values[4]}
+                    onChange={(value) => updateInlineRowValue(row.id, 4, value)}
+                    options={inlineAddressList}
+                    placeholder="Nơi đến"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[5]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 5, e.target.value)
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[70px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[6]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 6, e.target.value)
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[60px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[7]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 7, e.target.value)
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[120px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[8]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 8, e.target.value)
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[60px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[9]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 9, e.target.value)
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[70px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[10]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 10, e.target.value)
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[70px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[11]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 11, e.target.value)
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[60px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[12]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 12, e.target.value)
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[90px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.values[13]}
+                    onChange={(e) =>
+                      updateInlineRowValue(row.id, 13, e.target.value)
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[90px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1">
+                  <input
+                    type="text"
+                    value={row.laiXeThuKhach}
+                    onChange={(e) =>
+                      updateInlineRowField(
+                        row.id,
+                        "laiXeThuKhach",
+                        e.target.value,
+                      )
+                    }
+                    className="border border-gray-300 rounded px-1 py-1 w-[90px] bg-white"
+                  />
+                </td>
+
+                <td className="border p-1 min-w-[130px]">
+                  {row.laiXeThuKhach && Number(row.laiXeThuKhach) !== 0 ? (
+                    <div className="flex flex-col gap-1">
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name={`phuong-an-${row.id}`}
+                          checked={row.phuongAn === "daChuyenKhoan"}
+                          onChange={() =>
+                            updateInlineRowField(
+                              row.id,
+                              "phuongAn",
+                              "daChuyenKhoan",
+                            )
+                          }
+                        />
+                        Đã CK
+                      </label>
+
+                      <label className="flex items-center gap-1">
+                        <input
+                          type="radio"
+                          name={`phuong-an-${row.id}`}
+                          checked={row.phuongAn === "truVaoTongLichTrinh"}
+                          onChange={() =>
+                            updateInlineRowField(
+                              row.id,
+                              "phuongAn",
+                              "truVaoTongLichTrinh",
+                            )
+                          }
+                        />
+                        Trừ tổng
+                      </label>
+                    </div>
+                  ) : null}
+                </td>
+
+                {rowIndex === 0 && (
+                  <td rowSpan={inlineRows.length} className="border p-1">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={inlineTongTien}
+                      onChange={(e) =>
+                        setInlineTongTien(e.target.value.replace(/\D/g, ""))
+                      }
+                      placeholder="Tổng tiền"
+                      className="border border-gray-300 rounded px-1 py-1 w-[90px] bg-white"
+                    />
+                  </td>
+                )}
+
+                <td className="border p-1 text-center font-semibold text-blue-600">
+                  MỚI
+                </td>
+              </tr>
+            ))}
+
+            {/* ================================================= */}
+            {/* NÚT THÊM DÒNG */}
+            {/* ================================================= */}
+
+            <tr className="bg-blue-50">
+              <td colSpan={22} className="border p-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={addInlineRow}
+                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded"
+                  >
+                    + Thêm chuyến
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={deleteInlineLastRow}
+                    disabled={inlineRows.length <= 1}
+                    className="bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white px-3 py-1.5 rounded"
+                  >
+                    Xóa chuyến cuối
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={saveInlineSchedule}
+                    disabled={inlineSaving}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-1.5 rounded font-semibold"
+                  >
+                    {inlineSaving ? "Đang lưu..." : "Lưu lịch trình"}
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            {/* ================================================= */}
+            {/* DATA CŨ - CHỈ HIỆN KHI CÓ DATA */}
+            {/* ================================================= */}
+
+            {displayedData.map((schedule, scheduleIndex) =>
+              schedule.rows.map((row, rowIndex) => (
+                <tr
+                  key={`${schedule._id}-${rowIndex}`}
+                  onClick={() =>
+                    setActiveRows((prev) => {
+                      const existed = prev.some(
+                        (item) =>
+                          item.scheduleId === schedule._id &&
+                          item.rowIndex === rowIndex,
+                      );
+
+                      if (existed) {
+                        return prev.filter(
+                          (item) =>
+                            !(
+                              item.scheduleId === schedule._id &&
+                              item.rowIndex === rowIndex
+                            ),
+                        );
+                      }
+
+                      return [
+                        ...prev,
+                        {
+                          scheduleId: schedule._id,
+                          rowIndex,
+                        },
+                      ];
+                    })
+                  }
+                  className={`cursor-pointer ${
+                    isActiveRow(schedule._id, rowIndex)
+                      ? "bg-yellow-100"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  {rowIndex === 0 && (
+                    <>
+                      <td
+                        rowSpan={schedule.rows.length}
+                        className="border p-1 text-center"
+                      >
+                        {scheduleIndex + 1}
+                      </td>
+
+                      <td rowSpan={schedule.rows.length} className="border p-1">
+                        {schedule.tenLaiXe}
+                      </td>
+
+                      <td rowSpan={schedule.rows.length} className="border p-1">
+                        {schedule.ngayDi
+                          ?.slice(0, 10)
+                          .split("-")
+                          .reverse()
+                          .join("/")}
+                      </td>
+
+                      <td rowSpan={schedule.rows.length} className="border p-1">
+                        {schedule.ngayVe
+                          ?.slice(0, 10)
+                          .split("-")
+                          .reverse()
+                          .join("/")}
+                      </td>
+                    </>
+                  )}
+
+                  <td className="border p-1">{row.bienSoXe}</td>
+
+                  <td className="border p-1">{row.tenKhachHang}</td>
+
+                  <td className="border p-1">{row.giayTo}</td>
+
+                  <td className="border p-1">{row.noiDi}</td>
+
+                  <td className="border p-1">{row.noiDen}</td>
+
+                  <td className="border p-1">{row.trongLuongHang}</td>
+
+                  <td className="border p-1 text-center">{row.soDiem}</td>
+
+                  <td className="border p-1">{row.haiChieuVaLuuCa}</td>
+
+                  <td className="border p-1">{row.an}</td>
+
+                  <td className="border p-1">{row.tangCa}</td>
+
+                  <td className="border p-1">{row.bocXep}</td>
+
+                  <td className="border p-1">{row.ve}</td>
+
+                  <td className="border p-1">{row.tienChuyen}</td>
+
+                  <td className="border p-1">{row.chiPhiKhac}</td>
+
+                  <td className="border p-1">{row.laiXeThuKhach}</td>
+
+                  <td className="border p-1">
+                    {row.phuongAn === "daChuyenKhoan"
+                      ? "Đã CK"
+                      : row.phuongAn === "truVaoTongLichTrinh"
+                        ? "Trừ tổng"
+                        : ""}
+                  </td>
+
+                  {rowIndex === 0 && (
+                    <td
+                      rowSpan={schedule.rows.length}
+                      className="border p-1 text-right font-bold"
+                    >
+                      {schedule.tongTienLichTrinh} k
+                    </td>
+                  )}
+
+                  <td
+                    className="border p-1 cursor-help"
+                    title={`Người thêm: ${
+                      schedule.nguoiTao || "Không xác định"
                     }`}
                   >
-                    {/* STT + field chung – chỉ render 1 lần */}
-                    {rowIndex === 0 && (
-                      <>
-                        <td
-                          className={`border p-1 text-center ${
-                            isActiveSchedule(schedule._id)
-                              ? "bg-yellow-100"
-                              : ""
-                          }`}
-                          rowSpan={schedule.rows.length}
-                        >
-                          {scheduleIndex + 1}
-                        </td>
-                        <td
-                          className={`border p-1 ${
-                            isActiveSchedule(schedule._id)
-                              ? "bg-yellow-100"
-                              : ""
-                          }`}
-                          rowSpan={schedule.rows.length}
-                        >
-                          {schedule.tenLaiXe}
-                        </td>
-
-                        <td
-                          className={`border p-1 ${
-                            isActiveSchedule(schedule._id)
-                              ? "bg-yellow-100"
-                              : ""
-                          }`}
-                          rowSpan={schedule.rows.length}
-                        >
-                          {schedule.ngayDi
-                            ?.slice(0, 10)
-                            .split("-")
-                            .reverse()
-                            .join("/")}
-                        </td>
-
-                        <td
-                          className={`border p-1 ${
-                            isActiveSchedule(schedule._id)
-                              ? "bg-yellow-100"
-                              : ""
-                          }`}
-                          rowSpan={schedule.rows.length}
-                        >
-                          {schedule.ngayVe
-                            ?.slice(0, 10)
-                            .split("-")
-                            .reverse()
-                            .join("/")}
-                        </td>
-                      </>
-                    )}
-
-                    {/* FIELD THEO ROW */}
-                    <td className="border p-1">{row.bienSoXe}</td>
-                    <td className="border p-1">{row.tenKhachHang}</td>
-                    <td className="border p-1">{row.giayTo}</td>
-                    <td className="border p-1">{row.noiDi}</td>
-                    <td className="border p-1">{row.noiDen}</td>
-                    <td className="border p-1 text-right">
-                      {row.trongLuongHang}
-                    </td>
-                    <td className="border p-1 text-center">{row.soDiem}</td>
-                    <td className="border p-1">{row.haiChieuVaLuuCa}</td>
-                    <td className="border p-1 text-right">{row.an}</td>
-                    <td className="border p-1 text-right">{row.tangCa}</td>
-                    <td className="border p-1 text-right">{row.bocXep}</td>
-                    <td className="border p-1 text-right">{row.ve}</td>
-                    <td className="border p-1 text-right">{row.tienChuyen}</td>
-                    <td className="border p-1 text-right">{row.chiPhiKhac}</td>
-                    <td className="border p-1">{row.laiXeThuKhach}</td>
-                    <td className="border p-1">
-                      {row.phuongAn === "daChuyenKhoan"
-                        ? "Đã CK"
-                        : row.phuongAn === "truVaoTongLichTrinh"
-                          ? "Trừ tổng"
-                          : ""}
-                    </td>
-
-                    {/* Tổng tiền – chỉ 1 lần */}
-                    {rowIndex === 0 && (
-                      <td
-                        className={`border p-1 text-right text-blue-600 font-bold ${
-                          isActiveSchedule(schedule._id) ? "bg-yellow-100" : ""
-                        }`}
-                        rowSpan={schedule.rows.length}
-                      >
-                        {schedule.tongTienLichTrinh} k
-                      </td>
-                    )}
-                    <td
-                      className="border p-1 cursor-help"
-                      title={`Người thêm: ${schedule.nguoiTao || "Không xác định"}`}
-                    >
-                      {row.maLichTrinh}
-                    </td>
-                  </tr>
-                )),
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    {row.maLichTrinh}
+                  </td>
+                </tr>
+              )),
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <AddUserScheduleModal
         open={showAddSchedule}

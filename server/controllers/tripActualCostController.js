@@ -160,32 +160,21 @@ exports.createFromTrip = async (req, res) => {
       // =========================
       // GIÁ TRỊ GỐC
       // =========================
-
       bocXep: trip.bocXep || "",
-
       ve: trip.ve || "",
-
       hangVe: trip.hangVe || "",
-
       luuCa: trip.luuCa || "",
-
       luatChiPhiKhac: trip.luatChiPhiKhac || "",
 
       // =========================
       // GIÁ TRỊ THỰC TẾ
       // MẶC ĐỊNH TRỐNG
       // =========================
-
-      bocXepThucTe: null,
-
-      veThucTe: null,
-
-      hangVeThucTe: null,
-
-      luuCaThucTe: null,
-
-      luatChiPhiKhacThucTe: null,
-
+      bocXepThucTe: trip.bocXep || "",
+      veThucTe: trip.ve || "",
+      hangVeThucTe: trip.hangVe || "",
+      luuCaThucTe: trip.luuCa || "",
+      luatChiPhiKhacThucTe: trip.luatChiPhiKhac || "",
       tongChenhLech: 0,
 
       // =========================
@@ -533,22 +522,34 @@ exports.updateToOriginalTrip = async (req, res) => {
     trip.luatChiPhiKhac = record.luatChiPhiKhacThucTe;
 
     // =========================
-    // ĐÁNH DẤU CHUYẾN GỐC
-    // ĐÃ CẬP NHẬT GIÁ THỰC TẾ
+    // KIỂM TRA CHÊNH LỆCH TỪNG KHOẢN
     // =========================
 
-    trip.isRealFact = true;
+    const isRealBocXep = Number(record.bocXepChenhLech || 0) !== 0;
+
+    const isRealVe = Number(record.veChenhLech || 0) !== 0;
+
+    const isRealHangVe = Number(record.hangVeChenhLech || 0) !== 0;
+
+    const isRealLuuCa = Number(record.luuCaChenhLech || 0) !== 0;
+
+    const isRealLuatCpKhac = Number(record.luatChiPhiKhacChenhLech || 0) !== 0;
+
+    // =========================
+    // CẬP NHẬT TRẠNG THÁI
+    // =========================
+
+    trip.isRealBocXep = isRealBocXep;
+    trip.isRealVe = isRealVe;
+    trip.isRealHangVe = isRealHangVe;
+    trip.isRealLuuCa = isRealLuuCa;
+    trip.isRealLuatCpKhac = isRealLuatCpKhac;
+
+    record.isTrue = true
 
     await trip.save({
       session,
     });
-
-    // =========================
-    // ĐÁNH DẤU BẢN GHI THỰC TẾ
-    // ĐÃ CẬP NHẬT
-    // =========================
-
-    record.isTrue = true;
 
     record.updatedToScheduleAt = new Date();
 

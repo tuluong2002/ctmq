@@ -174,6 +174,10 @@ export default function ManageTrip({ user, onLogout }) {
   const handleGoToTripActualCost = () => {
     navigate("/trip-actual-cost", { state: { user } });
   };
+
+  const handleGoToEmployee = () => {
+    navigate("/employee-leave-advance", { state: { user } });
+  };
   // 5 danh sách gợi ý
   const [drivers, setDrivers] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -1631,7 +1635,7 @@ export default function ManageTrip({ user, onLogout }) {
           onClick={() => navigate("/ke-toan")}
           className="px-3 py-1 rounded text-white bg-blue-500"
         >
-          Trang chính
+          Trang chủ
         </button>
 
         <button
@@ -1640,7 +1644,7 @@ export default function ManageTrip({ user, onLogout }) {
       ${isActive("/manage-driver") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách lái xe
+          Danh sách LX
         </button>
 
         <button
@@ -1699,7 +1703,7 @@ export default function ManageTrip({ user, onLogout }) {
       ${isActive("/customer-debt-26") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Công nợ khách lẻ
+          Khách lẻ
         </button>
         <button
           onClick={handleGoToVouchers}
@@ -1747,7 +1751,15 @@ export default function ManageTrip({ user, onLogout }) {
             isActive("/overdue-customer-debt") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          CN khách lẻ quá hạn
+          Khách lẻ quá hạn
+        </button>
+                <button
+          onClick={handleGoToEmployee}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/employee-leave-advance") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          LX nghỉ & UT
         </button>
         <button
           onClick={handleGoToTripActualCost}
@@ -1755,7 +1767,7 @@ export default function ManageTrip({ user, onLogout }) {
       ${isActive("/trip-actual-cost") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Chênh lệch chuyến thực tế
+          Sửa chi phí LX
         </button>
       </div>
 

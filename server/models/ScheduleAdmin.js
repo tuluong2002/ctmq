@@ -91,7 +91,11 @@ const scheduleAdminSchema = new mongoose.Schema(
     },
     
     //Cập nhật chi phí thực tế
-    isRealFact: { type: Boolean, default: false },
+    isRealBocXep: { type: Boolean, default: false },
+    isRealVe: { type: Boolean, default: false },
+    isRealHangVe: { type: Boolean, default: false },
+    isRealLuuCa: { type: Boolean, default: false },
+    isRealLuatCpKhac: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

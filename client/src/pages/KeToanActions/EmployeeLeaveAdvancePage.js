@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import {
   FiPlus,
@@ -153,6 +153,69 @@ const getAdvanceMethodText = (type, otherText = "") => {
 
 const EmployeeLeaveAdvancePage = ({ user }) => {
   const navigate = useNavigate();
+
+  const location = useLocation();
+  const isActive = (path) => location.pathname === path;
+
+  // 👉 Hàm chuyển sang trang quản lý lái xe
+  const handleGoToDrivers = () => {
+    navigate("/manage-driver", { state: { user } });
+  };
+
+  const handleGoToCustomers = () => {
+    navigate("/manage-customer", { state: { user } });
+  };
+
+  const handleGoToVehicles = () => {
+    navigate("/manage-vehicle", { state: { user } });
+  };
+
+  const handleGoToTrips = () => {
+    navigate("/manage-trip", { state: { user } });
+  };
+
+  const handleGoToAllTrips = () => {
+    navigate("/manage-all-trip", { state: { user } });
+  };
+
+  const handleGoToAllCustomers = () => {
+    navigate("/customer-debt", { state: { user } });
+  };
+
+  const handleGoToCustomer26 = () => {
+    navigate("/customer-debt-26", { state: { user } });
+  };
+
+  const handleGoToVouchers = () =>
+    navigate("/voucher-list", { state: { user } });
+
+  const handleGoToContract = () => {
+    navigate("/contract", { state: { user } });
+  };
+
+  const handleGoToTCB = () => {
+    navigate("/tcb-person", { state: { user } });
+  };
+
+  const handleGoToOnlKT = () => {
+    navigate("/onl-schedules", { state: { user } });
+  };
+
+  const handleGoToScheErr = () => {
+    navigate("/schedule-errors", { state: { user } });
+  };
+
+  const handleGoToCNKLQH = () => {
+    navigate("/overdue-customer-debt", { state: { user } });
+  };
+
+  const handleGoToEmployee = () => {
+    navigate("/employee-leave-advance", { state: { user } });
+  };
+
+  const handleGoToTripActualCost = () => {
+    navigate("/trip-actual-cost", { state: { user } });
+  };
   // ===================================================
   // TAB
   // ===================================================
@@ -926,12 +989,147 @@ const EmployeeLeaveAdvancePage = ({ user }) => {
       {/* =================================================
           HEADER
       ================================================= */}
-      <div className="flex gap-2 items-center mb-2 text-xs">
+      <div className="flex gap-2 items-center mb-4 text-xs">
         <button
           onClick={() => navigate("/ke-toan")}
           className="px-3 py-1 rounded text-white bg-blue-500"
         >
-          Trang chính
+          Trang chủ
+        </button>
+
+        <button
+          onClick={handleGoToDrivers}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-driver") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Danh sách LX
+        </button>
+
+        <button
+          onClick={handleGoToCustomers}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-customer") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Danh sách KH
+        </button>
+
+        <button
+          onClick={handleGoToVehicles}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-vehicle") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Danh sách xe
+        </button>
+
+        <button
+          onClick={handleGoToTrips}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-trip") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Danh sách chuyến PT
+        </button>
+
+        <button
+          onClick={() => {
+            if (!user?.permissions?.includes("edit_trip")) {
+              alert("Bạn không có quyền truy cập!");
+              return;
+            }
+            handleGoToAllTrips();
+          }}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/manage-all-trip") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Tất cả các chuyến
+        </button>
+
+        <button
+          onClick={handleGoToAllCustomers}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/customer-debt") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Công nợ KH
+        </button>
+
+        <button
+          onClick={handleGoToCustomer26}
+          className={`px-3 py-1 rounded text-white 
+      ${isActive("/customer-debt-26") ? "bg-green-600" : "bg-blue-500"}
+    `}
+        >
+          Khách lẻ
+        </button>
+        <button
+          onClick={handleGoToVouchers}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/voucher-list") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          Sổ phiếu chi
+        </button>
+        <button
+          onClick={handleGoToContract}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/contract") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          HĐ vận chuyển
+        </button>
+        <button
+          onClick={handleGoToTCB}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/tcb-person") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          TCB cá nhân
+        </button>
+
+        <button
+          onClick={handleGoToOnlKT}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/onl-schedules") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          KT - Lịch trình
+        </button>
+
+        <button
+          onClick={handleGoToScheErr}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/schedule-errors") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          DS chuyến sai sót
+        </button>
+
+        <button
+          onClick={handleGoToCNKLQH}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/overdue-customer-debt") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          Khách lẻ quá hạn
+        </button>
+        <button
+          onClick={handleGoToEmployee}
+          className={`px-3 py-1 rounded text-white ${
+            isActive("/employee-leave-advance") ? "bg-green-600" : "bg-blue-500"
+          }`}
+        >
+          LX nghỉ & UT
+        </button>
+
+        <button
+          onClick={handleGoToTripActualCost}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Sửa chi phí LX
         </button>
       </div>
 

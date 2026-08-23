@@ -130,6 +130,14 @@ export default function ManageDriver() {
     navigate("/overdue-customer-debt", { state: { user } });
   };
 
+  const handleGoToEmployee = () => {
+    navigate("/employee-leave-advance", { state: { user } });
+  };
+
+  const handleGoToTripActualCost = () => {
+    navigate("/trip-actual-cost", { state: { user } }); 
+  }
+
   // visibleColumns khởi tạo mặc định từ allColumns
   const [visibleColumns, setVisibleColumns] = useState(
     allColumns.map((c) => c.key),
@@ -518,7 +526,7 @@ export default function ManageDriver() {
           onClick={() => navigate("/ke-toan")}
           className="px-3 py-1 rounded text-white bg-blue-500"
         >
-          Trang chính
+          Trang chủ
         </button>
 
         <button
@@ -527,7 +535,7 @@ export default function ManageDriver() {
       ${isActive("/manage-driver") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách lái xe
+          Danh sách LX
         </button>
 
         <button
@@ -536,7 +544,7 @@ export default function ManageDriver() {
       ${isActive("/manage-customer") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách khách hàng
+          Danh sách KH
         </button>
 
         <button
@@ -554,7 +562,7 @@ export default function ManageDriver() {
       ${isActive("/manage-trip") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Danh sách chuyến phụ trách
+          Danh sách chuyến PT
         </button>
 
         <button
@@ -587,7 +595,7 @@ export default function ManageDriver() {
       ${isActive("/customer-debt-26") ? "bg-green-600" : "bg-blue-500"}
     `}
         >
-          Công nợ khách lẻ
+          Khách lẻ
         </button>
         <button
           onClick={handleGoToVouchers}
@@ -603,7 +611,7 @@ export default function ManageDriver() {
             isActive("/contract") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          Hợp đồng vận chuyển
+          HĐ vận chuyển
         </button>
 
         <button
@@ -636,7 +644,20 @@ export default function ManageDriver() {
             isActive("/overdue-customer-debt") ? "bg-green-600" : "bg-blue-500"
           }`}
         >
-          CN khách lẻ quá hạn
+          Khách lẻ quá hạn
+        </button>
+        <button
+          onClick={handleGoToEmployee}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          LX nghỉ & UT
+        </button>
+
+        <button
+          onClick={handleGoToTripActualCost}
+          className="bg-blue-500 text-white px-3 py-1 rounded"
+        >
+          Sửa chi phí LX
         </button>
       </div>
 
