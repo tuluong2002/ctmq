@@ -132,6 +132,8 @@ const tripActualCostSchema = new mongoose.Schema(
       default: 0,
     },
 
+    note: { type: String, default: ""},
+
     // =====================================================
     // TRẠNG THÁI
     // false = chưa cập nhật về chuyến gốc

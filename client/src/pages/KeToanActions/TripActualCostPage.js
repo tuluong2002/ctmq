@@ -8,6 +8,7 @@ import {
   FiCheck,
   FiSave,
   FiX,
+  FiTrash2,
 } from "react-icons/fi";
 
 import API from "../../api";
@@ -98,6 +99,8 @@ const TripActualCostPage = ({ user }) => {
   );
 
   const [maChuyenInput, setMaChuyenInput] = useState("");
+
+  const [exporting, setExporting] = useState(false);
 
   const canManageTrip = (item) => {
     const hasManagePermission =
@@ -280,6 +283,75 @@ const TripActualCostPage = ({ user }) => {
   }, [statusFilter, fromDate, toDate]);
 
   // =====================================================
+  // XUẤT EXCEL
+  // =====================================================
+
+  const handleExportExcel = async () => {
+    if (!fromDate || !toDate) {
+      alert("Vui lòng chọn Từ ngày và Đến ngày");
+      return;
+    }
+
+    if (fromDate > toDate) {
+      alert("Từ ngày không được lớn hơn Đến ngày");
+      return;
+    }
+
+    try {
+      setExporting(true);
+
+      const response = await axios.post(
+        `${BASE_URL}/export-excel`,
+        {
+          from: fromDate,
+          to: toDate,
+        },
+        {
+          responseType: "blob",
+        },
+      );
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+
+      link.download = `CP_THUC_TE_${fromDate}_den_${toDate}.xlsx`;
+
+      document.body.appendChild(link);
+
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("handleExportExcel error:", error);
+
+      // Vì response lỗi có thể là blob nên đọc message
+      if (error.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const data = JSON.parse(text);
+
+          alert(data.message || "Không thể xuất Excel");
+        } catch {
+          alert("Không thể xuất Excel");
+        }
+      } else {
+        alert(error.response?.data?.message || "Không thể xuất Excel");
+      }
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // =====================================================
   // LOCAL FILTER
   // =====================================================
 
@@ -395,6 +467,7 @@ const TripActualCostPage = ({ user }) => {
         hangVeThucTe: parseMoney(item.hangVeThucTe),
         luuCaThucTe: parseMoney(item.luuCaThucTe),
         luatChiPhiKhacThucTe: parseMoney(item.luatChiPhiKhacThucTe),
+        note: item.note || "",
       };
 
       const response = await axios.put(`${BASE_URL}/${item._id}`, payload);
@@ -462,6 +535,45 @@ const TripActualCostPage = ({ user }) => {
       );
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  // =====================================================
+  // XÓA CHUYẾN
+  // =====================================================
+
+  const handleDelete = async (item) => {
+    if (item.isTrue) {
+      return;
+    }
+
+    if (!canManageTrip(item)) {
+      alert("Bạn không có quyền xóa chuyến này");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn xóa dữ liệu thực tế của chuyến ${item.maChuyen}?\n\nDữ liệu sau khi xóa sẽ không thể khôi phục.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setSavingId(item._id);
+
+      const response = await axios.delete(`${BASE_URL}/${item._id}`);
+
+      setData((prev) => prev.filter((row) => row._id !== item._id));
+
+      alert(response.data?.message || "Đã xóa chuyến");
+    } catch (error) {
+      console.error("handleDelete error:", error);
+
+      alert(error.response?.data?.message || "Không thể xóa chuyến");
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -837,8 +949,17 @@ const TripActualCostPage = ({ user }) => {
             </select>
           </div>
 
-          <div className="text-sm text-gray-500 pb-2">
-            Có <b className="text-gray-800">{filteredData.length}</b> chuyến
+          <div className="flex items-end gap-3">
+            <button
+              onClick={handleExportExcel}
+              disabled={exporting || !fromDate || !toDate}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {exporting ? "Đang xuất..." : "Xuất Excel"}
+            </button>
+            <div className="text-sm text-gray-500 pb-2 whitespace-nowrap">
+              Có <b className="text-gray-800">{filteredData.length}</b> chuyến
+            </div>
           </div>
         </div>
       </div>
@@ -943,6 +1064,13 @@ const TripActualCostPage = ({ user }) => {
 
                 <th
                   rowSpan={2}
+                  className="border border-gray-300 px-3 py-3 text-center min-w-[220px]"
+                >
+                  GHI CHÚ
+                </th>
+
+                <th
+                  rowSpan={2}
                   className="border border-gray-300 px-3 py-3 text-center min-w-[130px]"
                 >
                   TRẠNG THÁI
@@ -950,7 +1078,7 @@ const TripActualCostPage = ({ user }) => {
 
                 <th
                   rowSpan={2}
-                  className="border border-gray-300 px-3 py-3 text-center min-w-[190px]"
+                  className="border border-gray-300 px-3 py-3 text-center min-w-[245px]"
                 >
                   THAO TÁC
                 </th>
@@ -1120,6 +1248,36 @@ const TripActualCostPage = ({ user }) => {
                         {renderDifference(item.tongChenhLech)}
                       </td>
 
+                      {/* GHI CHÚ */}
+
+                      <td className="border border-gray-300 px-2 py-1 min-w-[220px]">
+                        <input
+                          type="text"
+                          value={item.note || ""}
+                          disabled={
+                            item.isTrue ||
+                            !canManageTrip(item) ||
+                            isSaving ||
+                            isUpdating
+                          }
+                          placeholder={
+                            !canManageTrip(item)
+                              ? "Không có quyền"
+                              : item.isTrue
+                                ? "Đã khóa"
+                                : "Nhập ghi chú..."
+                          }
+                          onChange={(e) =>
+                            handleActualChange(item._id, "note", e.target.value)
+                          }
+                          className={`w-full border rounded-md px-2 py-1.5 outline-none transition ${
+                            item.isTrue || !canManageTrip(item)
+                              ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
+                              : "bg-white border-blue-300 focus:ring-2 focus:ring-blue-200"
+                          }`}
+                        />
+                      </td>
+
                       {/* TRẠNG THÁI */}
 
                       <td className="border border-gray-300 px-3 py-2 text-center">
@@ -1153,6 +1311,20 @@ const TripActualCostPage = ({ user }) => {
                                   <FiSave />
                                 )}
                                 Lưu
+                              </button>
+
+                              <button
+                                onClick={() => handleDelete(item)}
+                                disabled={isSaving || isUpdating}
+                                title="Xóa dữ liệu thực tế"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                              >
+                                {isSaving ? (
+                                  <FiRefreshCw className="animate-spin" />
+                                ) : (
+                                  <FiTrash2 />
+                                )}
+                                Xóa
                               </button>
 
                               <button

@@ -12,19 +12,20 @@ const FuelNgocLongSchema = new mongoose.Schema({
   // ===== NHIÊN LIỆU =====
   amount: Number,       // Số tiền
   liter: Number,        // Số lít
-  note: String,         // Ghi chú
+  mayDo: String,         // Máy đổ
 
-  // ===== CỘNG DỒN SỐ CƠ =====
-  cumulativeMechanical1: Number, // Cộng dồn lít số cơ máy 1
-  cumulativeMechanical2: Number, // Cộng dồn lít số cơ máy 2
+  cumulativeMechanical1: Number, // Số điện tử máy 1
+  cumulativeMechanical2: Number, // Số điện tử máy 2
 
-  // ===== CỘNG DỒN SỐ ĐIỆN TỬ (THIẾU TRƯỚC ĐÓ) =====
-  cumulativeElectronic1: Number, // Cộng dồn lít số điện tử máy 1
-  cumulativeElectronic2: Number, // Cộng dồn lít số điện tử máy 2
+  checkElectronic1: Number, // Check số điện tử máy 1
+  checkElectronic2: Number, // Check số điện tử máy 2
 
   // ===== GIÁ + TỒN =====
-  internalFuelPrice: Number,     // Giá dầu nội bộ (đã VAT)
-  fuelRemaining: Number          // Tồn dầu
+  internalFuelPrice: Number,     // Giá dầu Nội bộ đã gồm VAT
+  fuelRemaining: Number,          // Tồn dầu
+
+  infoVehicle: String,   // Thông tin xe
+  placeFuel: String,   // Nơi đổ dầu
 }, { timestamps: true });
 
 module.exports = mongoose.model(

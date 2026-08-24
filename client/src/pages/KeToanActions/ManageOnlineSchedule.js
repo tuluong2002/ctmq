@@ -841,67 +841,67 @@ const ManageOnlineSchedule = () => {
       {/* ===================================================== */}
 
       <div className="max-h-[700px] min-h-[500px] overflow-auto border">
-        <table className="w-full border-collapse text-xs">
-          <thead className="bg-gray-200">
+        <table className="w-full border-collapse border-spacing-0 text-xs">
+          <thead className="bg-gray-200 sticky top-[-1px] p-1 z-30">
             <tr>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">STT</th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">STT</th>
+              <th className="border p-1 bg-gray-200">
                 Tên lái xe
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Ngày đi
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Ngày về
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Biển số
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Khách hàng
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Giấy tờ
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Nơi đi
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Nơi đến
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Trọng lượng
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Số điểm
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 2 chiều + lưu ca
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">Ăn</th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">Ăn</th>
+              <th className="border p-1 bg-gray-200">
                 Tăng ca
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Bốc xếp
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">Vé</th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">Vé</th>
+              <th className="border p-1 bg-gray-200">
                 Tiền chuyến
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Chi phí khác
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 LX thu KH
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Phương án
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Tổng tiền LT
               </th>
-              <th className="border p-1 sticky top-0 bg-gray-200 z-20">
+              <th className="border p-1 bg-gray-200">
                 Mã LT
               </th>
             </tr>
@@ -940,7 +940,7 @@ const ManageOnlineSchedule = () => {
                       className="border p-1 min-w-[155px]"
                     >
                       <input
-                        type="datetime-local"
+                        type="date"
                         value={inlineNgayDi}
                         onChange={(e) => setInlineNgayDi(e.target.value)}
                         onClick={(e) => e.target.showPicker()}
@@ -953,7 +953,7 @@ const ManageOnlineSchedule = () => {
                       className="border p-1 min-w-[155px]"
                     >
                       <input
-                        type="datetime-local"
+                        type="date"
                         value={inlineNgayVe}
                         onChange={(e) => setInlineNgayVe(e.target.value)}
                         onClick={(e) => e.target.showPicker()}

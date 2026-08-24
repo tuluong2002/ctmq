@@ -9,6 +9,8 @@ const controller = require("../controllers/tripActualCostController");
 // =====================================================
 router.post("/", controller.createFromTrip);
 
+router.post("/export-excel", controller.exportExcel);
+
 // =====================================================
 // LẤY DANH SÁCH
 // =====================================================
@@ -30,5 +32,7 @@ router.put("/:id", controller.updateActual);
 // CẬP NHẬT VỀ CHUYẾN GỐC
 // =====================================================
 router.put("/:id/update-original", controller.updateToOriginalTrip);
+
+router.delete("/:id", controller.delete);
 
 module.exports = router;

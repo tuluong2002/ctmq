@@ -9,12 +9,11 @@ const FuelVinhKhucSchema = new mongoose.Schema({
   amount: Number,            // Số tiền
   liter: Number,             // Số lít
 
-  outsideAmount: Number,     // Tiền đổ dầu ngoài
-  outsideLiter: Number,      // Số lít đổ ngoài
+  fuelPrice: Number,  // Giá dầu
+  note: String,         // Ghi chú
+  infoVehicle: String,   // Thông tin xe
+  placeFuel: String,   // Nơi đổ dầu
 
-  totalAmount: Number,       // Tổng cộng
-  fuelPriceChanged: Number,  // Giá dầu thay đổi
-  note: String
 }, { timestamps: true });
 
 module.exports = mongoose.model(

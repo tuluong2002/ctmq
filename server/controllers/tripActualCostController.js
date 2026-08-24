@@ -4,6 +4,9 @@ const TripActualCost = require("../models/TripActualCost");
 const ScheduleAdmin = require("../models/ScheduleAdmin");
 const User = require("../models/User");
 
+const ExcelJS = require("exceljs");
+const path = require("path");
+
 // =====================================================
 // HELPER
 // Chuyển String tiền -> Number
@@ -366,6 +369,7 @@ exports.updateActual = async (req, res) => {
       hangVeThucTe,
       luuCaThucTe,
       luatChiPhiKhacThucTe,
+      note,
     } = req.body;
 
     // =========================
@@ -413,6 +417,14 @@ exports.updateActual = async (req, res) => {
 
     if (luatChiPhiKhacThucTe !== undefined) {
       record.luatChiPhiKhacThucTe = luatChiPhiKhacThucTe;
+    }
+
+    // =========================
+    // CẬP NHẬT GHI CHÚ
+    // =========================
+
+    if (note !== undefined) {
+      record.note = String(note);
     }
 
     // =========================
@@ -545,7 +557,7 @@ exports.updateToOriginalTrip = async (req, res) => {
     trip.isRealLuuCa = isRealLuuCa;
     trip.isRealLuatCpKhac = isRealLuatCpKhac;
 
-    record.isTrue = true
+    record.isTrue = true;
 
     await trip.save({
       session,
@@ -616,5 +628,296 @@ exports.getUserList = async (req, res) => {
       message: "Lỗi server",
       error: error.message,
     });
+  }
+};
+
+// =====================================================
+// 7. XÓA DỮ LIỆU THỰC TẾ
+// CHỈ ĐƯỢC XÓA KHI CHƯA CẬP NHẬT VỀ CHUYẾN GỐC
+// =====================================================
+
+exports.delete = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // =========================
+    // VALIDATE ID
+    // =========================
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "ID không hợp lệ",
+      });
+    }
+
+    // =========================
+    // TÌM DATA
+    // =========================
+
+    const record = await TripActualCost.findById(id);
+
+    if (!record) {
+      return res.status(404).json({
+        message: "Không tìm thấy dữ liệu thực tế",
+      });
+    }
+
+    // =========================
+    // ĐÃ CẬP NHẬT VỀ CHUYẾN GỐC
+    // KHÔNG CHO XÓA
+    // =========================
+
+    if (record.isTrue) {
+      return res.status(400).json({
+        message: "Dữ liệu đã được cập nhật về chuyến gốc, không thể xóa",
+      });
+    }
+
+    // =========================
+    // XÓA
+    // =========================
+
+    await TripActualCost.findByIdAndDelete(id);
+
+    return res.json({
+      message: `Đã xóa dữ liệu thực tế của chuyến ${record.maChuyen}`,
+      data: {
+        id: record._id,
+        maChuyen: record.maChuyen,
+      },
+    });
+  } catch (error) {
+    console.error("delete error:", error);
+
+    return res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// =====================================================
+// HELPER
+// Giá trị tiền khi xuất Excel
+// =====================================================
+
+const exportCostValue = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return 0;
+  }
+
+  const number = Number(
+    String(value)
+      .replace(/,/g, "")
+      .replace(/\./g, "")
+      .trim(),
+  );
+
+  return Number.isFinite(number) ? number : 0;
+};
+
+// =====================================================
+// 8. XUẤT EXCEL THEO KHOẢNG NGÀY
+// =====================================================
+
+exports.exportExcel = async (req, res) => {
+  try {
+    const { from, to } = req.body;
+
+    console.log("EXPORT TRIP ACTUAL COST BODY >>>", req.body);
+
+    // ======================
+    // VALIDATE
+    // ======================
+
+    if (!from || !to) {
+      return res.status(400).json({
+        message: "Thiếu from hoặc to",
+      });
+    }
+
+    // ======================
+    // PARSE DATE
+    // ======================
+
+    const fromDate = new Date(`${from}T00:00:00.000+07:00`);
+    const toDate = new Date(`${to}T23:59:59.999+07:00`);
+
+    if (
+      Number.isNaN(fromDate.getTime()) ||
+      Number.isNaN(toDate.getTime())
+    ) {
+      return res.status(400).json({
+        message: "Ngày không hợp lệ",
+      });
+    }
+
+    if (fromDate > toDate) {
+      return res.status(400).json({
+        message: "Ngày bắt đầu không được lớn hơn ngày kết thúc",
+      });
+    }
+
+    // ======================
+    // QUERY CONDITION
+    // ======================
+
+    const condition = {
+      ngayGiaoHang: {
+        $gte: fromDate,
+        $lte: toDate,
+      },
+    };
+
+    // ======================
+    // LẤY DATA
+    // ======================
+
+    const trips = await TripActualCost.find(condition)
+      .sort({
+        ngayGiaoHang: 1,
+        createdAt: 1,
+      })
+      .lean();
+
+    if (!trips.length) {
+      return res.status(400).json({
+        message: "Không có dữ liệu",
+      });
+    }
+
+    // ======================
+    // LOAD FORM MẪU
+    // ======================
+
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(path.join( __dirname, "../templates/SUA_CP_LX.xlsx"));
+
+    // ⚠️ Đổi thành đúng tên sheet trong file mẫu
+    const sheet = workbook.getWorksheet("Sheet1");
+
+    if (!sheet) {
+      return res.status(500).json({
+        message: "Không tìm thấy sheet trong form mẫu",
+      });
+    }
+
+    // ======================
+    // SCHEMA
+    // ======================
+
+    // ⚠️ Đổi nếu form mẫu bắt đầu từ dòng khác
+    const startRow = 3;
+
+    // ======================
+    // GHI DỮ LIỆU
+    // ======================
+
+    trips.forEach((trip, index) => {
+      const rowIndex = startRow + index;
+      const row = sheet.getRow(rowIndex);
+
+      // ======================
+      // THÔNG TIN CHUYẾN
+      // ======================
+
+      row.getCell("A").value = index + 1;
+
+      row.getCell("B").value = trip.maChuyen || "";
+
+      row.getCell("C").value = trip.accountUsername || "";
+
+      row.getCell("D").value = trip.tenLaiXe || "";
+
+      row.getCell("E").value = trip.khachHang || "";
+
+      row.getCell("F").value = trip.maKH || "";
+
+      // ======================
+      // NGÀY GIAO HÀNG
+      // ======================
+
+      if (trip.ngayGiaoHang) {
+        const date = new Date(trip.ngayGiaoHang);
+
+        if (!Number.isNaN(date.getTime())) {
+          row.getCell("G").value = date;
+          row.getCell("G").numFmt = "dd/mm/yyyy";
+        } else {
+          row.getCell("G").value = "";
+        }
+      } else {
+        row.getCell("G").value = "";
+      }
+
+      // ======================
+      // GIÁ TRỊ GỐC - THỰC TẾ
+      // ======================
+
+      row.getCell("H").value = exportCostValue(trip.bocXep);
+      row.getCell("I").value = exportCostValue(trip.bocXepThucTe);
+
+      row.getCell("J").value = exportCostValue(trip.ve);
+      row.getCell("K").value = exportCostValue(trip.veThucTe);
+
+      row.getCell("L").value = exportCostValue(trip.hangVe);
+      row.getCell("M").value = exportCostValue(trip.hangVeThucTe);
+
+      row.getCell("N").value = exportCostValue(trip.luuCa);
+      row.getCell("O").value = exportCostValue(trip.luuCaThucTe);
+
+      row.getCell("P").value = exportCostValue(trip.luatChiPhiKhac);
+      row.getCell("Q").value = exportCostValue(trip.luatChiPhiKhacThucTe);
+
+      // ======================
+      // TỔNG CHÊNH LỆCH
+      // ======================
+
+      row.getCell("R").value = exportCostValue(trip.tongChenhLech);
+
+      // ======================
+      // GHI CHÚ
+      // ======================
+
+      row.getCell("S").value = trip.note || "";
+
+      // ======================
+      // TRẠNG THÁI
+      // ======================
+
+      row.getCell("T").value = trip.isTrue
+        ? "Đã cập nhật"
+        : "Chưa cập nhật";
+
+      row.commit();
+    });
+
+    // ======================
+    // RESPONSE
+    // ======================
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=CHI_PHI_THUC_TE_${from}_den_${to}.xlsx`,
+    );
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+
+    await workbook.xlsx.write(res);
+
+    res.end();
+  } catch (error) {
+    console.error("exportExcel error:", error);
+
+    if (!res.headersSent) {
+      return res.status(500).json({
+        message: "Lỗi xuất Excel",
+        error: error.message,
+      });
+    }
   }
 };
