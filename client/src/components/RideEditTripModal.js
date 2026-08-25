@@ -78,7 +78,7 @@ const appendAddress = (prevValue, newValue) => {
   parts.pop();
 
   return [...parts, newValue].join("; ");
-};  
+};
 
 const splitCompletedPoints = (str = "") =>
   str
@@ -1271,10 +1271,15 @@ export default function RideEditTripModal({
                 <div>
                   <label className="text-sm">Bốc xếp</label>
                   <input
-                    className="border rounded p-2 w-full"
+                    className={`border rounded p-2 w-full ${
+                      formData.isRealBocXep
+                        ? "bg-gray-200 cursor-not-allowed"
+                        : ""
+                    }`}
                     value={formatMoney(formData.bocXep)}
                     name="bocXep"
                     onChange={handleChange}
+                    disabled={formData.isRealBocXep}
                   />
                   <CompareHint result={compareResult.bocXep} />
                 </div>
@@ -1282,10 +1287,15 @@ export default function RideEditTripModal({
                 <div>
                   <label className="text-sm">Hàng về</label>
                   <input
-                    className="border rounded p-2 w-full"
+                    className={`border rounded p-2 w-full ${
+                      formData.isRealHangVe
+                        ? "bg-gray-200 cursor-not-allowed"
+                        : ""
+                    }`}
                     value={formatMoney(formData.hangVe)}
                     name="hangVe"
                     onChange={handleChange}
+                    disabled={formData.isRealHangVe}
                   />
                   <CompareHint result={compareResult.hangVe} />
                 </div>
@@ -1296,10 +1306,13 @@ export default function RideEditTripModal({
                 <div>
                   <label className="text-sm">Vé</label>
                   <input
-                    className="border rounded p-2 w-full"
+                    className={`border rounded p-2 w-full ${
+                      formData.isRealVe ? "bg-gray-200 cursor-not-allowed" : ""
+                    }`}
                     value={formatMoney(formData.ve)}
                     name="ve"
                     onChange={handleChange}
+                    disabled={formData.isRealVe}
                   />
                   <CompareHint result={compareResult.ve} />
                 </div>
@@ -1307,10 +1320,15 @@ export default function RideEditTripModal({
                 <div>
                   <label className="text-sm">Lưu ca</label>
                   <input
-                    className="border rounded p-2 w-full"
+                    className={`border rounded p-2 w-full ${
+                      formData.isRealLuuCa
+                        ? "bg-gray-200 cursor-not-allowed"
+                        : ""
+                    }`}
                     value={formatMoney(formData.luuCa)}
                     name="luuCa"
                     onChange={handleChange}
+                    disabled={formData.isRealLuuCa}
                   />
                   <CompareHint result={compareResult.luuCa} />
                 </div>
@@ -1320,10 +1338,15 @@ export default function RideEditTripModal({
               <div className="mt-3">
                 <label className="text-sm">Luật chi phí khác</label>
                 <input
-                  className="border rounded p-2 w-full"
+                  className={`border rounded p-2 w-full ${
+                    formData.isRealLuatCpKhac
+                      ? "bg-gray-200 cursor-not-allowed"
+                      : ""
+                  }`}
                   value={formatMoney(formData.luatChiPhiKhac)}
                   name="luatChiPhiKhac"
                   onChange={handleChange}
+                  disabled={formData.isRealLuatCpKhac}
                 />
                 <CompareHint result={compareResult.luatChiPhiKhac} />
               </div>

@@ -34,7 +34,7 @@ const levenshtein = (a, b) => {
       dp[i][j] = Math.min(
         dp[i - 1][j] + 1,
         dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
       );
     }
   }
@@ -74,7 +74,7 @@ const appendAddress = (prevValue, newValue) => {
   parts.pop();
 
   return [...parts, newValue].join("; ");
-};  
+};
 
 const splitCompletedPoints = (str = "") =>
   str
@@ -172,15 +172,15 @@ export default function RideEditModal({
 
       const filtered = customers.filter((c) =>
         removeVietnameseTones(c.tenKhachHang || c.name).includes(
-          removeVietnameseTones(value)
-        )
+          removeVietnameseTones(value),
+        ),
       );
       setCustomerSuggestions(filtered);
 
       const matched = customers.find(
         (c) =>
           removeVietnameseTones(c.tenKhachHang || c.name) ===
-          removeVietnameseTones(value)
+          removeVietnameseTones(value),
       );
       if (matched) {
         setFormData((prev) => ({
@@ -198,7 +198,7 @@ export default function RideEditModal({
       setFormData((prev) => ({ ...prev, tenLaiXe: value }));
 
       const filtered = drivers.filter((d) =>
-        removeVietnameseTones(d.name).includes(removeVietnameseTones(value))
+        removeVietnameseTones(d.name).includes(removeVietnameseTones(value)),
       );
       setDriverSuggestions(filtered);
       return;
@@ -210,8 +210,8 @@ export default function RideEditModal({
 
       const filtered = vehicles.filter((v) =>
         removeVietnameseTones(v.plateNumber).includes(
-          removeVietnameseTones(value)
-        )
+          removeVietnameseTones(value),
+        ),
       );
       setVehicleSuggestions(filtered);
       return;
@@ -224,7 +224,7 @@ export default function RideEditModal({
         const completedList = splitCompletedPoints(next);
 
         const newList = completedList.map((diaChi) =>
-          getDiaChiMoiByDiaChi(diaChi, addresses)
+          getDiaChiMoiByDiaChi(diaChi, addresses),
         );
 
         return {
@@ -263,7 +263,7 @@ export default function RideEditModal({
         const completedList = splitCompletedPoints(next);
 
         const newList = completedList.map((diaChi) =>
-          getDiaChiMoiByDiaChi(diaChi, addresses)
+          getDiaChiMoiByDiaChi(diaChi, addresses),
         );
 
         return {
@@ -300,7 +300,7 @@ export default function RideEditModal({
       setFormData((prev) => ({ ...prev, KHdiemGiaoHang: value }));
 
       const filtered = customers2.filter((c) =>
-        removeVietnameseTones(c.nameKH).includes(removeVietnameseTones(value))
+        removeVietnameseTones(c.nameKH).includes(removeVietnameseTones(value)),
       );
 
       setCustomer2Suggestions(filtered);
@@ -401,14 +401,14 @@ export default function RideEditModal({
                     if (e.key === "ArrowDown") {
                       e.preventDefault();
                       setCustomerIndex((i) =>
-                        i < customerSuggestions.length - 1 ? i + 1 : 0
+                        i < customerSuggestions.length - 1 ? i + 1 : 0,
                       );
                     }
 
                     if (e.key === "ArrowUp") {
                       e.preventDefault();
                       setCustomerIndex((i) =>
-                        i > 0 ? i - 1 : customerSuggestions.length - 1
+                        i > 0 ? i - 1 : customerSuggestions.length - 1,
                       );
                     }
 
@@ -479,14 +479,14 @@ export default function RideEditModal({
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
                     setPickupIndex((i) =>
-                      i < pickupSuggestions.length - 1 ? i + 1 : 0
+                      i < pickupSuggestions.length - 1 ? i + 1 : 0,
                     );
                   }
 
                   if (e.key === "ArrowUp") {
                     e.preventDefault();
                     setPickupIndex((i) =>
-                      i > 0 ? i - 1 : pickupSuggestions.length - 1
+                      i > 0 ? i - 1 : pickupSuggestions.length - 1,
                     );
                   }
 
@@ -500,7 +500,7 @@ export default function RideEditModal({
                       diemXepHang: appendAddress(prev.diemXepHang, a.diaChi),
                       diemXepHangNew: appendAddress(
                         prev.diemXepHangNew,
-                        diaChiMoi
+                        diaChiMoi,
                       ),
                     }));
 
@@ -537,11 +537,11 @@ export default function RideEditModal({
                           ...prev,
                           diemXepHang: appendAddress(
                             prev.diemXepHang,
-                            a.diaChi
+                            a.diaChi,
                           ),
                           diemXepHangNew: appendAddress(
                             prev.diemXepHangNew,
-                            diaChiMoi
+                            diaChiMoi,
                           ),
                         }));
                         setPickupSuggestions([]);
@@ -574,14 +574,14 @@ export default function RideEditModal({
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
                     setDropIndex((i) =>
-                      i < dropSuggestions.length - 1 ? i + 1 : 0
+                      i < dropSuggestions.length - 1 ? i + 1 : 0,
                     );
                   }
 
                   if (e.key === "ArrowUp") {
                     e.preventDefault();
                     setDropIndex((i) =>
-                      i > 0 ? i - 1 : dropSuggestions.length - 1
+                      i > 0 ? i - 1 : dropSuggestions.length - 1,
                     );
                   }
 
@@ -595,7 +595,7 @@ export default function RideEditModal({
                       diemDoHang: appendAddress(prev.diemDoHang, a.diaChi),
                       diemDoHangNew: appendAddress(
                         prev.diemDoHangNew,
-                        diaChiMoi
+                        diaChiMoi,
                       ),
                     }));
                     setDropSuggestions([]);
@@ -625,7 +625,7 @@ export default function RideEditModal({
                           diemDoHang: appendAddress(prev.diemDoHang, a.diaChi),
                           diemDoHangNew: appendAddress(
                             prev.diemDoHangNew,
-                            diaChiMoi
+                            diaChiMoi,
                           ),
                         }));
                         setDropSuggestions([]);
@@ -661,14 +661,14 @@ export default function RideEditModal({
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
                     setCustomer2Index((i) =>
-                      i < customer2Suggestions.length - 1 ? i + 1 : 0
+                      i < customer2Suggestions.length - 1 ? i + 1 : 0,
                     );
                   }
 
                   if (e.key === "ArrowUp") {
                     e.preventDefault();
                     setCustomer2Index((i) =>
-                      i > 0 ? i - 1 : customer2Suggestions.length - 1
+                      i > 0 ? i - 1 : customer2Suggestions.length - 1,
                     );
                   }
 
@@ -806,14 +806,14 @@ export default function RideEditModal({
                     if (e.key === "ArrowDown") {
                       e.preventDefault();
                       setVehicleIndex((i) =>
-                        i < vehicleSuggestions.length - 1 ? i + 1 : 0
+                        i < vehicleSuggestions.length - 1 ? i + 1 : 0,
                       );
                     }
 
                     if (e.key === "ArrowUp") {
                       e.preventDefault();
                       setVehicleIndex((i) =>
-                        i > 0 ? i - 1 : vehicleSuggestions.length - 1
+                        i > 0 ? i - 1 : vehicleSuggestions.length - 1,
                       );
                     }
 
@@ -873,14 +873,14 @@ export default function RideEditModal({
                     if (e.key === "ArrowDown") {
                       e.preventDefault();
                       setDriverIndex((i) =>
-                        i < driverSuggestions.length - 1 ? i + 1 : 0
+                        i < driverSuggestions.length - 1 ? i + 1 : 0,
                       );
                     }
 
                     if (e.key === "ArrowUp") {
                       e.preventDefault();
                       setDriverIndex((i) =>
-                        i > 0 ? i - 1 : driverSuggestions.length - 1
+                        i > 0 ? i - 1 : driverSuggestions.length - 1,
                       );
                     }
 
@@ -990,10 +990,15 @@ export default function RideEditModal({
 
                   {formData.bocXepEnabled && (
                     <input
-                      className="border rounded p-2 w-full"
-                      value={formatMoney(formData.bocXep || "")}
+                      className={`border rounded p-2 w-full ${
+                        formData.isRealBocXep
+                          ? "bg-gray-200 cursor-not-allowed"
+                          : ""
+                      }`}
+                      value={formatMoney(formData.bocXep)}
                       name="bocXep"
                       onChange={handleChange}
+                      disabled={formData.isRealBocXep}
                     />
                   )}
                 </div>
@@ -1017,10 +1022,15 @@ export default function RideEditModal({
 
                   {formData.hangVeEnabled && (
                     <input
-                      className="border rounded p-2 w-full"
-                      value={formatMoney(formData.hangVe || "")}
+                      className={`border rounded p-2 w-full ${
+                        formData.isRealHangVe
+                          ? "bg-gray-200 cursor-not-allowed"
+                          : ""
+                      }`}
+                      value={formatMoney(formData.hangVe)}
                       name="hangVe"
                       onChange={handleChange}
+                      disabled={formData.isRealHangVe}
                     />
                   )}
                 </div>
@@ -1047,10 +1057,15 @@ export default function RideEditModal({
 
                   {formData.veEnabled && (
                     <input
-                      className="border rounded p-2 w-full"
-                      value={formatMoney(formData.ve || "")}
+                      className={`border rounded p-2 w-full ${
+                        formData.isRealVe
+                          ? "bg-gray-200 cursor-not-allowed"
+                          : ""
+                      }`}
+                      value={formatMoney(formData.ve)}
                       name="ve"
                       onChange={handleChange}
+                      disabled={formData.isRealVe}
                     />
                   )}
                 </div>
@@ -1074,10 +1089,15 @@ export default function RideEditModal({
 
                   {formData.luuCaEnabled && (
                     <input
-                      className="border rounded p-2 w-full"
-                      value={formatMoney(formData.luuCa || "")}
+                      className={`border rounded p-2 w-full ${
+                        formData.isRealLuuCa
+                          ? "bg-gray-200 cursor-not-allowed"
+                          : ""
+                      }`}
+                      value={formatMoney(formData.luuCa)}
                       name="luuCa"
                       onChange={handleChange}
+                      disabled={formData.isRealLuuCa}
                     />
                   )}
                 </div>
@@ -1102,10 +1122,15 @@ export default function RideEditModal({
 
                 {formData.chiPhiKhacEnabled && (
                   <input
-                    className="border rounded p-2 w-full"
-                    value={formatMoney(formData.chiPhiKhac || "")}
-                    name="chiPhiKhac"
+                    className={`border rounded p-2 w-full ${
+                      formData.isRealLuatCpKhac
+                        ? "bg-gray-200 cursor-not-allowed"
+                        : ""
+                    }`}
+                    value={formatMoney(formData.luatChiPhiKhac)}
+                    name="luatChiPhiKhac"
                     onChange={handleChange}
+                    disabled={formData.isRealLuatCpKhac}
                   />
                 )}
               </div>
