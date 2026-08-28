@@ -30,10 +30,15 @@ import EpassTurnPage from "./pages/CostManagementTables/EpassTurnPage";
 import EtcCostPage from "./pages/CostManagementTables/EtcCostPage";
 import FuelCostPage from "./pages/CostManagementTables/FuelCostPage";
 import RepairCostPage from "./pages/CostManagementTables/RepairCostPage";
-import TireCostPage from "./pages/CostManagementTables/TireCostPage";
+import OtherCostPage from "./pages/CostManagementTables/OtherCostPage";
 import SalaryCostPage from "./pages/CostManagementTables/SalaryCostPage";
 import VehicleLegalCostPage from "./pages/CostManagementTables/VehicleLegalCostPage";
 import TripPaymentPage from "./pages/CostManagementTables/TripPaymentPage";
+import NCCPage from "./pages/CostManagementTables/NCCPage";
+import DeNghiThanhToanPage from "./pages/CostManagementTables/DeNghiThanhToanPage";
+
+import DeNghiThanhToanPrintPage from "./components/CostModal/DeNghiThanhToanPrintPage";
+
 import ManageContract from "./pages/KeToanActions/ManageContract";
 import ManageTCBperson from "./pages/KeToanActions/ManageTCBperson";
 import ManageOil from "./pages/KeToanActions/ManageOil";
@@ -130,7 +135,7 @@ function App() {
           <Route index element={<FuelCostPage />} /> {/* mặc định */}
           <Route path="fuel" element={<FuelCostPage />} />
           <Route path="repair" element={<RepairCostPage />} />
-          <Route path="tire" element={<TireCostPage />} />
+          <Route path="other" element={<OtherCostPage />} />
           <Route path="salary" element={<SalaryCostPage />} />
           <Route path="depreciation" element={<DepreciationPage />} />
           <Route path="epass-month" element={<EpassMonthPage />} />
@@ -138,7 +143,22 @@ function App() {
           <Route path="etc" element={<EtcCostPage />} />
           <Route path="vehicle-legal" element={<VehicleLegalCostPage />} />
           <Route path="trip-payment" element={<TripPaymentPage />} />
+          <Route path="ncc" element={<NCCPage />} />
+          <Route
+            path="de-nghi-thanh-toan"
+            user={user}
+            element={<DeNghiThanhToanPage />}
+          />
         </Route>
+
+        <Route
+          path="/ke-toan/de-nghi-thanh-toan/:id/print"
+          element={
+            <PrivateRoute roles={["keToan"]}>
+              <DeNghiThanhToanPrintPage user={user} />
+            </PrivateRoute>
+          }
+        />
 
         <Route
           path="/contract"

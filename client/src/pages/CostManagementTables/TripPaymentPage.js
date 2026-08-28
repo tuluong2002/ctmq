@@ -1,23 +1,28 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
+import VehicleProfitTripPaymentKTModal from "../../components/CostModal/VehicleProfitTripPaymentKTModal";
 import API from "../../api";
 
 export default function TripPaymentKTPage() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({});
+  /* ================= THỐNG KÊ THÁNG ================= */
+  const [monthlyStats, setMonthlyStats] = useState({
+    totalTrips: 0,
+    totalMoney: 0,
+  });
 
+  /* ================= IMPORT ================= */
   const [importing, setImporting] = useState(false);
   const [importTotal, setImportTotal] = useState(0);
   const [importDone, setImportDone] = useState(0);
 
-  const token = localStorage.getItem("token");
-  const baseUrl = `${API}/trip-payment-kt`;
-
   const fileInputRef = useRef(null);
   const [importFile, setImportFile] = useState(null);
+
+  const token = localStorage.getItem("token");
+  const baseUrl = `${API}/trip-payment-kt`;
 
   /* ================= FILTER OPTIONS ================= */
   const [driverOptions, setDriverOptions] = useState([]);
@@ -26,35 +31,64 @@ export default function TripPaymentKTPage() {
   const [driverFilter, setDriverFilter] = useState([]);
   const [plateFilter, setPlateFilter] = useState([]);
 
-  // dropdown control
+  /* ================= DROPDOWN ================= */
   const [showDriverDropdown, setShowDriverDropdown] = useState(false);
   const [showPlateDropdown, setShowPlateDropdown] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
 
-  // search trong dropdown
+  const [dropdownPos, setDropdownPos] = useState({
+    top: 0,
+    left: 0,
+  });
+
   const [driverFilterSearch, setDriverFilterSearch] = useState("");
   const [plateFilterSearch, setPlateFilterSearch] = useState("");
 
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  /* ================= MONTH FILTER ================= */
+  const getCurrentMonth = () => {
+    const now = new Date();
 
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}`;
+  };
+
+  const [month, setMonth] = useState(getCurrentMonth());
+
+  /* ================= VEHICLE PROFIT ================= */
+  const [showVehicleProfitModal, setShowVehicleProfitModal] = useState(false);
+
+  const [updatingVehicleProfit, setUpdatingVehicleProfit] = useState(false);
+
+  /* ================= PAGINATION ================= */
+  const [page, setPage] = useState(1);
+  const limit = 150;
+  const [totalPages, setTotalPages] = useState(1);
+
+  /* =========================================================
+     LẤY DANH SÁCH FILTER
+  ========================================================= */
   const fetchFilterOptions = async () => {
     try {
       const [driversRes, platesRes] = await Promise.all([
         axios.get(`${baseUrl}/drivers`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }),
+
         axios.get(`${baseUrl}/plates`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }),
       ]);
 
-      setDriverOptions(driversRes.data);
-      setPlateOptions(platesRes.data);
-      setDriverFilter([]);
-      setPlateFilter([]);
+      setDriverOptions(Array.isArray(driversRes.data) ? driversRes.data : []);
+
+      setPlateOptions(Array.isArray(platesRes.data) ? platesRes.data : []);
     } catch (err) {
-      console.error(err);
+      console.error("Lỗi lấy filter:", err);
     }
   };
 
@@ -62,18 +96,19 @@ export default function TripPaymentKTPage() {
     fetchFilterOptions();
   }, []);
 
-  /* ================= FETCH DATA ================= */
-  const [page, setPage] = useState(1);
-  const limit = 150;
-  const [totalPages, setTotalPages] = useState(1);
-
+  /* =========================================================
+     FETCH DATA
+  ========================================================= */
   const fetchData = async () => {
     setLoading(true);
-    try {
-      const params = { page, limit };
 
-      // ================= FILTER BIỂN SỐ XE =================
-      // chỉ gửi khi KHÔNG chọn tất cả
+    try {
+      const params = {
+        page,
+        limit,
+      };
+
+      /* ================= BIỂN SỐ XE ================= */
       if (
         plateFilter.length > 0 &&
         plateFilter.length !== plateOptions.length
@@ -81,11 +116,7 @@ export default function TripPaymentKTPage() {
         params.bienSoXe = plateFilter;
       }
 
-      // ================= FILTER NGÀY =================
-      if (fromDate) params.from = fromDate;
-      if (toDate) params.to = toDate;
-
-      // ================= FILTER TÊN LÁI XE =================
+      /* ================= TÊN LÁI XE ================= */
       if (
         driverFilter.length > 0 &&
         driverFilter.length !== driverOptions.length
@@ -93,28 +124,55 @@ export default function TripPaymentKTPage() {
         params.tenLaiXe = driverFilter;
       }
 
+      /* ================= THÁNG ================= */
+      if (month) {
+        params.month = month;
+      }
+
       const res = await axios.get(baseUrl, {
         params,
+
         paramsSerializer: (params) => {
           const qs = [];
+
           Object.keys(params).forEach((key) => {
             const value = params[key];
+
             if (Array.isArray(value)) {
-              value.forEach((v) => qs.push(`${key}=${encodeURIComponent(v)}`));
+              value.forEach((v) => {
+                qs.push(`${key}=${encodeURIComponent(v)}`);
+              });
             } else {
               qs.push(`${key}=${encodeURIComponent(value)}`);
             }
           });
+
           return qs.join("&");
+        },
+
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
       });
 
       setData(Array.isArray(res.data.data) ? res.data.data : []);
-      setTotalPages(res.data.totalPages || 1);
+
+      setTotalPages(res.data.pagination?.totalPages || 1);
+
+      setMonthlyStats({
+        totalTrips: Number(res.data.monthlyStats?.totalTrips || 0),
+        totalMoney: Number(res.data.monthlyStats?.totalMoney || 0),
+      });
     } catch (err) {
-      console.error(err);
+      console.error("Lỗi lấy dữ liệu:", err);
+
       setData([]);
       setTotalPages(1);
+
+      setMonthlyStats({
+        totalTrips: 0,
+        totalMoney: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -122,18 +180,24 @@ export default function TripPaymentKTPage() {
 
   useEffect(() => {
     fetchData();
-    setEditing(null);
-    setForm({});
-  }, [page, plateFilter.join(","), driverFilter.join(","), fromDate, toDate]);
+  }, [page, plateFilter.join(","), driverFilter.join(","), month]);
 
-  /* ================= IMPORT ================= */
+  /* =========================================================
+     IMPORT EXCEL
+  ========================================================= */
   const handleSelectFile = (e) => {
-    const file = e.target.files[0];
-    if (file) setImportFile(file);
+    const file = e.target.files?.[0];
+
+    if (file) {
+      setImportFile(file);
+    }
   };
 
   const handleImport = async () => {
-    if (!importFile) return alert("Chưa chọn file");
+    if (!importFile) {
+      alert("Chưa chọn file");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("file", importFile);
@@ -150,177 +214,265 @@ export default function TripPaymentKTPage() {
         },
       });
 
-      setImportTotal(res.data.totalValid || res.data.inserted || 0);
-      setImportDone(res.data.inserted || 0);
+      const inserted = res.data.inserted || res.data.totalValid || 0;
+
+      setImportTotal(inserted);
+      setImportDone(inserted);
+
+      setPage(1);
+
       await fetchData();
+
+      alert(`Import thành công ${inserted} dòng`);
     } catch (err) {
-      alert("Import thất bại");
+      console.error(err);
+
+      alert(err.response?.data?.message || "Import thất bại");
     } finally {
       setImporting(false);
       setImportFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
-  /* ================= CRUD ================= */
-  const handleEdit = (row) => {
-    setEditing(row._id);
-    setForm({ ...row });
-  };
+  /* =========================================================
+   XOÁ THEO THÁNG
+========================================================= */
+  const handleDeleteByMonth = async () => {
+    if (!month) {
+      alert("Chọn tháng trước");
+      return;
+    }
 
-  const handleCancel = () => {
-    setEditing(null);
-    setForm({});
-  };
+    if (!window.confirm(`Xoá tất cả dữ liệu của tháng ${month} ?`)) {
+      return;
+    }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-  };
-
-  const handleAddNew = () => {
-    setEditing("new");
-    setForm({});
-  };
-
-  const handleSave = async () => {
     try {
-      if (editing === "new") {
-        await axios.post(baseUrl, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } else {
-        await axios.put(`${baseUrl}/${editing}`, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      fetchData();
-      handleCancel();
+      await axios.delete(`${baseUrl}/delete-by-date`, {
+        params: {
+          month,
+        },
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setPage(1);
+
+      await fetchData();
+
+      alert("Xoá thành công");
     } catch (err) {
       console.error(err);
+
+      alert(err.response?.data?.message || "Xoá thất bại");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Xóa dòng này?")) return;
-    await axios.delete(`${baseUrl}/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchData();
-  };
-  const handleDeleteByDate = async () => {
-    if (!fromDate && !toDate) {
-      alert("Chọn từ ngày / đến ngày trước");
+  /* =========================================================
+   CẬP NHẬT CHI PHÍ THANH TOÁN LỊCH TRÌNH
+========================================================= */
+  const handleUpdateVehicleProfit = async () => {
+    if (!month) {
+      alert("Vui lòng chọn tháng");
+      return;
+    }
+
+    if (updatingVehicleProfit) {
       return;
     }
 
     if (
       !window.confirm(
-        `Xoá tất cả dữ liệu từ ${fromDate || "đầu"} đến ${toDate || "cuối"} ?`
+        `Bạn có chắc muốn cập nhật chi phí thanh toán lịch trình vào VehicleProfit tháng ${month}?`,
       )
-    )
+    ) {
       return;
+    }
+
+    setUpdatingVehicleProfit(true);
 
     try {
-      await axios.delete(`${baseUrl}/delete-by-date`, {
-        params: {
-          from: fromDate || undefined,
-          to: toDate || undefined,
+      const res = await axios.post(
+        `${baseUrl}/vehicle-profit/update`,
+        {
+          month,
         },
-        headers: { Authorization: `Bearer ${token}` },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
-      setPage(1); // quay về trang 1 cho an toàn
-      fetchData();
+      alert(
+        res.data?.message ||
+          "Cập nhật chi phí thanh toán lịch trình thành công",
+      );
+
+      await fetchData();
     } catch (err) {
-      alert("Xoá thất bại");
+      console.error("UPDATE VEHICLE PROFIT TRIP PAYMENT KT ERROR:", err);
+
+      alert(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          "Cập nhật thất bại",
+      );
+    } finally {
+      setUpdatingVehicleProfit(false);
     }
   };
 
-  const dateFields = ["ngayThang", "dayPayment"];
-
-  /* ================= TOOLBAR ================= */
+  /* =========================================================
+     TOOLBAR
+  ========================================================= */
   const Toolbar = () => (
-    <div className="flex gap-2 mb-3 items-center">
-      {/* FROM DATE */}
+    <div className="flex gap-2 mb-3 items-center flex-wrap">
+      {/* THÁNG */}
       <input
-        type="date"
-        value={fromDate}
-        onChange={(e) => setFromDate(e.target.value)}
+        type="month"
+        value={month}
+        onChange={(e) => {
+          setMonth(e.target.value);
+          setPage(1);
+        }}
         className="border px-2 py-1"
       />
 
-      {/* TO DATE */}
-      <input
-        type="date"
-        value={toDate}
-        onChange={(e) => setToDate(e.target.value)}
-        className="border px-2 py-1"
-      />
-
+      {/* XOÁ THEO THÁNG */}
       <button
-        onClick={handleDeleteByDate}
-        disabled={!fromDate && !toDate}
+        onClick={handleDeleteByMonth}
+        disabled={!month}
         className="bg-red-600 text-white px-2 py-1 disabled:opacity-50"
       >
-        Xoá theo khoảng ngày
+        Xoá theo tháng
       </button>
 
+      {/* FILE INPUT */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleSelectFile}
         className="hidden"
+        accept=".xlsx,.xls"
       />
 
+      {/* CHỌN FILE */}
       <button
-        onClick={() => fileInputRef.current.click()}
+        onClick={() => fileInputRef.current?.click()}
         className="border px-2 py-1"
       >
-        {importFile ? "Đã chọn file" : "Chọn file"}
+        Chọn file
       </button>
 
+      {importFile && (
+        <span className="text-xs text-gray-700 max-w-[300px] truncate">
+          {importFile.name}
+        </span>
+      )}
+
+      {/* IMPORT */}
       <button
         onClick={handleImport}
         disabled={!importFile || importing}
-        className="bg-blue-600 text-white px-2 py-1"
+        className="bg-blue-600 text-white px-2 py-1 disabled:opacity-50"
       >
-        Import
+        {importing ? "Đang import..." : "Import"}
       </button>
 
+      {importing && importTotal > 0 && (
+        <span className="text-xs">
+          {importDone} / {importTotal}
+        </span>
+      )}
+
+      {/* CẬP NHẬT CHI PHÍ */}
       <button
-        onClick={handleAddNew}
-        className="bg-green-600 text-white px-2 py-1"
+        onClick={handleUpdateVehicleProfit}
+        disabled={!month || updatingVehicleProfit || importing}
+        className="bg-green-600 text-white px-2 py-1 rounded disabled:opacity-50"
       >
-        + Thêm
+        {updatingVehicleProfit
+          ? "Đang cập nhật..."
+          : "Cập nhật chi phí lịch trình"}
+      </button>
+
+      {/* XEM VEHICLE PROFIT */}
+      <button
+        onClick={() => {
+          if (!month) {
+            alert("Không xác định được tháng");
+            return;
+          }
+
+          setShowVehicleProfitModal(true);
+        }}
+        disabled={!month || updatingVehicleProfit}
+        className="bg-purple-600 text-white px-2 py-1 rounded disabled:opacity-50"
+      >
+        Xem chi phí lịch trình
       </button>
     </div>
   );
 
-  /* ================= TABLE ================= */
+  /* =========================================================
+     TABLE HEADER
+  ========================================================= */
   const columns = [
-    "tenLaiXe",
-    "bienSoXe",
     "ngayThang",
+    "maXe",
     "totalMoney",
+    "bienSoXe",
+    "tenLaiXe",
     "ghiChu",
-    "dayPayment",
   ];
 
   const headers = [
-    "Tên lái xe",
-    "Biển số xe",
     "Ngày tháng",
-    "Tổng tiền lịch trình",
+    "Mã xe",
+    "Tổng tiền",
+    "Biển số xe",
+    "Tên lái xe",
     "Ghi chú",
-    "Ngày thanh toán",
-    "Hành động",
   ];
 
+  /* =========================================================
+     RENDER
+  ========================================================= */
   return (
     <div className="p-4">
       <Toolbar />
-      {loading && <p>Đang tải...</p>}
+
+      {loading && <p className="mb-2 text-xs">Đang tải...</p>}
+
+      {/* =======================================================
+    THỐNG KÊ THÁNG
+======================================================= */}
+      <div className="flex gap-4 mb-3 justify-between text-xs">
+        <div className="border rounded px-3 py-1.5 bg-gray-50">
+          <span className="text-black">Số lịch trình trong tháng:</span>{" "}
+          <span className="font-semibold">
+            {monthlyStats.totalTrips.toLocaleString("vi-VN")}
+          </span>
+        </div>
+
+        <div className="border rounded px-3 py-1.5 bg-gray-50">
+          <span className="text-black">Tổng tiền của tháng:</span>{" "}
+          <span className="font-semibold text-red-600">
+            {monthlyStats.totalMoney.toLocaleString("vi-VN")}
+          </span>{" "}
+          VNĐ
+        </div>
+      </div>
+
+      <div className="border rounded overflow-auto max-h-[70vh]"></div>
 
       <div className="border rounded overflow-auto max-h-[70vh]">
         <table className="min-w-[1000px] w-full text-xs table-auto border-separate border-spacing-0">
@@ -331,18 +483,23 @@ export default function TripPaymentKTPage() {
                   key={h}
                   className="border px-2 py-1 whitespace-nowrap relative"
                 >
-                  {/* ===== FILTER TÊN LÁI XE ===== */}
+                  {/* =================================================
+                      FILTER TÊN LÁI XE
+                  ================================================= */}
                   {h === "Tên lái xe" ? (
                     <div className="flex flex-col relative">
                       <span
                         className="cursor-pointer select-none"
                         onClick={(e) => {
-                          const rect = e.target.getBoundingClientRect();
+                          const rect = e.currentTarget.getBoundingClientRect();
+
                           setDropdownPos({
-                            top: rect.bottom + window.scrollY,
-                            left: rect.left + window.scrollX,
+                            top: rect.bottom + 4,
+                            left: rect.left,
                           });
+
                           setShowDriverDropdown((p) => !p);
+
                           setShowPlateDropdown(false);
                         }}
                       >
@@ -367,18 +524,22 @@ export default function TripPaymentKTPage() {
                             }
                           />
 
+                          {/* CHỌN TẤT CẢ */}
                           <label className="flex items-center gap-1 mb-1">
                             <input
                               type="checkbox"
                               checked={
+                                driverOptions.length > 0 &&
                                 driverFilter.length === driverOptions.length
                               }
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setDriverFilter(
-                                  e.target.checked ? [...driverOptions] : []
-                                )
-                              }
+                                  e.target.checked ? [...driverOptions] : [],
+                                );
+                                setPage(1);
+                              }}
                             />
+
                             <span>Chọn tất cả</span>
                           </label>
 
@@ -387,7 +548,7 @@ export default function TripPaymentKTPage() {
                               .filter((d) =>
                                 d
                                   .toLowerCase()
-                                  .includes(driverFilterSearch.toLowerCase())
+                                  .includes(driverFilterSearch.toLowerCase()),
                               )
                               .map((d) => (
                                 <label
@@ -397,14 +558,17 @@ export default function TripPaymentKTPage() {
                                   <input
                                     type="checkbox"
                                     checked={driverFilter.includes(d)}
-                                    onChange={(e) =>
-                                      setDriverFilter((p) =>
+                                    onChange={(e) => {
+                                      setDriverFilter((prev) =>
                                         e.target.checked
-                                          ? [...p, d]
-                                          : p.filter((x) => x !== d)
-                                      )
-                                    }
+                                          ? [...prev, d]
+                                          : prev.filter((x) => x !== d),
+                                      );
+
+                                      setPage(1);
+                                    }}
                                   />
+
                                   <span>{d}</span>
                                 </label>
                               ))}
@@ -420,17 +584,22 @@ export default function TripPaymentKTPage() {
                       )}
                     </div>
                   ) : h === "Biển số xe" ? (
-                    /* ===== FILTER BIỂN SỐ XE ===== */
+                    /* =================================================
+                       FILTER BIỂN SỐ XE
+                    ================================================= */
                     <div className="flex flex-col relative">
                       <span
                         className="cursor-pointer select-none"
                         onClick={(e) => {
-                          const rect = e.target.getBoundingClientRect();
+                          const rect = e.currentTarget.getBoundingClientRect();
+
                           setDropdownPos({
-                            top: rect.bottom + window.scrollY,
-                            left: rect.left + window.scrollX,
+                            top: rect.bottom + 4,
+                            left: rect.left,
                           });
+
                           setShowPlateDropdown((p) => !p);
+
                           setShowDriverDropdown(false);
                         }}
                       >
@@ -455,18 +624,22 @@ export default function TripPaymentKTPage() {
                             }
                           />
 
+                          {/* CHỌN TẤT CẢ */}
                           <label className="flex items-center gap-1 mb-1">
                             <input
                               type="checkbox"
                               checked={
+                                plateOptions.length > 0 &&
                                 plateFilter.length === plateOptions.length
                               }
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setPlateFilter(
-                                  e.target.checked ? [...plateOptions] : []
-                                )
-                              }
+                                  e.target.checked ? [...plateOptions] : [],
+                                );
+                                setPage(1);
+                              }}
                             />
+
                             <span>Chọn tất cả</span>
                           </label>
 
@@ -475,7 +648,7 @@ export default function TripPaymentKTPage() {
                               .filter((p) =>
                                 p
                                   .toLowerCase()
-                                  .includes(plateFilterSearch.toLowerCase())
+                                  .includes(plateFilterSearch.toLowerCase()),
                               )
                               .map((p) => (
                                 <label
@@ -485,14 +658,17 @@ export default function TripPaymentKTPage() {
                                   <input
                                     type="checkbox"
                                     checked={plateFilter.includes(p)}
-                                    onChange={(e) =>
+                                    onChange={(e) => {
                                       setPlateFilter((prev) =>
                                         e.target.checked
                                           ? [...prev, p]
-                                          : prev.filter((x) => x !== p)
-                                      )
-                                    }
+                                          : prev.filter((x) => x !== p),
+                                      );
+
+                                      setPage(1);
+                                    }}
                                   />
+
                                   <span>{p}</span>
                                 </label>
                               ))}
@@ -516,99 +692,59 @@ export default function TripPaymentKTPage() {
           </thead>
 
           <tbody>
-            {editing === "new" && (
-              <tr className="bg-green-100">
-                {columns.map((k) => (
-                  <td key={k} className="border px-1">
-                    <input
-                      type={k.includes("ngay") ? "date" : "text"}
-                      name={k}
-                      value={form[k] || ""}
-                      onChange={handleChange}
-                      className="w-full border px-1"
-                    />
-                  </td>
-                ))}
-                <td className="border text-center">
-                  <button onClick={handleSave}>Lưu</button>
-                  <button onClick={handleCancel}>Huỷ</button>
+            {data.length === 0 && !loading ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="border px-2 py-4 text-center text-gray-500"
+                >
+                  Không có dữ liệu
                 </td>
               </tr>
-            )}
+            ) : (
+              data.map((r) => (
+                <tr
+                  key={r._id}
+                  className={r.isDontMatchCP === true ? "text-red-600" : ""}
+                >
+                  {/* NGÀY THÁNG */}
+                  <td className="border px-2 text-center whitespace-nowrap">
+                    {r.ngayThang
+                      ? new Date(r.ngayThang).toLocaleDateString("vi-VN")
+                      : ""}
+                  </td>
 
-            {data.map((r) => (
-              <tr key={r._id}>
-                {editing === r._id ? (
-                  <>
-                    {columns.map((k) => (
-                      <td key={k} className="border px-1">
-                        <input
-                          type={dateFields.includes(k) ? "date" : "text"}
-                          name={k}
-                          value={
-                            dateFields.includes(k) && form[k]
-                              ? form[k].slice(0, 10)
-                              : form[k] || ""
-                          }
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                    ))}
-                    <td className="border text-center">
-                      <button
-                        onClick={handleSave}
-                        className="mr-2 text-green-600"
-                      >
-                        Lưu
-                      </button>
-                      <button onClick={handleCancel} className="text-red-600">
-                        Huỷ
-                      </button>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="border px-2">{r.tenLaiXe}</td>
-                    <td className="border px-2">{r.bienSoXe}</td>
-                    <td className="border px-2 text-center">
-                      {new Date(r.ngayThang).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td className="border px-2 text-right">
-                      {r.totalMoney?.toLocaleString()}
-                    </td>
-                    <td className="border px-2">{r.ghiChu}</td>
-                    <td className="border px-2 text-center">
-                      {r.dayPayment
-                        ? new Date(r.dayPayment).toLocaleDateString("vi-VN")
-                        : ""}
-                    </td>
-                    <td className="border px-2 text-center">
-                      <button
-                        onClick={() => handleEdit(r)}
-                        className="text-blue-600 mr-2"
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        onClick={() => handleDelete(r._id)}
-                        className="text-red-600"
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
+                  {/* MÃ XE */}
+                  <td className="border px-2 text-center">{r.maXe || ""}</td>
+
+                  {/* TỔNG TIỀN */}
+                  <td className="border px-2 text-right whitespace-nowrap font-semibold">
+                    {Number(r.totalMoney || 0).toLocaleString("vi-VN")}
+                  </td>
+
+                  {/* BIỂN SỐ XE */}
+                  <td className="border px-2">{r.bienSoXe || ""}</td>
+
+                  {/* TÊN LÁI XE */}
+                  <td className="border px-2">{r.tenLaiXe || ""}</td>
+
+                  {/* GHI CHÚ */}
+                  <td className="border px-2">{r.ghiChu || ""}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
+
+      {/* =======================================================
+          PHÂN TRANG
+      ======================================================= */}
       <div className="flex gap-2 justify-center mt-3 text-xs items-center">
         <button
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-          className="border px-2 py-1"
+          disabled={page === 1 || loading}
+          onClick={() => setPage((p) => Math.max(p - 1, 1))}
+          className="border px-2 py-1 disabled:opacity-50"
         >
           ◀ Trước
         </button>
@@ -618,13 +754,18 @@ export default function TripPaymentKTPage() {
         </span>
 
         <button
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => p + 1)}
-          className="border px-2 py-1"
+          disabled={page === totalPages || loading}
+          onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+          className="border px-2 py-1 disabled:opacity-50"
         >
           Sau ▶
         </button>
       </div>
+      <VehicleProfitTripPaymentKTModal
+        open={showVehicleProfitModal}
+        month={month}
+        onClose={() => setShowVehicleProfitModal(false)}
+      />
     </div>
   );
 }

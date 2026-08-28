@@ -1,13 +1,11 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
+import VehicleProfitEpassMonthModal from "../../components/CostModal/VehicleProfitEpassMonthModal";
 import API from "../../api";
 
 export default function EpassMonthPage() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({});
 
   const [importing, setImporting] = useState(false);
   const [importTotal, setImportTotal] = useState(0);
@@ -19,71 +17,181 @@ export default function EpassMonthPage() {
   const fileInputRef = useRef(null);
   const [importFile, setImportFile] = useState(null);
 
-  /* ================= FILTER ================= */
+  /* =====================================================
+     FILTER BSX
+  ===================================================== */
+
   const [bsxOptions, setBsxOptions] = useState([]);
   const [bsxFilter, setBsxFilter] = useState([]);
   const [bsxSearch, setBsxSearch] = useState("");
-  const [showBsxDropdown, setShowBsxDropdown] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
 
-  /* ================= FETCH FILTER ================= */
+  const [showBsxDropdown, setShowBsxDropdown] = useState(false);
+
+  const [dropdownPos, setDropdownPos] = useState({
+    top: 0,
+    left: 0,
+  });
+
+  /* =====================================================
+     FILTER THÁNG
+     MẶC ĐỊNH THÁNG HIỆN TẠI
+  ===================================================== */
+
+  const getCurrentMonth = () => {
+    const now = new Date();
+
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}`;
+  };
+
+  const [monthFilter, setMonthFilter] = useState(getCurrentMonth());
+
+  const [showVehicleProfitModal, setShowVehicleProfitModal] = useState(false);
+
+  /* =====================================================
+     FETCH DANH SÁCH BSX
+  ===================================================== */
+
   const fetchFilterOptions = async () => {
     try {
       const res = await axios.get(`${baseUrl}/unique-bsx`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      const bsx = res.data || [];
+
+      const bsx = Array.isArray(res.data) ? res.data : [];
+
       setBsxOptions(bsx);
-      setBsxFilter(bsx); // mặc định chọn tất cả
+
+      /*
+       * Nếu trước đó chưa có filter
+       * hoặc BSX cũ không còn tồn tại
+       * thì chọn toàn bộ BSX
+       */
+      setBsxFilter((prev) => {
+        if (prev.length === 0) {
+          return bsx;
+        }
+
+        return prev.filter((item) => bsx.includes(item));
+      });
     } catch (err) {
-      console.error(err);
+      console.error("Lỗi lấy danh sách BSX:", err);
     }
   };
+
+  /* =====================================================
+     FETCH BSX LẦN ĐẦU
+  ===================================================== */
 
   useEffect(() => {
     fetchFilterOptions();
   }, []);
 
-  /* ================= FETCH DATA ================= */
+  /* =====================================================
+     FETCH DATA
+  ===================================================== */
+
   const fetchData = async () => {
     setLoading(true);
+
     try {
       const res = await axios.get(baseUrl, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      let fetched = res.data || [];
+      let fetchedData = Array.isArray(res.data) ? res.data : [];
 
-      // ⬇️ FILTER GIỐNG RepairCost
-      if (bsxFilter && bsxFilter.length > 0) {
-        fetched = fetched.filter((r) => bsxFilter.includes(r.bienSoXe));
-      } else {
-        fetched = [];
+      /* =================================================
+         FILTER THÁNG
+         Theo dayBuy = NGÀY MUA
+      ================================================= */
+
+      if (monthFilter) {
+        fetchedData = fetchedData.filter((r) => {
+          if (!r.dayBuy) {
+            return false;
+          }
+
+          const date = new Date(r.dayBuy);
+
+          if (Number.isNaN(date.getTime())) {
+            return false;
+          }
+
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+
+          const ym = `${year}-${month}`;
+
+          return ym === monthFilter;
+        });
       }
 
-      setData(fetched);
+      /* =================================================
+         FILTER BIỂN SỐ
+      ================================================= */
+
+      if (bsxFilter.length > 0) {
+        fetchedData = fetchedData.filter((r) => bsxFilter.includes(r.bienSoXe));
+      } else {
+        fetchedData = [];
+      }
+
+      setData(fetchedData);
+    } catch (err) {
+      console.error("Lỗi lấy dữ liệu Epass:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-    setEditing(null);
-    setForm({});
-  }, [bsxFilter]);
+  /* =====================================================
+     LOAD KHI FILTER THAY ĐỔI
+  ===================================================== */
 
-  /* ================= IMPORT ================= */
+  useEffect(() => {
+    /*
+     * Chưa có danh sách BSX thì chưa fetch
+     */
+    if (bsxOptions.length === 0) {
+      return;
+    }
+
+    fetchData();
+
+    setImporting(false);
+    setImportTotal(0);
+    setImportDone(0);
+  }, [monthFilter, bsxFilter]);
+
+  /* =====================================================
+     IMPORT
+  ===================================================== */
+
   const handleSelectFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
     setImportFile(file);
   };
 
   const handleImport = async () => {
-    if (!importFile) return alert("Chưa chọn file");
+    if (!importFile) {
+      alert("Chưa chọn file Excel");
+      return;
+    }
 
     const formData = new FormData();
+
     formData.append("file", importFile);
 
     setImporting(true);
@@ -97,127 +205,309 @@ export default function EpassMonthPage() {
           "Content-Type": "multipart/form-data",
         },
       });
-      setImportTotal(res.data.totalValid || 0);
-      setImportDone(res.data.inserted || 0);
-      fetchData();
+
+      const total = Number(res.data.total || 0);
+      const inserted = Number(res.data.inserted || 0);
+
+      setImportTotal(total);
+      setImportDone(inserted);
+
+      /*
+       * Cập nhật lại danh sách BSX
+       */
+      await fetchFilterOptions();
+
+      /*
+       * Lấy lại data theo tháng + BSX hiện tại
+       */
+      await fetchData();
+
+      alert(`Import thành công ${inserted} dòng.`);
     } catch (err) {
-      alert(err.response?.data?.message || "Import thất bại");
+      console.error("IMPORT EPASS ERROR:", err);
+
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Import thất bại";
+
+      alert(msg);
     } finally {
       setImporting(false);
+
       setImportFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      setTimeout(() => {
+        setImportTotal(0);
+        setImportDone(0);
+      }, 2000);
     }
   };
 
-  /* ================= CRUD ================= */
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-  };
+  const handleDeleteByMonth = async () => {
+    if (!monthFilter) {
+      return alert("Vui lòng chọn tháng");
+    }
 
-  const handleAddNew = () => {
-    setEditing("new");
-    setForm({});
-  };
+    const [year, month] = monthFilter.split("-");
 
-  const handleEdit = (row) => {
-    setEditing(row._id);
-    setForm({ ...row });
-  };
+    if (
+      !window.confirm(
+        `Bạn có chắc muốn xoá toàn bộ Epass có ngày mua trong tháng ${month}/${year}?`,
+      )
+    ) {
+      return;
+    }
 
-  const handleSave = async () => {
     try {
-      if (editing === "new") {
-        await axios.post(baseUrl, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } else {
-        await axios.put(`${baseUrl}/${editing}`, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      fetchData();
-      setEditing(null);
+      const res = await axios.delete(`${baseUrl}/by-month-year`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          month: Number(month),
+          year: Number(year),
+        },
+      });
+
+      alert(res.data.message);
+
+      await fetchData();
     } catch (err) {
       console.error(err);
+      alert(
+        err.response?.data?.message || err.message || "Xoá dữ liệu thất bại",
+      );
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Xóa dòng này?")) return;
-    await axios.delete(`${baseUrl}/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchData();
+  const handleUpdateVehicleProfit = async () => {
+    if (!monthFilter) {
+      return alert("Vui lòng chọn tháng");
+    }
+
+    try {
+      const res = await axios.post(
+        `${baseUrl}/vehicle-profit/update`,
+        {
+          month: monthFilter,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert(res.data.message || "Cập nhật thành công");
+
+      await fetchData();
+    } catch (err) {
+      console.error(
+        "UPDATE EPASS VEHICLE PROFIT ERROR:",
+        err.response?.data || err,
+      );
+
+      alert(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Cập nhật chi phí Epass thất bại",
+      );
+    }
   };
 
-  const handleDeleteAll = async () => {
-    if (!window.confirm("Xóa toàn bộ dữ liệu?")) return;
-    await axios.delete(baseUrl, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchData();
+  /* =====================================================
+     FORMAT
+  ===================================================== */
+
+  const formatMoney = (value) => {
+    return Number(value || 0).toLocaleString("vi-VN");
   };
+
+  const formatDate = (value) => {
+    if (!value) {
+      return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleDateString("vi-VN");
+  };
+
+  /* =====================================================
+     TỔNG TIỀN
+  ===================================================== */
 
   const totalMoney = data.reduce(
     (sum, r) => sum + Number(r.moneyAmount || 0),
-    0
+    0,
   );
 
-  /* ================= TABLE ================= */
+  /* =====================================================
+     TOOLBAR
+  ===================================================== */
+
+  const Toolbar = () => (
+    <div className="flex gap-2 mb-3 items-center flex-wrap">
+      {/* =================================================
+          THÁNG / NĂM
+      ================================================= */}
+
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-semibold">Tháng:</span>
+
+        <input
+          type="month"
+          value={monthFilter}
+          onChange={(e) => setMonthFilter(e.target.value)}
+          className="border rounded px-2 py-1 text-sm"
+        />
+      </div>
+
+      {/* =================================================
+          FILE INPUT
+      ================================================= */}
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleSelectFile}
+        className="hidden"
+        accept=".xlsx,.xls"
+      />
+
+      {/* =================================================
+          CHỌN FILE
+      ================================================= */}
+
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="border px-2 py-1 rounded bg-white"
+      >
+        {importFile ? "Đã chọn file" : "Chọn file"}
+      </button>
+
+      {/* =================================================
+          TÊN FILE
+      ================================================= */}
+
+      {importFile && (
+        <span className="text-xs text-gray-600 max-w-[250px] truncate">
+          {importFile.name}
+        </span>
+      )}
+
+      {/* =================================================
+          IMPORT
+      ================================================= */}
+
+      <button
+        onClick={handleImport}
+        disabled={!importFile || importing}
+        className="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
+      >
+        {importing ? "Đang import..." : "Import"}
+      </button>
+
+      {/* =================================================
+          XÓA TẤT CẢ
+      ================================================= */}
+
+      <button
+        onClick={handleDeleteByMonth}
+        disabled={!monthFilter}
+        className="bg-red-600 text-white px-2 py-1 rounded disabled:opacity-50"
+      >
+        Xóa theo tháng
+      </button>
+
+      {/* =================================================
+          TRẠNG THÁI IMPORT
+      ================================================= */}
+
+      {importing && (
+        <span className="text-blue-600 text-xs">Đang nhập dữ liệu...</span>
+      )}
+
+      {!importing && importTotal > 0 && (
+        <span className="text-green-700 text-xs">
+          Đã nhập {importDone}/{importTotal} dòng
+        </span>
+      )}
+
+      {/* =================================================
+       CẬP NHẬT CP EPASS VÀO VEHICLE PROFIT
+       ================================================= */}
+
+      <button
+        onClick={handleUpdateVehicleProfit}
+        disabled={!monthFilter}
+        className="bg-green-600 text-white px-3 py-1 rounded disabled:opacity-50"
+      >
+        Cập nhật chi phí
+      </button>
+
+      {/* =================================================
+      XEM CHI PHÍ EPASS TRÊN VEHICLE PROFIT
+      ================================================= */}
+
+      <button
+        onClick={() => setShowVehicleProfitModal(true)}
+        disabled={!monthFilter}
+        className="bg-purple-600 text-white px-3 py-1 rounded disabled:opacity-50"
+      >
+        Xem chi phí
+      </button>
+    </div>
+  );
+
+  /* =====================================================
+     TABLE
+  ===================================================== */
+
   return (
     <div className="p-4">
-      {/* TOOLBAR */}
-      <div className="flex gap-2 mb-3 items-center">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleSelectFile}
-          className="hidden"
-        />
-        <button
-          onClick={() => fileInputRef.current.click()}
-          className="border px-2 py-1"
-        >
-          Chọn file
-        </button>
-        {importFile && <span className="text-xs">{importFile.name}</span>}
-        <button
-          onClick={handleImport}
-          disabled={!importFile || importing}
-          className="bg-blue-600 text-white px-2 py-1"
-        >
-          Import
-        </button>
-        <button
-          onClick={handleAddNew}
-          className="bg-green-600 text-white px-2 py-1"
-        >
-          + Thêm
-        </button>
-        <button
-          onClick={handleDeleteAll}
-          className="bg-red-600 text-white px-2 py-1"
-        >
-          Xóa tất cả
-        </button>
-      </div>
+      <Toolbar />
+
+      {/* =================================================
+          SUMMARY
+      ================================================= */}
 
       <div className="flex justify-between items-center mb-2 text-xs">
         <div>
           Tổng số dòng: <b>{data.length}</b>
         </div>
+
         <div>
-          Tổng tiền:{" "}
-          <b className="text-red-600">{totalMoney.toLocaleString("vi-VN")}</b>{" "}
+          Tổng tiền: <b className="text-red-600">{formatMoney(totalMoney)}</b>{" "}
           VNĐ
         </div>
       </div>
 
-      {/* TABLE */}
-      <div className="border rounded overflow-auto max-h-[70vh]">
-        <table className="w-full table-auto text-xs border-separate border-spacing-0">
-          <thead className="sticky top-0 bg-blue-600 text-white">
+      {/* =================================================
+          LOADING
+      ================================================= */}
+
+      {loading && (
+        <p className="text-sm text-gray-500 mb-2">Đang tải dữ liệu...</p>
+      )}
+
+      {/* =================================================
+          TABLE
+      ================================================= */}
+
+      <div className="border rounded-lg overflow-auto max-h-[70vh] shadow-sm">
+        <table className="min-w-[1100px] w-full table-auto border-separate border-spacing-0 text-xs">
+          <thead className="sticky top-0 bg-blue-600 text-white z-20">
             <tr>
               {[
                 "STT",
@@ -228,33 +518,43 @@ export default function EpassMonthPage() {
                 "NGÀY MUA",
                 "TỪ NGÀY",
                 "ĐẾN NGÀY",
-                "HÀNH ĐỘNG",
               ].map((h) => (
-                <th key={h} className="border px-2 py-2 text-center">
+                <th
+                  key={h}
+                  className="border px-2 py-2 text-center whitespace-nowrap"
+                >
                   {h === "BIỂN SỐ XE" ? (
-                    <div className="flex flex-col relative">
+                    <div className="relative flex flex-col">
                       <span
-                        className="cursor-pointer"
+                        className="cursor-pointer select-none"
                         onClick={(e) => {
-                          const r = e.target.getBoundingClientRect();
+                          const rect = e.currentTarget.getBoundingClientRect();
+
                           setDropdownPos({
-                            top: r.bottom + window.scrollY,
-                            left: r.left + window.scrollX,
+                            top: rect.bottom + window.scrollY,
+                            left: rect.left + window.scrollX,
                           });
+
                           setShowBsxDropdown((p) => !p);
                         }}
                       >
                         {h}
                       </span>
-                      {/* ===== DROPDOWN FILTER BSX ===== */}
+
+                      {/* =================================================
+                          DROPDOWN BSX
+                      ================================================= */}
+
                       {showBsxDropdown && (
                         <div
                           className="fixed z-[999] w-48 border rounded bg-white text-black p-2 shadow-lg"
                           style={{
-                            top: dropdownPos.top,
-                            left: dropdownPos.left,
+                            top: `${dropdownPos.top}px`,
+                            left: `${dropdownPos.left}px`,
                           }}
                         >
+                          {/* SEARCH */}
+
                           <input
                             type="text"
                             placeholder="Tìm biển số..."
@@ -263,25 +563,33 @@ export default function EpassMonthPage() {
                             onChange={(e) => setBsxSearch(e.target.value)}
                           />
 
+                          {/* CHỌN TẤT CẢ */}
+
                           <label className="flex items-center gap-1 mb-1">
                             <input
                               type="checkbox"
-                              checked={bsxFilter.length === bsxOptions.length}
-                              onChange={(e) =>
-                                setBsxFilter(
-                                  e.target.checked ? [...bsxOptions] : []
-                                )
+                              checked={
+                                bsxOptions.length > 0 &&
+                                bsxFilter.length === bsxOptions.length
                               }
+                              onChange={(e) => {
+                                setBsxFilter(
+                                  e.target.checked ? [...bsxOptions] : [],
+                                );
+                              }}
                             />
+
                             <span>Chọn tất cả</span>
                           </label>
+
+                          {/* DANH SÁCH BSX */}
 
                           <div className="max-h-40 overflow-auto">
                             {bsxOptions
                               .filter((v) =>
-                                v
+                                String(v)
                                   .toLowerCase()
-                                  .includes(bsxSearch.toLowerCase())
+                                  .includes(bsxSearch.toLowerCase()),
                               )
                               .map((v) => (
                                 <label
@@ -291,18 +599,21 @@ export default function EpassMonthPage() {
                                   <input
                                     type="checkbox"
                                     checked={bsxFilter.includes(v)}
-                                    onChange={(e) =>
-                                      setBsxFilter((p) =>
+                                    onChange={(e) => {
+                                      setBsxFilter((prev) =>
                                         e.target.checked
-                                          ? [...p, v]
-                                          : p.filter((x) => x !== v)
-                                      )
-                                    }
+                                          ? [...prev, v]
+                                          : prev.filter((x) => x !== v),
+                                      );
+                                    }}
                                   />
+
                                   <span>{v}</span>
                                 </label>
                               ))}
                           </div>
+
+                          {/* ĐÓNG */}
 
                           <button
                             onClick={() => setShowBsxDropdown(false)}
@@ -322,211 +633,74 @@ export default function EpassMonthPage() {
           </thead>
 
           <tbody>
-            {editing === "new" && (
-              <tr className="bg-green-100">
-                <td />
-                <td>
-                  <input
-                    name="bienSoXe"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
+            {data.map((r, i) => (
+              <tr key={r._id} className="even:bg-gray-50 hover:bg-blue-50">
+                {/* STT */}
+
+                <td className="border px-2 py-1 text-center">{i + 1}</td>
+
+                {/* BSX */}
+
+                <td className="border px-2 py-1 font-semibold">{r.bienSoXe}</td>
+
+                {/* TRẠM / ĐOẠN */}
+
+                <td className="border px-2 py-1">{r.tramDoan}</td>
+
+                {/* LOẠI VÉ */}
+
+                <td className="border px-2 py-1 text-center">{r.loaiVe}</td>
+
+                {/* SỐ TIỀN */}
+
+                <td className="border px-2 py-1 text-right font-semibold">
+                  {formatMoney(r.moneyAmount)}
                 </td>
-                <td>
-                  <input
-                    name="tramDoan"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
+
+                {/* NGÀY MUA */}
+
+                <td className="border px-2 py-1 text-center whitespace-nowrap">
+                  {formatDate(r.dayBuy)}
                 </td>
-                <td>
-                  <input
-                    name="loaiVe"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
+
+                {/* TỪ NGÀY */}
+
+                <td className="border px-2 py-1 text-center whitespace-nowrap">
+                  {formatDate(r.dayFrom)}
                 </td>
-                <td>
-                  <input
-                    type="number"
-                    name="moneyAmount"
-                    onChange={handleChange}
-                    className="border px-1 text-right"
-                  />
+
+                {/* ĐẾN NGÀY */}
+
+                <td className="border px-2 py-1 text-center whitespace-nowrap">
+                  {formatDate(r.dayTo)}
                 </td>
-                <td>
-                  <input
-                    type="date"
-                    name="dayBuy"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="date"
-                    name="dayFrom"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="date"
-                    name="dayTo"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
-                </td>
-                <td className="text-center">
-                  <button onClick={handleSave} className="text-green-600 mr-2">
-                    Lưu
-                  </button>
-                  <button
-                    onClick={() => {
-                      setEditing(null);
-                      setForm({});
-                    }}
-                    className="text-gray-600"
-                  >
-                    Huỷ
-                  </button>
+              </tr>
+            ))}
+
+            {/* =================================================
+                KHÔNG CÓ DATA
+            ================================================= */}
+
+            {!loading && data.length === 0 && (
+              <tr>
+                <td
+                  colSpan={8}
+                  className="border px-2 py-8 text-center text-gray-500"
+                >
+                  Không có dữ liệu
                 </td>
               </tr>
             )}
-
-            {data.map((r, i) => (
-              <tr key={r._id} className="even:bg-gray-50 hover:bg-blue-50">
-                {editing === r._id ? (
-                  <>
-                    <td className="border px-2 text-center">{i + 1}</td>
-
-                    <td className="border px-2">
-                      <input
-                        name="bienSoXe"
-                        value={form.bienSoXe || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-2">
-                      <input
-                        name="tramDoan"
-                        value={form.tramDoan || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-2">
-                      <input
-                        name="loaiVe"
-                        value={form.loaiVe || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-2">
-                      <input
-                        type="number"
-                        name="moneyAmount"
-                        value={form.moneyAmount || 0}
-                        onChange={handleChange}
-                        className="border px-1 w-full text-right"
-                      />
-                    </td>
-
-                    <td className="border px-2">
-                      <input
-                        type="date"
-                        name="dayBuy"
-                        value={form.dayBuy?.slice(0, 10) || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-2">
-                      <input
-                        type="date"
-                        name="dayFrom"
-                        value={form.dayFrom?.slice(0, 10) || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-2">
-                      <input
-                        type="date"
-                        name="dayTo"
-                        value={form.dayTo?.slice(0, 10) || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-2 text-center">
-                      <button
-                        onClick={handleSave}
-                        className="text-green-600 mr-2"
-                      >
-                        Lưu
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditing(null);
-                          setForm({});
-                        }}
-                        className="text-gray-600"
-                      >
-                        Huỷ
-                      </button>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="border px-2 text-center">{i + 1}</td>
-                    <td className="border px-2">{r.bienSoXe}</td>
-                    <td className="border px-2">{r.tramDoan}</td>
-                    <td className="border px-2">{r.loaiVe}</td>
-                    <td className="border px-2 text-right">
-                      {r.moneyAmount?.toLocaleString("vi-VN")}
-                    </td>
-                    <td className="border px-2 text-center">
-                      {r.dayBuy &&
-                        new Date(r.dayBuy).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td className="border px-2 text-center">
-                      {r.dayFrom &&
-                        new Date(r.dayFrom).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td className="border px-2 text-center">
-                      {r.dayTo && new Date(r.dayTo).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td className="border px-2 text-center">
-                      <button
-                        onClick={() => handleEdit(r)}
-                        className="text-blue-600 mr-2"
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        onClick={() => handleDelete(r._id)}
-                        className="text-red-600"
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
           </tbody>
         </table>
       </div>
+
+      {showVehicleProfitModal && (
+        <VehicleProfitEpassMonthModal
+          month={monthFilter}
+          onClose={() => setShowVehicleProfitModal(false)}
+        />
+      )}
     </div>
   );
 }

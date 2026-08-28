@@ -1,13 +1,31 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
+import RepairCostVehicleProfitModal from "../../components/CostModal/RepairCostVehicleProfitModal";
 import API from "../../api";
 
 export default function RepairCostPage() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({});
+  // =====================================================
+  // FILTER THÁNG / NĂM - THEO NGÀY SỬA CHỮA
+  // =====================================================
+  const getCurrentMonth = () => {
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+
+    return `${year}-${month}`;
+  };
+
+  const [monthFilter, setMonthFilter] = useState(getCurrentMonth());
+
+  // =====================================================
+  // MODAL CP SỬA XE VEHICLE PROFIT
+  // =====================================================
+  const [showRepairCostModal, setShowRepairCostModal] = useState(false);
+  const [updatingRepairCost, setUpdatingRepairCost] = useState(false);
 
   const [importing, setImporting] = useState(false);
   const [importTotal, setImportTotal] = useState(0);
@@ -19,36 +37,61 @@ export default function RepairCostPage() {
   const fileInputRef = useRef(null);
   const [importFile, setImportFile] = useState(null);
 
+  // =====================================================
+  // FILTER OPTIONS
+  // =====================================================
+
   const [vehicleFilterOptions, setVehicleFilterOptions] = useState([]);
   const [unitFilterOptions, setUnitFilterOptions] = useState([]);
 
-  const [vehicleFilter, setVehicleFilter] = useState([]); // mảng giá trị đã chọn
+  const [vehicleFilter, setVehicleFilter] = useState([]);
   const [unitFilter, setUnitFilter] = useState([]);
 
   const [vehicleFilterSearch, setVehicleFilterSearch] = useState("");
   const [unitFilterSearch, setUnitFilterSearch] = useState("");
+
   const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
   const [showUnitDropdown, setShowUnitDropdown] = useState(false);
 
-  /* ================= FETCH FILTER OPTIONS ================= */
+  const [dropdownPos, setDropdownPos] = useState({
+    top: 0,
+    left: 0,
+  });
+
+  // =====================================================
+  // FETCH FILTER OPTIONS
+  // =====================================================
+
   const fetchFilterOptions = async () => {
     try {
       const [vehiclesRes, unitsRes] = await Promise.all([
         axios.get(`${baseUrl}/unique-vehiclePlates`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }),
+
         axios.get(`${baseUrl}/unique-repairUnits`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }),
       ]);
+
       const vehicles = vehiclesRes.data || [];
       const units = unitsRes.data || [];
 
       setVehicleFilterOptions(vehicles);
       setUnitFilterOptions(units);
 
-      setVehicleFilter(vehicles); // mặc định chọn tất cả
-      setUnitFilter(units); // mặc định chọn tất cả
+      // Nếu chưa có filter thì mặc định chọn tất cả
+      setVehicleFilter((prev) =>
+        prev.length === 0 ? vehicles : prev.filter((v) => vehicles.includes(v)),
+      );
+
+      setUnitFilter((prev) =>
+        prev.length === 0 ? units : prev.filter((v) => units.includes(v)),
+      );
     } catch (err) {
       console.error(err);
     }
@@ -58,61 +101,85 @@ export default function RepairCostPage() {
     fetchFilterOptions();
   }, []);
 
-  /* ================= FETCH DATA ================= */
+  // =====================================================
+  // FETCH DATA
+  // =====================================================
   const fetchData = async () => {
     setLoading(true);
+
     try {
+      const params = {};
+
+      // ==========================================
+      // LỌC THÁNG / NĂM
+      // month dạng: 2026-08
+      // ==========================================
+      if (monthFilter) {
+        params.month = monthFilter;
+      }
+
+      // ==========================================
+      // LỌC BIỂN SỐ
+      // ==========================================
+      if (vehicleFilter.length > 0) {
+        params.vehiclePlates = JSON.stringify(vehicleFilter);
+      }
+
+      // ==========================================
+      // LỌC ĐƠN VỊ
+      // ==========================================
+      if (unitFilter.length > 0) {
+        params.repairUnits = JSON.stringify(unitFilter);
+      }
+
       const res = await axios.get(baseUrl, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params,
       });
 
-      let fetchedData = res.data || [];
-
-      // ⬇️ APPLY VEHICLE FILTER
-      if (vehicleFilter && vehicleFilter.length > 0) {
-        fetchedData = fetchedData.filter((r) =>
-          vehicleFilter.includes(r.vehiclePlate)
-        );
-      } else {
-        // 🔹 mảng trống = không show dòng nào
-        fetchedData = [];
-      }
-
-      // ⬇️ APPLY UNIT FILTER
-      if (unitFilter && unitFilter.length > 0) {
-        fetchedData = fetchedData.filter((r) =>
-          unitFilter.includes(r.repairUnit)
-        );
-      } else {
-        fetchedData = [];
-      }
-
-      setData(fetchedData);
+      setData(res.data || []);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    // Chỉ fetch khi đã có options
+    if (vehicleFilterOptions.length === 0 && unitFilterOptions.length === 0) {
+      return;
+    }
+
     fetchData();
-    setEditing(null);
-    setForm({});
+
     setImporting(false);
     setImportTotal(0);
     setImportDone(0);
-  }, [vehicleFilter, unitFilter]);
+  }, [vehicleFilter, unitFilter, monthFilter]);
 
-  /* ================= IMPORT ================= */
+  // =====================================================
+  // IMPORT
+  // =====================================================
+
   const handleSelectFile = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
+
     if (!file) return;
+
     setImportFile(file);
   };
 
   const handleImport = async () => {
-    if (!importFile) return alert("Chưa chọn file");
+    if (!importFile) {
+      alert("Chưa chọn file");
+      return;
+    }
 
     const formData = new FormData();
+
     formData.append("file", importFile);
 
     setImporting(true);
@@ -126,20 +193,33 @@ export default function RepairCostPage() {
           "Content-Type": "multipart/form-data",
         },
       });
+
       setImportTotal(res.data.totalValid || 0);
       setImportDone(res.data.inserted || 0);
+
+      // Cập nhật lại danh sách filter
+      await fetchFilterOptions();
+
+      // Lấy lại dữ liệu
       await fetchData();
+
+      alert(`Import thành công ${res.data.inserted || 0} dòng.`);
     } catch (err) {
       console.error(err);
+
       const msg =
-        err.response?.data?.message || // lấy message từ BE
-        err.message || // fallback JS error
-        "Import thất bại";
+        err.response?.data?.message || err.message || "Import thất bại";
+
       alert(msg);
     } finally {
       setImporting(false);
+
       setImportFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
       setTimeout(() => {
         setImportTotal(0);
         setImportDone(0);
@@ -147,246 +227,158 @@ export default function RepairCostPage() {
     }
   };
 
-  /* ================= CRUD ================= */
-  const handleEdit = (row) => {
-    setEditing(row._id);
-    setForm({ ...row });
-  };
-  const handleCancel = () => {
-    setEditing(null);
-    setForm({});
-  };
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-  };
-  const handleAddNew = () => {
-    setEditing("new");
-    setForm({});
-  };
-  const handleSave = async () => {
+  // =====================================================
+  // CẬP NHẬT CHI PHÍ SỬA XE VÀO VEHICLE PROFIT
+  // THEO THÁNG ĐANG CHỌN
+  // =====================================================
+
+  const handleUpdateRepairCost = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng/năm");
+      return;
+    }
+
+    const [year, month] = monthFilter.split("-");
+
+    const confirmUpdate = window.confirm(
+      `Bạn có chắc muốn cập nhật chi phí sửa xe tháng ${month}/${year} vào Doanh thu?`,
+    );
+
+    if (!confirmUpdate) {
+      return;
+    }
+
+    setUpdatingRepairCost(true);
+
     try {
-      if (editing === "new") {
-        await axios.post(baseUrl, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } else {
-        await axios.put(`${baseUrl}/${editing}`, form, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      fetchData();
-      handleCancel();
+      const res = await axios.post(
+        `${API}/repair/update-repair-cost`,
+        {
+          month: monthFilter,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert(
+        res.data?.message ||
+          `Đã cập nhật chi phí sửa xe tháng ${month}/${year}`,
+      );
     } catch (err) {
       console.error(err);
+
+      alert(err.response?.data?.message || "Lỗi cập nhật chi phí sửa xe");
+    } finally {
+      setUpdatingRepairCost(false);
     }
   };
-  const handleDelete = async (id) => {
-    if (!window.confirm("Xóa dòng này?")) return;
-    await axios.delete(`${baseUrl}/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchData();
-  };
-  const handleDeleteAll = async () => {
-    if (!window.confirm("Xóa toàn bộ dữ liệu?")) return;
-    await axios.delete(baseUrl, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    fetchData();
-  };
 
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  // =====================================================
+  // XÓA THEO THÁNG / NĂM
+  // THEO repairDate
+  // =====================================================
+  const handleDeleteByMonth = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng/năm cần xóa");
+      return;
+    }
 
-  /* ================= RENDER ================= */
-  const renderNewRow = () => {
-    if (editing !== "new") return null;
+    const [year, month] = monthFilter.split("-");
 
-    // Tính tổng tiền tự động
-    const quantity = Number(form.quantity || 0);
-    const unitPrice = Number(form.unitPrice || 0);
-    const totalAmount = quantity * unitPrice;
-
-    return (
-      <tr className="bg-green-100">
-        {/* STT */}
-        <td className="text-center">-</td>
-
-        {/* Đơn vị */}
-        <td>
-          <input
-            name="repairUnit"
-            value={form.repairUnit || ""}
-            onChange={handleChange}
-            className="w-full border px-1"
-          />
-        </td>
-
-        {/* Ngày sửa */}
-        <td>
-          <input
-            type="date"
-            name="repairDate"
-            value={form.repairDate?.slice(0, 10) || ""}
-            onChange={handleChange}
-            className="w-full border px-1"
-          />
-        </td>
-
-        {/* Biển số xe */}
-        <td>
-          <input
-            name="vehiclePlate"
-            value={form.vehiclePlate || ""}
-            onChange={handleChange}
-            className="w-full border px-1"
-          />
-        </td>
-
-        {/* Chi tiết sửa */}
-        <td>
-          <input
-            name="repairDetails"
-            value={form.repairDetails || ""}
-            onChange={handleChange}
-            className="w-full border px-1"
-          />
-        </td>
-
-        {/* ĐVT */}
-        <td>
-          <input
-            name="unit"
-            value={form.unit || ""}
-            onChange={handleChange}
-            className="w-full border px-1"
-          />
-        </td>
-
-        {/* SL */}
-        <td>
-          <input
-            name="quantity"
-            type="number"
-            value={form.quantity || 0}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, quantity: Number(e.target.value) }))
-            }
-            className="w-full border px-1 text-right"
-          />
-        </td>
-
-        {/* Đơn giá */}
-        <td>
-          <input
-            name="unitPrice"
-            type="number"
-            value={form.unitPrice || 0}
-            onChange={(e) =>
-              setForm((p) => ({ ...p, unitPrice: Number(e.target.value) }))
-            }
-            className="w-full border px-1 text-right"
-          />
-        </td>
-
-        {/* Thành tiền (tự động) */}
-        <td className="text-right font-semibold">
-          {totalAmount.toLocaleString("vi-VN")}
-        </td>
-
-        {/* Khuyến mãi */}
-        <td>
-          <input
-            name="discount"
-            value={form.discount || ""}
-            onChange={handleChange}
-            className="w-full border px-1"
-          />
-        </td>
-
-        {/* Số ngày BH */}
-        <td>
-          <input
-            name="warrantyDays"
-            type="number"
-            value={form.warrantyDays || 0}
-            onChange={handleChange}
-            className="w-full border px-1 text-right"
-          />
-        </td>
-
-        {/* Ngày hết BH */}
-        <td>
-          <input
-            type="date"
-            name="warrantyEndDate"
-            value={form.warrantyEndDate?.slice(0, 10) || ""}
-            onChange={handleChange}
-            className="w-full border px-1"
-          />
-        </td>
-
-        {/* Ghi chú */}
-        <td>
-          <input
-            name="note"
-            value={form.note || ""}
-            onChange={handleChange}
-            className="w-full border px-1"
-          />
-        </td>
-
-        {/* Ngày thanh toán */}
-        <td>
-          <input
-            type="date"
-            name="paymentDate"
-            value={form.paymentDate?.slice(0, 10) || ""}
-            onChange={handleChange}
-            className="w-full border px-1"
-          />
-        </td>
-
-        {/* Hành động */}
-        <td>
-          <button onClick={handleSave} className="text-green-600">
-            Lưu
-          </button>
-          <button onClick={handleCancel} className="ml-2 text-gray-600">
-            Huỷ
-          </button>
-        </td>
-      </tr>
+    const confirmDelete = window.confirm(
+      `Bạn có chắc muốn xóa toàn bộ dữ liệu sửa chữa tháng ${month}/${year}?`,
     );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    try {
+      const res = await axios.delete(`${baseUrl}/month-year`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        data: {
+          month: Number(month),
+          year: Number(year),
+        },
+      });
+
+      alert(res.data?.message || `Đã xóa ${res.data?.deletedCount || 0} dòng`);
+
+      // Load lại danh sách filter
+      await fetchFilterOptions();
+
+      // Load lại data theo tháng hiện tại
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+
+      alert(err.response?.data?.message || "Xóa dữ liệu theo tháng thất bại");
+    }
   };
+
+  // =====================================================
+  // FORMAT
+  // =====================================================
+
+  const formatMoney = (value) => {
+    return Number(value || 0).toLocaleString("vi-VN");
+  };
+
+  const formatDate = (value) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleDateString("vi-VN");
+  };
+
+  // =====================================================
+  // TABLE
+  // =====================================================
 
   const renderTable = () => {
     const totalMoney = data.reduce(
-      (sum, r) => sum + Number(r.totalAmount || 0),
-      0
+      (sum, r) => sum + Number(r.grandTotal || 0),
+      0,
     );
 
     return (
       <>
-        {/* SUMMARY */}
+        {/* =================================================
+            SUMMARY
+        ================================================= */}
+
         <div className="flex justify-between items-center mb-2 text-sm">
           <div>
             Tổng số dòng: <b>{data.length}</b>
           </div>
+
           <div>
-            Tổng tiền:{" "}
-            <b className="text-red-600">{totalMoney.toLocaleString("vi-VN")}</b>{" "}
+            Tổng cộng: <b className="text-red-600">{formatMoney(totalMoney)}</b>{" "}
             VNĐ
           </div>
         </div>
 
-        {/* TABLE */}
+        {/* =================================================
+            TABLE
+        ================================================= */}
+
         <div className="border rounded-lg overflow-auto max-h-[70vh] shadow-sm">
-          <table className="min-w-[1400px] w-full table-auto border-separate border-spacing-0 text-xs">
+          <table className="min-w-[2600px] w-full table-auto border-separate border-spacing-0 text-xs">
             <thead className="sticky top-0 bg-blue-600 z-20">
               <tr>
                 {[
-                  "STT",
+                  "MÃ SỬA XE",
+                  "MÃ SỐ THUẾ",
                   "ĐƠN VỊ SỬA CHỮA",
                   "NGÀY SỬA CHỮA",
                   "BIỂN SỐ XE",
@@ -395,12 +387,13 @@ export default function RepairCostPage() {
                   "SL",
                   "ĐƠN GIÁ",
                   "THÀNH TIỀN",
-                  "KHUYẾN MÃI",
-                  "SỐ NGÀY BẢO HÀNH",
-                  "NGÀY HẾT BẢO HÀNH",
+                  "VAT",
+                  "TỔNG CỘNG",
                   "GHI CHÚ",
+                  "SỐ HÓA ĐƠN",
+                  "NGƯỜI PHỤ TRÁCH",
+                  "PHIẾU CHI SỐ",
                   "NGÀY THANH TOÁN",
-                  "HÀNH ĐỘNG",
                 ].map((h) => (
                   <th
                     key={h}
@@ -411,21 +404,32 @@ export default function RepairCostPage() {
                         <span
                           className="cursor-pointer select-none"
                           onClick={(e) => {
-                            const rect = e.target.getBoundingClientRect();
+                            const rect =
+                              e.currentTarget.getBoundingClientRect();
+
                             setDropdownPos({
                               top: rect.bottom + window.scrollY,
                               left: rect.left + window.scrollX,
                             });
-                            if (h === "ĐƠN VỊ SỬA CHỮA")
+
+                            if (h === "ĐƠN VỊ SỬA CHỮA") {
                               setShowUnitDropdown((p) => !p);
-                            else setShowVehicleDropdown((p) => !p);
+                              setShowVehicleDropdown(false);
+                            } else {
+                              setShowVehicleDropdown((p) => !p);
+                              setShowUnitDropdown(false);
+                            }
                           }}
                         >
                           {h}
                         </span>
 
-                        {(h === "ĐƠN VỊ SỬA CHỮA" && showUnitDropdown) ||
-                        (h === "BIỂN SỐ XE" && showVehicleDropdown) ? (
+                        {/* =================================================
+                            FILTER DROPDOWN
+                        ================================================= */}
+
+                        {((h === "ĐƠN VỊ SỬA CHỮA" && showUnitDropdown) ||
+                          (h === "BIỂN SỐ XE" && showVehicleDropdown)) && (
                           <div
                             className="fixed z-[999] w-48 border rounded bg-white text-black p-2 shadow-lg"
                             style={{
@@ -433,6 +437,8 @@ export default function RepairCostPage() {
                               left: `${dropdownPos.left}px`,
                             }}
                           >
+                            {/* SEARCH */}
+
                             <input
                               type="text"
                               placeholder={
@@ -446,12 +452,17 @@ export default function RepairCostPage() {
                                   ? unitFilterSearch
                                   : vehicleFilterSearch
                               }
-                              onChange={(e) =>
-                                h === "ĐƠN VỊ SỬA CHỮA"
-                                  ? setUnitFilterSearch(e.target.value)
-                                  : setVehicleFilterSearch(e.target.value)
-                              }
+                              onChange={(e) => {
+                                if (h === "ĐƠN VỊ SỬA CHỮA") {
+                                  setUnitFilterSearch(e.target.value);
+                                } else {
+                                  setVehicleFilterSearch(e.target.value);
+                                }
+                              }}
                             />
+
+                            {/* CHỌN TẤT CẢ */}
+
                             <label className="flex items-center gap-1 mb-1">
                               <input
                                 type="checkbox"
@@ -467,19 +478,22 @@ export default function RepairCostPage() {
                                     setUnitFilter(
                                       e.target.checked
                                         ? [...unitFilterOptions]
-                                        : []
+                                        : [],
                                     );
                                   } else {
                                     setVehicleFilter(
                                       e.target.checked
                                         ? [...vehicleFilterOptions]
-                                        : []
+                                        : [],
                                     );
                                   }
                                 }}
                               />
+
                               <span>Chọn tất cả</span>
                             </label>
+
+                            {/* DANH SÁCH */}
 
                             <div className="max-h-40 overflow-auto">
                               {(h === "ĐƠN VỊ SỬA CHỮA"
@@ -487,14 +501,14 @@ export default function RepairCostPage() {
                                 : vehicleFilterOptions
                               )
                                 .filter((v) =>
-                                  v
+                                  String(v)
                                     .toLowerCase()
                                     .includes(
                                       (h === "ĐƠN VỊ SỬA CHỮA"
                                         ? unitFilterSearch
                                         : vehicleFilterSearch
-                                      ).toLowerCase()
-                                    )
+                                      ).toLowerCase(),
+                                    ),
                                 )
                                 .map((v) => (
                                   <label
@@ -513,34 +527,39 @@ export default function RepairCostPage() {
                                           setUnitFilter((p) =>
                                             e.target.checked
                                               ? [...p, v]
-                                              : p.filter((x) => x !== v)
+                                              : p.filter((x) => x !== v),
                                           );
                                         } else {
                                           setVehicleFilter((p) =>
                                             e.target.checked
                                               ? [...p, v]
-                                              : p.filter((x) => x !== v)
+                                              : p.filter((x) => x !== v),
                                           );
                                         }
                                       }}
                                     />
+
                                     <span>{v}</span>
                                   </label>
                                 ))}
                             </div>
 
+                            {/* ĐÓNG */}
+
                             <button
-                              onClick={() =>
-                                h === "ĐƠN VỊ SỬA CHỮA"
-                                  ? setShowUnitDropdown(false)
-                                  : setShowVehicleDropdown(false)
-                              }
+                              onClick={() => {
+                                if (h === "ĐƠN VỊ SỬA CHỮA") {
+                                  setShowUnitDropdown(false);
+                                } else {
+                                  setShowVehicleDropdown(false);
+                                }
+                              }}
                               className="mt-1 w-full bg-blue-600 text-white text-xs py-0.5 rounded"
                             >
                               Đóng
                             </button>
                           </div>
-                        ) : null}
+                        )}
                       </div>
                     ) : (
                       h
@@ -551,194 +570,111 @@ export default function RepairCostPage() {
             </thead>
 
             <tbody>
-              {renderNewRow()}
               {data.map((r, idx) => (
                 <tr
                   key={r._id}
                   className="even:bg-gray-50 hover:bg-blue-50 text-xs"
                 >
-                  {editing === r._id ? (
-                    <>
-                      <td className="border px-2 py-1 text-center">
-                        {idx + 1}
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          name="repairUnit"
-                          value={form.repairUnit || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          type="date"
-                          name="repairDate"
-                          value={form.repairDate?.slice(0, 10) || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          name="vehiclePlate"
-                          value={form.vehiclePlate || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          name="repairDetails"
-                          value={form.repairDetails || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          name="unit"
-                          value={form.unit || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          name="quantity"
-                          type="number"
-                          value={form.quantity || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1 text-right"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          name="unitPrice"
-                          type="number"
-                          value={form.unitPrice || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1 text-right"
-                        />
-                      </td>
-                      <td className="border px-2 py-1 text-right font-semibold">
-                        {(
-                          Number(form.quantity || 0) *
-                          Number(form.unitPrice || 0)
-                        ).toLocaleString("vi-VN")}
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          name="discount"
-                          value={form.discount || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          name="warrantyDays"
-                          type="number"
-                          value={form.warrantyDays || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1 text-right"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          type="date"
-                          name="warrantyEndDate"
-                          value={form.warrantyEndDate?.slice(0, 10) || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          name="note"
-                          value={form.note || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                      <td className="border px-2 py-1">
-                        <input
-                          type="date"
-                          name="paymentDate"
-                          value={form.paymentDate?.slice(0, 10) || ""}
-                          onChange={handleChange}
-                          className="w-full border px-1"
-                        />
-                      </td>
-                      <td className="border px-2 py-1 text-center">
-                        <button
-                          onClick={handleSave}
-                          className="text-green-600 mr-2"
-                        >
-                          Lưu
-                        </button>
-                        <button
-                          onClick={() => setEditing(null)}
-                          className="text-gray-600"
-                        >
-                          Huỷ
-                        </button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="border px-2 py-1 text-center">
-                        {idx + 1}
-                      </td>
-                      <td className="border px-2 py-1">{r.repairUnit}</td>
-                      <td className="border px-2 py-1">
-                        {new Date(r.repairDate).toLocaleDateString("vi-VN")}
-                      </td>
-                      <td className="border px-2 py-1">{r.vehiclePlate}</td>
-                      <td className="border px-2 py-1">{r.repairDetails}</td>
-                      <td className="border px-2 py-1">{r.unit}</td>
-                      <td className="border px-2 py-1 text-right">
-                        {r.quantity?.toLocaleString()}
-                      </td>
-                      <td className="border px-2 py-1 text-right">
-                        {r.unitPrice?.toLocaleString()}
-                      </td>
-                      <td className="border px-2 py-1 text-right font-semibold">
-                        {r.totalAmount?.toLocaleString("vi-VN")}
-                      </td>
-                      <td className="border px-2 py-1">{r.discount}</td>
-                      <td className="border px-2 py-1 text-right">
-                        {r.warrantyDays}
-                      </td>
-                      <td className="border px-2 py-1">
-                        {r.warrantyEndDate &&
-                          new Date(r.warrantyEndDate).toLocaleDateString(
-                            "vi-VN"
-                          )}
-                      </td>
-                      <td className="border px-2 py-1">{r.note}</td>
-                      <td className="border px-2 py-1">
-                        {r.paymentDate &&
-                          new Date(r.paymentDate).toLocaleDateString("vi-VN")}
-                      </td>
-                      <td className="border px-2 py-1 text-center">
-                        <button
-                          onClick={() => handleEdit(r)}
-                          className="text-blue-600 mr-2"
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => handleDelete(r._id)}
-                          className="text-red-600"
-                        >
-                          Xóa
-                        </button>
-                      </td>
-                    </>
-                  )}
+                  {/* MÃ SỬA XE */}
+
+                  <td className="border px-2 py-1 font-semibold text-blue-700 whitespace-nowrap">
+                    {r.repairCode}
+                  </td>
+
+                  {/* MST */}
+
+                  <td className="border px-2 py-1">{r.taxCode}</td>
+
+                  {/* ĐƠN VỊ */}
+
+                  <td className="border px-2 py-1">{r.repairUnit}</td>
+
+                  {/* NGÀY SỬA */}
+
+                  <td className="border px-2 py-1 whitespace-nowrap text-center">
+                    {formatDate(r.repairDate)}
+                  </td>
+
+                  {/* BSX */}
+
+                  <td className="border px-2 py-1 text-center">
+                    {r.vehiclePlate}
+                  </td>
+
+                  {/* CHI TIẾT */}
+
+                  <td className="border px-2 py-1">{r.repairDetails}</td>
+
+                  {/* ĐVT */}
+
+                  <td className="border px-2 py-1 text-center">{r.unit}</td>
+
+                  {/* SL */}
+
+                  <td className="border px-2 py-1 text-center">
+                    {Number(r.quantity || 0).toLocaleString("vi-VN")}
+                  </td>
+
+                  {/* ĐƠN GIÁ */}
+
+                  <td className="border px-2 py-1 text-right">
+                    {formatMoney(r.unitPrice)}
+                  </td>
+
+                  {/* THÀNH TIỀN */}
+
+                  <td className="border px-2 py-1 text-right font-semibold">
+                    {formatMoney(r.totalAmount)}
+                  </td>
+
+                  {/* VAT */}
+
+                  <td className="border px-2 py-1 text-right">
+                    {Number(r.vat || 0).toLocaleString("vi-VN")}%
+                  </td>
+
+                  {/* TỔNG CỘNG */}
+
+                  <td className="border px-2 py-1 text-right font-semibold text-red-600">
+                    {formatMoney(r.grandTotal)}
+                  </td>
+
+                  {/* GHI CHÚ */}
+
+                  <td className="border px-2 py-1">{r.note}</td>
+
+                  {/* SỐ HÓA ĐƠN */}
+
+                  <td className="border px-2 py-1">{r.invoiceNumber}</td>
+
+                  {/* NGƯỜI PHỤ TRÁCH */}
+
+                  <td className="border px-2 py-1">{r.personInCharge}</td>
+
+                  {/* PHIẾU CHI */}
+
+                  <td className="border px-2 py-1">{r.paymentVoucherNumber}</td>
+
+                  {/* NGÀY THANH TOÁN */}
+
+                  <td className="border px-2 py-1 whitespace-nowrap">
+                    {formatDate(r.paymentDate)}
+                  </td>
                 </tr>
               ))}
+
+              {/* KHÔNG CÓ DATA */}
+
+              {!loading && data.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={18}
+                    className="border px-2 py-8 text-center text-gray-500"
+                  >
+                    Không có dữ liệu
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -746,55 +682,144 @@ export default function RepairCostPage() {
     );
   };
 
-  /* ================= TOOLBAR ================= */
+  // =====================================================
+  // TOOLBAR
+  // =====================================================
+
   const Toolbar = () => (
     <div className="flex gap-2 mb-3 items-center">
+      {/* =================================================
+      LỌC THÁNG / NĂM
+      ================================================= */}
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-semibold">Tháng:</span>
+
+        <input
+          type="month"
+          value={monthFilter}
+          onChange={(e) => {
+            setMonthFilter(e.target.value);
+          }}
+          className="border px-2 py-1 rounded text-sm"
+        />
+
+        {monthFilter && (
+          <button
+            onClick={() => setMonthFilter("")}
+            className="border px-2 py-1 rounded text-xs bg-gray-100 hover:bg-gray-200"
+          >
+            Tất cả
+          </button>
+        )}
+      </div>
+      {/* FILE INPUT */}
+
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleSelectFile}
         className="hidden"
+        accept=".xlsx,.xls"
       />
+
+      {/* CHỌN FILE */}
+
       <button
-        onClick={() => fileInputRef.current.click()}
-        className="border px-2 py-1"
+        onClick={() => fileInputRef.current?.click()}
+        className="border px-2 py-1 rounded"
       >
         {importFile ? "Đã chọn file" : "Chọn file"}
       </button>
+
+      {/* TÊN FILE */}
+
       {importFile && <span className="text-xs">{importFile.name}</span>}
+
+      {/* IMPORT */}
+
       <button
         onClick={handleImport}
         disabled={!importFile || importing}
-        className="bg-blue-600 text-white px-2 py-1 disabled:opacity-50"
+        className="bg-blue-600 text-white px-2 py-1 rounded disabled:opacity-50"
       >
-        Import
+        {importing ? "Đang import..." : "Import"}
       </button>
+
+      {/* =================================================
+      XÓA THEO THÁNG / NĂM
+      ================================================= */}
       <button
-        onClick={handleAddNew}
-        className="bg-green-600 text-white px-2 py-1"
+        onClick={handleDeleteByMonth}
+        disabled={!monthFilter}
+        className="bg-red-500 text-white px-2 py-1 rounded disabled:opacity-50"
       >
-        + Thêm
+        Xóa theo tháng
       </button>
-      <button
-        onClick={handleDeleteAll}
-        className="bg-red-500 text-white px-2 py-1"
-      >
-        Xóa tất cả
-      </button>
+
+      {/* TRẠNG THÁI IMPORT */}
+
       {importing && <span className="text-blue-600 text-sm">Đang nhập...</span>}
+
       {!importing && importTotal > 0 && (
         <span className="text-green-700 text-xs">
           Đã nhập {importDone}/{importTotal} dòng hợp lệ
         </span>
       )}
+
+      {/* =================================================
+      CẬP NHẬT CP SỬA XE
+      ================================================= */}
+
+      <button
+        onClick={handleUpdateRepairCost}
+        disabled={!monthFilter || updatingRepairCost}
+        className="bg-green-600 text-white px-2 py-1 rounded text-xs disabled:opacity-50"
+      >
+        {updatingRepairCost ? "Đang cập nhật..." : "Cập nhật chi phí"}
+      </button>
+
+      {/* =================================================
+      XEM CP SỬA XE
+      ================================================= */}
+
+      <button
+        onClick={() => {
+          if (!monthFilter) {
+            alert("Vui lòng chọn tháng/năm");
+            return;
+          }
+
+          setShowRepairCostModal(true);
+        }}
+        disabled={!monthFilter}
+        className="bg-purple-600 text-white px-2 py-1 rounded text-xs disabled:opacity-50"
+      >
+        Xem chi phí
+      </button>
     </div>
   );
+
+  // =====================================================
+  // RENDER
+  // =====================================================
 
   return (
     <div className="p-4">
       <Toolbar />
-      {loading && <p>Đang tải...</p>}
+
+      {loading && <p className="text-sm text-gray-500 mb-2">Đang tải...</p>}
+
       {renderTable()}
+
+      {/* =================================================
+        MODAL DANH SÁCH CP SỬA XE
+    ================================================= */}
+
+      <RepairCostVehicleProfitModal
+        open={showRepairCostModal}
+        onClose={() => setShowRepairCostModal(false)}
+        month={monthFilter}
+      />
     </div>
   );
 }

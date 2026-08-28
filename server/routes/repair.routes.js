@@ -20,29 +20,17 @@ router.get("/unique-vehiclePlates", repairController.getUniqueVehiclePlates);
 ======================= */
 router.get("/unique-repairUnits", repairController.getUniqueRepairUnits);
 
-/* =======================
-   THÊM
-======================= */
-router.post("/", repairController.create);
-
-/* =======================
-   SỬA
-======================= */
-router.put("/:id", repairController.update);
-
-/* =======================
-   XOÁ 1
-======================= */
-router.delete("/:id", repairController.remove);
+router.get("/repair-cost", repairController.getVehicleRepairCostByMonth);
 
 /* =======================
    XOÁ TẤT CẢ
 ======================= */
-router.delete("/", repairController.removeAll);
+router.delete("/month-year", repairController.removeByMonthYear);
 
 /* =======================
    IMPORT EXCEL
 ======================= */
 router.post("/import", upload.single("file"), repairController.importExcel);
+router.post("/update-repair-cost", repairController.updateVehicleProfitRepair);
 
 module.exports = router;

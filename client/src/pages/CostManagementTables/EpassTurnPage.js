@@ -1,107 +1,274 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
+import VehicleProfitEpassTurnModal from "../../components/CostModal/VehicleProfitEpassTurnModal";
 import API from "../../api";
 
 export default function EpassTurnPage() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({});
+  /* =====================================================
+     IMPORT
+  ===================================================== */
 
   const [importing, setImporting] = useState(false);
   const [importTotal, setImportTotal] = useState(0);
   const [importDone, setImportDone] = useState(0);
 
-  const baseUrl = `${API}/epass-turn`;
-
   const fileInputRef = useRef(null);
   const [importFile, setImportFile] = useState(null);
 
-  /* ================= FILTER BIỂN SỐ ================= */
+  const token = localStorage.getItem("token");
+
+  const baseUrl = `${API}/epass-turn`;
+
+  /* =====================================================
+     FILTER BSX
+  ===================================================== */
+
   const [bsxOptions, setBsxOptions] = useState([]);
   const [bsxFilter, setBsxFilter] = useState([]);
   const [bsxSearch, setBsxSearch] = useState("");
-  const [showBsxDropdown, setShowBsxDropdown] = useState(false);
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
 
-  /* ================= FETCH FILTER ================= */
+  const [showBsxDropdown, setShowBsxDropdown] = useState(false);
+
+  const [dropdownPos, setDropdownPos] = useState({
+    top: 0,
+    left: 0,
+  });
+
+  /* =====================================================
+     FILTER THÁNG
+     Theo TimeActions
+     Mặc định tháng hiện tại
+  ===================================================== */
+
+  const getCurrentMonth = () => {
+    const now = new Date();
+
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}`;
+  };
+
+  const [monthFilter, setMonthFilter] = useState(getCurrentMonth());
+
+  const [showVehicleProfitModal, setShowVehicleProfitModal] = useState(false);
+  const [updatingVehicleProfit, setUpdatingVehicleProfit] = useState(false);
+
+  /* =====================================================
+     PHÂN TRANG
+  ===================================================== */
+
+  const [page, setPage] = useState(1);
+
+  const limit = 150;
+
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  /* =====================================================
+     FETCH BSX
+  ===================================================== */
+
   const fetchFilterOptions = async () => {
     try {
-      const res = await axios.get(`${baseUrl}/unique-bsx`);
-      const bsx = res.data || [];
+      const res = await axios.get(`${baseUrl}/unique-bsx`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const bsx = Array.isArray(res.data) ? res.data : [];
+
       setBsxOptions(bsx);
-      setBsxFilter(bsx); // mặc định chọn tất cả
+
+      /*
+       * Nếu chưa có filter thì chọn tất cả
+       */
+      setBsxFilter((prev) => {
+        if (prev.length === 0) {
+          return bsx;
+        }
+
+        return prev.filter((item) => bsx.includes(item));
+      });
     } catch (err) {
-      console.error(err);
+      console.error("Lỗi lấy danh sách BSX:", err);
     }
   };
 
+  /* =====================================================
+     LOAD BSX LẦN ĐẦU
+  ===================================================== */
 
   useEffect(() => {
     fetchFilterOptions();
   }, []);
 
-  const [page, setPage] = useState(1);
-  const limit = 150;
-  const [totalPages, setTotalPages] = useState(1);
+  /* =====================================================
+     FETCH DATA
+  ===================================================== */
 
-  /* ================= FETCH DATA ================= */
-const fetchData = async () => {
-  setLoading(true);
-  try {
-    const params = { page, limit };
+  const fetchData = async () => {
+    setLoading(true);
 
-    // Nếu không chọn tất cả thì gửi filter
-    if (bsxFilter.length > 0 && bsxFilter.length !== bsxOptions.length) {
-      params.bienSoXe = bsxFilter;
-    }
+    try {
+      /*
+       * BE hiện tại chỉ hỗ trợ:
+       * page
+       * limit
+       * bienSoXe
+       *
+       * Không filter tháng ở BE.
+       *
+       * Vì vậy lấy dữ liệu theo trang trước,
+       * sau đó filter TimeActions ở FE.
+       */
 
-    const res = await axios.get(baseUrl, {
-      params,
-      // serialize array thành multiple query param
-      paramsSerializer: (params) => {
-        const qs = [];
-        Object.keys(params).forEach((key) => {
-          const value = params[key];
-          if (Array.isArray(value)) {
-            value.forEach((v) => qs.push(`${key}=${encodeURIComponent(v)}`));
-          } else {
-            qs.push(`${key}=${encodeURIComponent(value)}`);
+      const params = {
+        page,
+        limit,
+      };
+
+      /*
+       * Nếu chọn một phần BSX
+       * thì gửi bienSoXe nhiều lần:
+       *
+       * ?bienSoXe=30A-xxx&bienSoXe=30B-xxx
+       */
+
+      if (bsxFilter.length > 0 && bsxFilter.length !== bsxOptions.length) {
+        params.bienSoXe = bsxFilter;
+      }
+
+      const res = await axios.get(baseUrl, {
+        params,
+
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+
+        paramsSerializer: (params) => {
+          const qs = [];
+
+          Object.keys(params).forEach((key) => {
+            const value = params[key];
+
+            if (Array.isArray(value)) {
+              value.forEach((v) => {
+                qs.push(`${key}=${encodeURIComponent(v)}`);
+              });
+            } else {
+              qs.push(`${key}=${encodeURIComponent(value)}`);
+            }
+          });
+
+          return qs.join("&");
+        },
+      });
+
+      let fetchedData = Array.isArray(res.data?.data) ? res.data.data : [];
+
+      /*
+       * =================================================
+       * FILTER THÁNG
+       * Theo TimeActions
+       * =================================================
+       */
+
+      if (monthFilter) {
+        fetchedData = fetchedData.filter((r) => {
+          if (!r.TimeActions) {
+            return false;
           }
+
+          const date = new Date(r.TimeActions);
+
+          if (Number.isNaN(date.getTime())) {
+            return false;
+          }
+
+          const year = date.getFullYear();
+
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+
+          return `${year}-${month}` === monthFilter;
         });
-        return qs.join("&");
-      },
-    });
+      }
 
-    setData(Array.isArray(res.data.data) ? res.data.data : []);
-    setTotalPages(res.data.totalPages || 1);
-  } catch (err) {
-    console.error(err);
-    setData([]);
-  } finally {
-    setLoading(false);
-  }
-};
+      setData(fetchedData);
 
+      /*
+       * totalPages lấy trực tiếp từ BE
+       */
+      setTotalPages(Number(res.data?.totalPages || 1));
+
+      setTotal(Number(res.data?.total || 0));
+    } catch (err) {
+      console.error("Lỗi lấy dữ liệu EpassTurn:", err);
+
+      setData([]);
+      setTotalPages(1);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* =====================================================
+     LOAD KHI FILTER / PAGE THAY ĐỔI
+  ===================================================== */
 
   useEffect(() => {
-    fetchData();
-    setEditing(null);
-    setForm({});
-  }, [page,bsxFilter.length, bsxFilter.join(",")]);
+    if (bsxOptions.length === 0) {
+      return;
+    }
 
-  /* ================= IMPORT ================= */
+    fetchData();
+
+    setImporting(false);
+    setImportTotal(0);
+    setImportDone(0);
+  }, [page, monthFilter, bsxFilter.length, bsxFilter.join(",")]);
+
+  /* =====================================================
+     KHI ĐỔI THÁNG
+     VỀ TRANG 1
+  ===================================================== */
+
+  const handleMonthChange = (e) => {
+    setMonthFilter(e.target.value);
+    setPage(1);
+  };
+
+  /* =====================================================
+     IMPORT FILE
+  ===================================================== */
+
   const handleSelectFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const file = e.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
     setImportFile(file);
   };
 
+  /* =====================================================
+     IMPORT
+  ===================================================== */
+
   const handleImport = async () => {
-    if (!importFile) return alert("Chưa chọn file");
+    if (!importFile) {
+      alert("Chưa chọn file Excel");
+      return;
+    }
 
     const formData = new FormData();
+
     formData.append("file", importFile);
 
     setImporting(true);
@@ -110,105 +277,367 @@ const fetchData = async () => {
 
     try {
       const res = await axios.post(`${baseUrl}/import-excel`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
-      setImportTotal(res.data.totalValid || 0);
-      setImportDone(res.data.inserted || 0);
-      fetchData();
+
+      const total = Number(res.data?.totalValid || 0);
+
+      const inserted = Number(res.data?.inserted || 0);
+
+      setImportTotal(total);
+      setImportDone(inserted);
+
+      /*
+       * Cập nhật lại BSX
+       */
+      await fetchFilterOptions();
+
+      /*
+       * Về trang 1 sau import
+       */
+      setPage(1);
+
+      /*
+       * Lấy lại data
+       */
+      await fetchData();
+
+      alert(`Import thành công ${inserted} dòng.`);
     } catch (err) {
-      alert(err.response?.data?.message || "Import thất bại");
+      console.error("IMPORT EPASS TURN ERROR:", err);
+
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        "Import thất bại";
+
+      alert(msg);
     } finally {
       setImporting(false);
+
       setImportFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
 
-  /* ================= CRUD ================= */
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-  };
-
-  const handleAddNew = () => {
-    setEditing("new");
-    setForm({});
-  };
-
-  const handleEdit = (row) => {
-    setEditing(row._id);
-    setForm({ ...row });
-  };
-
-  const handleSave = async () => {
-    try {
-      if (editing === "new") {
-        await axios.post(baseUrl, form);
-      } else {
-        await axios.put(`${baseUrl}/${editing}`, form);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
-      fetchData();
-      setEditing(null);
-    } catch (err) {
-      console.error(err);
+
+      setTimeout(() => {
+        setImportTotal(0);
+        setImportDone(0);
+      }, 2000);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Xóa dòng này?")) return;
-    await axios.delete(`${baseUrl}/${id}`);
-    fetchData();
+  /* =====================================================
+     CẬP NHẬT
+  ===================================================== */
+  const handleUpdateVehicleProfit = async () => {
+    if (!monthFilter) {
+      return alert("Vui lòng chọn tháng");
+    }
+
+    if (updatingVehicleProfit) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        `Bạn có chắc muốn cập nhật chi phí Epass lượt vào VehicleProfit tháng ${monthFilter}?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setUpdatingVehicleProfit(true);
+
+      const token = localStorage.getItem("token");
+
+      const res = await axios.post(
+        `${baseUrl}/vehicle-profit/update`,
+        {
+          month: monthFilter,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert(res.data?.message || "Cập nhật chi phí Epass lượt thành công");
+
+      // Nếu muốn load lại bảng sau khi cập nhật
+      await fetchData();
+    } catch (err) {
+      console.error("UPDATE EPASS TURN VEHICLE PROFIT ERROR:", err);
+
+      alert(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          err.message ||
+          "Cập nhật chi phí Epass lượt thất bại",
+      );
+    } finally {
+      setUpdatingVehicleProfit(false);
+    }
   };
 
-  const handleDeleteAll = async () => {
-    if (!window.confirm("Xóa toàn bộ dữ liệu?")) return;
-    await axios.delete(baseUrl);
-    fetchData();
+  /* =====================================================
+     XÓA THEO THÁNG
+  ===================================================== */
+
+  const handleDeleteByMonth = async () => {
+    if (!monthFilter) {
+      return alert("Vui lòng chọn tháng");
+    }
+
+    const [year, month] = monthFilter.split("-");
+
+    if (
+      !window.confirm(
+        `Bạn có chắc muốn xoá toàn bộ Epass lượt có thời gian giao dịch trong tháng ${month}/${year}?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await axios.delete(`${baseUrl}/by-month-year`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+
+        data: {
+          month: Number(month),
+          year: Number(year),
+        },
+      });
+
+      alert(res.data.message);
+
+      /*
+       * Về trang 1
+       */
+      setPage(1);
+
+      /*
+       * Cập nhật lại BSX
+       */
+      await fetchFilterOptions();
+
+      /*
+       * Load lại data
+       */
+      await fetchData();
+    } catch (err) {
+      console.error("DELETE EPASS TURN ERROR:", err);
+
+      alert(
+        err.response?.data?.message || err.message || "Xoá dữ liệu thất bại",
+      );
+    }
   };
 
-  /* ================= TABLE ================= */
-  return (
-    <div className="p-4">
-      {/* TOOLBAR */}
-      <div className="flex gap-2 mb-3 items-center">
+  /* =====================================================
+     FORMAT TIỀN
+  ===================================================== */
+
+  const formatMoney = (value) => {
+    return Number(value || 0).toLocaleString("vi-VN");
+  };
+
+  /* =====================================================
+     FORMAT DATE TIME
+  ===================================================== */
+
+  const formatDateTime = (value) => {
+    if (!value) {
+      return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    return date.toLocaleString("vi-VN");
+  };
+
+  /* =====================================================
+     TỔNG TIỀN
+  ===================================================== */
+
+  const totalMoney = data.reduce((sum, r) => sum + Number(r.price || 0), 0);
+
+  /* =====================================================
+     TOOLBAR
+  ===================================================== */
+
+  const Toolbar = () => (
+    <div className="flex gap-2 mb-3 items-center flex-wrap">
+      {/* =================================================
+          THÁNG
+      ================================================= */}
+
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-semibold">Tháng:</span>
+
         <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleSelectFile}
-          className="hidden"
+          type="month"
+          value={monthFilter}
+          onChange={handleMonthChange}
+          className="border rounded px-2 py-1 text-sm"
         />
-        <button
-          onClick={() => fileInputRef.current.click()}
-          className="border px-2 py-1"
-        >
-          Chọn file
-        </button>
-        {importFile && <span className="text-xs">{importFile.name}</span>}
-        <button
-          onClick={handleImport}
-          disabled={!importFile || importing}
-          className="bg-blue-600 text-white px-2 py-1"
-        >
-          Import
-        </button>
-        <button
-          onClick={handleAddNew}
-          className="bg-green-600 text-white px-2 py-1"
-        >
-          + Thêm
-        </button>
-        <button
-          onClick={handleDeleteAll}
-          className="bg-red-600 text-white px-2 py-1"
-        >
-          Xóa tất cả
-        </button>
       </div>
 
-      {/* TABLE */}
-      <div className="border rounded overflow-auto max-h-[70vh]">
-        <table className="w-full table-auto border-separate border-spacing-0 text-xs">
-          <thead className="sticky top-0 bg-blue-600 text-white">
+      {/* =================================================
+          FILE INPUT
+      ================================================= */}
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleSelectFile}
+        className="hidden"
+        accept=".xlsx,.xls"
+      />
+
+      {/* =================================================
+          CHỌN FILE
+      ================================================= */}
+
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        className="border px-2 py-1 rounded bg-white"
+      >
+        {importFile ? "Đã chọn file" : "Chọn file"}
+      </button>
+
+      {/* =================================================
+          TÊN FILE
+      ================================================= */}
+
+      {importFile && (
+        <span className="text-xs text-gray-600 max-w-[250px] truncate">
+          {importFile.name}
+        </span>
+      )}
+
+      {/* =================================================
+          IMPORT
+      ================================================= */}
+
+      <button
+        onClick={handleImport}
+        disabled={!importFile || importing}
+        className="bg-blue-600 text-white px-3 py-1 rounded disabled:opacity-50"
+      >
+        {importing ? "Đang import..." : "Import"}
+      </button>
+
+      {/* =================================================
+          XÓA THEO THÁNG
+      ================================================= */}
+
+      <button
+        onClick={handleDeleteByMonth}
+        disabled={!monthFilter}
+        className="bg-red-600 text-white px-2 py-1 rounded disabled:opacity-50"
+      >
+        Xóa theo tháng
+      </button>
+
+      {/* =================================================
+          TRẠNG THÁI IMPORT
+      ================================================= */}
+
+      {importing && (
+        <span className="text-blue-600 text-xs">Đang nhập dữ liệu...</span>
+      )}
+
+      {!importing && importTotal > 0 && (
+        <span className="text-green-700 text-xs">
+          Đã nhập {importDone}/{importTotal} dòng
+        </span>
+      )}
+
+      {/* =================================================
+    CẬP NHẬT VEHICLE PROFIT
+      ================================================= */}
+
+      <button
+        type="button"
+        onClick={handleUpdateVehicleProfit}
+        disabled={!monthFilter || updatingVehicleProfit}
+        className="bg-green-600 text-white px-3 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {updatingVehicleProfit ? "Đang cập nhật..." : "Cập nhật chi phí"}
+      </button>
+
+      {/* =================================================
+    XEM VEHICLE PROFIT
+================================================= */}
+
+      <button
+        onClick={() => setShowVehicleProfitModal(true)}
+        disabled={!monthFilter}
+        className="bg-purple-600 text-white px-3 py-1 rounded disabled:opacity-50"
+      >
+        Xem chi phí
+      </button>
+    </div>
+  );
+
+  /* =====================================================
+     TABLE
+  ===================================================== */
+
+  return (
+    <div className="p-4">
+      <Toolbar />
+
+      {/* =================================================
+          SUMMARY
+      ================================================= */}
+
+      <div className="flex justify-between items-center mb-2 text-xs">
+        <div>
+          Tổng số dòng trang này: <b>{data.length}</b>
+          {total > 0 && (
+            <>
+              {" "}
+              / Tổng dữ liệu: <b>{total}</b>
+            </>
+          )}
+        </div>
+
+        <div>
+          Tổng tiền trang này:{" "}
+          <b className="text-red-600">{formatMoney(totalMoney)}</b> VNĐ
+        </div>
+      </div>
+
+      {/* =================================================
+          LOADING
+      ================================================= */}
+
+      {loading && (
+        <p className="text-sm text-gray-500 mb-2">Đang tải dữ liệu...</p>
+      )}
+
+      {/* =================================================
+          TABLE
+      ================================================= */}
+
+      <div className="border rounded-lg overflow-auto max-h-[70vh] shadow-sm">
+        <table className="min-w-[1400px] w-full table-auto border-separate border-spacing-0 text-xs">
+          <thead className="sticky top-0 bg-blue-600 text-white z-20">
             <tr>
               {[
                 "STT",
@@ -222,94 +651,116 @@ const fetchData = async () => {
                 "HÌNH THỨC THU PHÍ",
                 "LOẠI VÉ",
                 "GIÁ TIỀN",
-                "HÀNH ĐỘNG",
               ].map((h) => (
-                <th key={h} className="border px-2 py-2 text-center">
+                <th
+                  key={h}
+                  className="border px-2 py-2 text-center whitespace-nowrap"
+                >
                   {h === "BIỂN SỐ XE" ? (
-                    <div className="flex flex-col relative">
+                    <div className="relative flex flex-col">
                       <span
-                        className="cursor-pointer"
+                        className="cursor-pointer select-none"
                         onClick={(e) => {
-                          const r = e.target.getBoundingClientRect();
+                          const rect = e.currentTarget.getBoundingClientRect();
+
                           setDropdownPos({
-                            top: r.bottom + window.scrollY,
-                            left: r.left + window.scrollX,
+                            top: rect.bottom + window.scrollY,
+                            left: rect.left + window.scrollX,
                           });
+
                           setShowBsxDropdown((p) => !p);
                         }}
                       >
                         {h}
                       </span>
-                      {/* DROPDOWN FILTER BSX */}
-                        {showBsxDropdown && (
-                          <div
-                            className="fixed z-[999] w-48 border rounded bg-white text-black p-2 shadow-lg"
-                            style={{
-                              top: dropdownPos.top,
-                              left: dropdownPos.left,
-                            }}
-                          >
+
+                      {/* =================================================
+                          DROPDOWN BSX
+                      ================================================= */}
+
+                      {showBsxDropdown && (
+                        <div
+                          className="fixed z-[999] w-48 border rounded bg-white text-black p-2 shadow-lg"
+                          style={{
+                            top: `${dropdownPos.top}px`,
+                            left: `${dropdownPos.left}px`,
+                          }}
+                        >
+                          {/* SEARCH */}
+
+                          <input
+                            type="text"
+                            placeholder="Tìm biển số..."
+                            className="w-full border rounded px-1 mb-1"
+                            value={bsxSearch}
+                            onChange={(e) => setBsxSearch(e.target.value)}
+                          />
+
+                          {/* CHỌN TẤT CẢ */}
+
+                          <label className="flex items-center gap-1 mb-1">
                             <input
-                              type="text"
-                              placeholder="Tìm biển số..."
-                              className="w-full border rounded px-1 mb-1"
-                              value={bsxSearch}
-                              onChange={(e) => setBsxSearch(e.target.value)}
+                              type="checkbox"
+                              checked={
+                                bsxOptions.length > 0 &&
+                                bsxFilter.length === bsxOptions.length
+                              }
+                              onChange={(e) => {
+                                setBsxFilter(
+                                  e.target.checked ? [...bsxOptions] : [],
+                                );
+
+                                setPage(1);
+                              }}
                             />
 
-                            <label className="flex items-center gap-1 mb-1">
-                              <input
-                                type="checkbox"
-                                checked={
-                                  bsxOptions.length > 0 &&
-                                  bsxFilter.length === bsxOptions.length
-                                }
-                                onChange={(e) =>
-                                  setBsxFilter(
-                                    e.target.checked ? [...bsxOptions] : []
-                                  )
-                                }
-                              />
-                              <span>Chọn tất cả</span>
-                            </label>
+                            <span>Chọn tất cả</span>
+                          </label>
 
-                            <div className="max-h-40 overflow-auto">
-                              {bsxOptions
-                                .filter((v) =>
-                                  v
-                                    .toLowerCase()
-                                    .includes(bsxSearch.toLowerCase())
-                                )
-                                .map((v) => (
-                                  <label
-                                    key={v}
-                                    className="flex items-center gap-1 mb-1"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={bsxFilter.includes(v)}
-                                      onChange={(e) =>
-                                        setBsxFilter((prev) =>
-                                          e.target.checked
-                                            ? [...prev, v]
-                                            : prev.filter((x) => x !== v)
-                                        )
-                                      }
-                                    />
-                                    <span>{v}</span>
-                                  </label>
-                                ))}
-                            </div>
+                          {/* DANH SÁCH BSX */}
 
-                            <button
-                              onClick={() => setShowBsxDropdown(false)}
-                              className="mt-1 w-full bg-blue-600 text-white text-xs py-0.5 rounded"
-                            >
-                              Đóng
-                            </button>
+                          <div className="max-h-40 overflow-auto">
+                            {bsxOptions
+                              .filter((v) =>
+                                String(v)
+                                  .toLowerCase()
+                                  .includes(bsxSearch.toLowerCase()),
+                              )
+                              .map((v) => (
+                                <label
+                                  key={v}
+                                  className="flex items-center gap-1 mb-1"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={bsxFilter.includes(v)}
+                                    onChange={(e) => {
+                                      setBsxFilter((prev) =>
+                                        e.target.checked
+                                          ? [...prev, v]
+                                          : prev.filter((x) => x !== v),
+                                      );
+
+                                      setPage(1);
+                                    }}
+                                  />
+
+                                  <span>{v}</span>
+                                </label>
+                              ))}
                           </div>
-                        )}
-                      </div>
+
+                          {/* ĐÓNG */}
+
+                          <button
+                            onClick={() => setShowBsxDropdown(false)}
+                            className="mt-1 w-full bg-blue-600 text-white text-xs py-0.5 rounded"
+                          >
+                            Đóng
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     h
                   )}
@@ -319,283 +770,106 @@ const fetchData = async () => {
           </thead>
 
           <tbody>
-            {/* NEW ROW */}
-            {editing === "new" && (
-              <tr className="bg-green-100">
-                <td />
-                <td>
-                  <input
-                    name="maGD"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
+            {data.map((r, i) => (
+              <tr
+                key={r._id}
+                className={
+                  r.isDontMatchCP
+                    ? "text-red-600 even:bg-red-50 hover:bg-red-100"
+                    : "even:bg-gray-50 hover:bg-blue-50"
+                }
+              >
+                {/* STT */}
+                <td className="border px-2 py-1 text-center">
+                  {(page - 1) * limit + i + 1}
                 </td>
-                <td>
-                  <input
-                    name="TramVao"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
+
+                {/* MÃ GD */}
+                <td className="border px-2 py-1">{r.maGD}</td>
+
+                {/* TRẠM VÀO */}
+                <td className="border px-2 py-1">{r.TramVao}</td>
+
+                {/* TIME IN */}
+                <td className="border px-2 py-1 text-center whitespace-nowrap">
+                  {formatDateTime(r.TimeIn)}
                 </td>
-                <td>
-                  <input
-                    type="datetime-local"
-                    name="TimeIn"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
+
+                {/* TRẠM RA */}
+                <td className="border px-2 py-1">{r.TramRa}</td>
+
+                {/* TIME OUT */}
+                <td className="border px-2 py-1 text-center whitespace-nowrap">
+                  {formatDateTime(r.TimeOut)}
                 </td>
-                <td>
-                  <input
-                    name="TramRa"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
+
+                {/* TIME ACTIONS */}
+                <td className="border px-2 py-1 text-center whitespace-nowrap">
+                  {formatDateTime(r.TimeActions)}
                 </td>
-                <td>
-                  <input
-                    type="datetime-local"
-                    name="TimeOut"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
+
+                {/* BSX */}
+                <td className="border px-2 py-1 font-semibold">{r.bienSoXe}</td>
+
+                {/* HÌNH THỨC THU PHÍ */}
+                <td className="border px-2 py-1">{r.htThuPhi}</td>
+
+                {/* LOẠI VÉ */}
+                <td className="border px-2 py-1 text-center">{r.loaiVe}</td>
+
+                {/* GIÁ */}
+                <td className="border px-2 py-1 text-right font-semibold">
+                  {formatMoney(r.price)}
                 </td>
-                <td>
-                  <input
-                    type="datetime-local"
-                    name="TimeActions"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
-                </td>
-                <td>
-                  <input
-                    name="bienSoXe"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
-                </td>
-                <td>
-                  <input
-                    name="htThuPhi"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
-                </td>
-                <td>
-                  <input
-                    name="loaiVe"
-                    onChange={handleChange}
-                    className="border px-1"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="number"
-                    name="price"
-                    onChange={handleChange}
-                    className="border px-1 text-right"
-                  />
-                </td>
-                <td className="text-center">
-                  <button onClick={handleSave} className="text-green-600 mr-2">
-                    Lưu
-                  </button>
-                  <button
-                    onClick={() => setEditing(null)}
-                    className="text-gray-600"
-                  >
-                    Huỷ
-                  </button>
+              </tr>
+            ))}
+
+            {!loading && data.length === 0 && (
+              <tr>
+                <td
+                  colSpan={11}
+                  className="border px-2 py-8 text-center text-gray-500"
+                >
+                  Không có dữ liệu
                 </td>
               </tr>
             )}
-
-            {/* DATA */}
-            {data.map((r, i) => (
-              <tr key={r._id} className="even:bg-gray-50 hover:bg-blue-50">
-                {editing === r._id ? (
-                  <>
-                    <td className="border text-center">{i + 1}</td>
-
-                    <td className="border px-1">
-                      <input
-                        name="maGD"
-                        value={form.maGD || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-1">
-                      <input
-                        name="TramVao"
-                        value={form.TramVao || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-1">
-                      <input
-                        type="datetime-local"
-                        name="TimeIn"
-                        value={form.TimeIn ? form.TimeIn.slice(0, 16) : ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-1">
-                      <input
-                        name="TramRa"
-                        value={form.TramRa || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-1">
-                      <input
-                        type="datetime-local"
-                        name="TimeOut"
-                        value={form.TimeOut ? form.TimeOut.slice(0, 16) : ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-1">
-                      <input
-                        type="datetime-local"
-                        name="TimeActions"
-                        value={
-                          form.TimeActions ? form.TimeActions.slice(0, 16) : ""
-                        }
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-1">
-                      <input
-                        name="bienSoXe"
-                        value={form.bienSoXe || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-1">
-                      <input
-                        name="htThuPhi"
-                        value={form.htThuPhi || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-1">
-                      <input
-                        name="loaiVe"
-                        value={form.loaiVe || ""}
-                        onChange={handleChange}
-                        className="border px-1 w-full"
-                      />
-                    </td>
-
-                    <td className="border px-1">
-                      <input
-                        type="number"
-                        name="price"
-                        value={form.price || 0}
-                        onChange={handleChange}
-                        className="border px-1 w-full text-right"
-                      />
-                    </td>
-
-                    <td className="border text-center">
-                      <button
-                        onClick={handleSave}
-                        className="text-green-600 mr-2"
-                      >
-                        Lưu
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditing(null);
-                          setForm({});
-                        }}
-                        className="text-gray-600"
-                      >
-                        Huỷ
-                      </button>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="border text-center">{i + 1}</td>
-                    <td className="border px-1">{r.maGD}</td>
-                    <td className="border px-1">{r.TramVao}</td>
-                    <td className="border px-1">
-                      {r.TimeIn && new Date(r.TimeIn).toLocaleString("vi-VN")}
-                    </td>
-                    <td className="border px-1">{r.TramRa}</td>
-                    <td className="border px-1">
-                      {r.TimeOut && new Date(r.TimeOut).toLocaleString("vi-VN")}
-                    </td>
-                    <td className="border px-1">
-                      {r.TimeActions &&
-                        new Date(r.TimeActions).toLocaleString("vi-VN")}
-                    </td>
-                    <td className="border px-1">{r.bienSoXe}</td>
-                    <td className="border px-1">{r.htThuPhi}</td>
-                    <td className="border px-1">{r.loaiVe}</td>
-                    <td className="border px-1 text-right font-semibold">
-                      {r.price?.toLocaleString("vi-VN")}
-                    </td>
-                    <td className="border text-center">
-                      <button
-                        onClick={() => handleEdit(r)}
-                        className="text-blue-600 mr-2"
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        onClick={() => handleDelete(r._id)}
-                        className="text-red-600"
-                      >
-                        Xóa
-                      </button>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
           </tbody>
         </table>
       </div>
+
+      {/* =====================================================
+          PHÂN TRANG
+      ===================================================== */}
+
       <div className="flex gap-2 justify-center mt-3 text-xs items-center">
         <button
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-          className="border px-2 py-1"
+          disabled={loading || page === 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          className="border px-3 py-1 rounded disabled:opacity-50"
         >
           ◀ Trước
         </button>
 
         <span>
-          Trang {page} / {totalPages}
+          Trang <b>{page}</b> / <b>{totalPages}</b>
         </span>
 
         <button
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => p + 1)}
-          className="border px-2 py-1"
+          disabled={loading || page === totalPages}
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          className="border px-3 py-1 rounded disabled:opacity-50"
         >
           Sau ▶
         </button>
       </div>
+
+      {showVehicleProfitModal && (
+        <VehicleProfitEpassTurnModal
+          month={monthFilter}
+          onClose={() => setShowVehicleProfitModal(false)}
+        />
+      )}
     </div>
   );
 }

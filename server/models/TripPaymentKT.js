@@ -1,14 +1,14 @@
 const mongoose = require("mongoose");
 
 const TripPaymentKTSchema = new mongoose.Schema({
-  tenLaiXe: { type: String, required: true },          //Tên lái xe
-  bienSoXe: { type: String, required: true },            //Biển số xe
-  ngayThang: { type: Date, default: '' },                    // Ngày tháng
-  totalMoney: { type: Number, default: 0 },                  //Tổng tiền lịch trình
-  ghiChu: { type: String },                              // Ghi chú
-  dayPayment: { type: Date, default: '' },                    // Ngày thanh toán
+  ngayThang: { type: Date, default: "" }, // Ngày tháng
+  maXe: { type: String, default: "" }, //Mã xe
+  totalMoney: { type: Number, default: 0 }, //Số tiền
+  bienSoXe: { type: String, trim: true }, //Biển số xe
+  tenLaiXe: { type: String, trim: true }, //Tên lái xe
+  ghiChu: { type: String }, // Ghi chú
+  isDontMatchCP: { type: Boolean, default: false},
 });
-
 
 const TripPaymentKT = mongoose.model("TripPaymentKT", TripPaymentKTSchema);
 

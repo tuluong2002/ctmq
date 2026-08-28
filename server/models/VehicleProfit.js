@@ -5,46 +5,39 @@ const vehicleProfitSchema = new mongoose.Schema(
     // ==========================================
     // BIỂN SỐ XE
     // ==========================================
-    bsx: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    bsx: { type: String, required: true, trim: true },
 
     // ==========================================
     // MÃ LỢI NHUẬN
     // Ví dụ: LN.7.2026
     // ==========================================
-    maLoiNhuan: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    maLoiNhuan: { type: String, required: true, trim: true },
 
     // ==========================================
     // CHI PHÍ
     // ==========================================
-    chiPhi: {
-      type: Number,
-      default: 0,
-    },
+    chiPhi: { type: Number, default: 0 },
+
+    cpNhienLieu: { type: Number, default: 0 },
+    cpSuaXe: { type: Number, default: 0 },
+    cpKhac: { type: Number, default: 0 },
+
+    cpEpassMonth: { type: Number, default: 0 },
+    cpEpassTurn: { type: Number, default: 0 },
+    cpEpassTotal: { type: Number, default: 0 }, //Tổng epass = epass tháng + epass lượt
+
+    cpThanhToanLichTrinh: { type: Number, default: 0 },
 
     // ==========================================
     // DOANH THU
     // ==========================================
-    doanhThu: {
-      type: Number,
-      default: 0,
-    },
+    doanhThu: { type: Number, default: 0 },
 
     // ==========================================
     // LỢI NHUẬN
     // = DOANH THU - CHI PHÍ
     // ==========================================
-    loiNhuan: {
-      type: Number,
-      default: 0,
-    },
+    loiNhuan: { type: Number, default: 0 },
   },
   {
     timestamps: true,

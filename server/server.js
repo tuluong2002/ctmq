@@ -59,9 +59,10 @@ app.use("/api/vehicle-profit", vehicleProfitRoutes);
 
 app.use("/api/fuel-vinh-khuc", require("./routes/fuelVinhKhuc.routes"));
 app.use("/api/fuel-ngoc-long", require("./routes/fuelNgocLong.routes"));
+app.use("/api/fuel-dau-ngoai", require("./routes/fuelDauNgoai.routes"));
 
 app.use("/api/repair", require("./routes/repair.routes"));
-app.use("/api/tire", require("./routes/tire.routes"));
+app.use("/api/other-cost", require("./routes/otherCost.routes"));
 app.use("/api/depreciation", require("./routes/depreciation.routes"));
 app.use("/api/epass-month", require("./routes/epassMonth.routes"));
 app.use("/api/epass-turn", require("./routes/epassTurn.routes"));
@@ -69,20 +70,27 @@ app.use("/api/etc", require("./routes/etc.routes"));
 app.use("/api/vehicle-legal", require("./routes/vehicleLegal.routes"));
 app.use("/api/salary", require("./routes/salary.routes"));
 app.use("/api/trip-payment-kt", require("./routes/tripPaymentKT.routes"));
+app.use("/api/ncc", require("./routes/nccRoutes"));
+app.use("/api/de-nghi-thanh-toan", require("./routes/deNghiThanhToanRoutes"));
+
+
 app.use(
   "/api/transportation-contract",
   require("./routes/transportationContract.routes"),
 );
+
 app.use("/api/tcb-person", require("./routes/TCBperson.routes"));
 
 app.use("/api/address", require("./routes/address.routes"));
 app.use("/api/customer2", require("./routes/customer2.routes"));
 
-
 //Quản lý NV/LX nghỉ và ứng tiền
 app.use("/api/employee-leave", employeeLeaveRoutes);
 app.use("/api/employee-advance", employeeAdvanceRoutes);
-app.use("/api/employee-leave-advance/summary", employeeLeaveAdvanceSummaryRoutes);
+app.use(
+  "/api/employee-leave-advance/summary",
+  employeeLeaveAdvanceSummaryRoutes,
+);
 
 app.use("/api/trip-actual-cost", tripActualCostRoutes);
 
