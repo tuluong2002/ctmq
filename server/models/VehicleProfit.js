@@ -16,16 +16,14 @@ const vehicleProfitSchema = new mongoose.Schema(
     // ==========================================
     // CHI PHÍ
     // ==========================================
-    chiPhi: { type: Number, default: 0 },
+    cpLuong: { type: Number, default: 0 }, //được import từ excel
 
     cpNhienLieu: { type: Number, default: 0 },
     cpSuaXe: { type: Number, default: 0 },
-    cpKhac: { type: Number, default: 0 },
 
     cpEpassMonth: { type: Number, default: 0 },
     cpEpassTurn: { type: Number, default: 0 },
-    cpEpassTotal: { type: Number, default: 0 }, //Tổng epass = epass tháng + epass lượt
-
+    cpKhauHaoXe: { type: Number, default: 0 },
     cpThanhToanLichTrinh: { type: Number, default: 0 },
 
     // ==========================================
@@ -41,7 +39,7 @@ const vehicleProfitSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 // ==========================================
@@ -54,7 +52,7 @@ vehicleProfitSchema.index(
   },
   {
     unique: true,
-  },
+  }
 );
 
 module.exports = mongoose.model("VehicleProfit", vehicleProfitSchema);

@@ -1268,33 +1268,46 @@ const TripActualCostPage = ({ user }) => {
                       </td>
 
                       {/* GHI CHÚ */}
-
-                      <td className="border border-gray-300 px-2 py-1 min-w-[220px]">
-                        <input
-                          type="text"
-                          value={item.note || ""}
-                          disabled={
-                            item.isTrue ||
-                            !canManageTrip(item) ||
-                            isSaving ||
-                            isUpdating
-                          }
-                          placeholder={
-                            !canManageTrip(item)
-                              ? "Không có quyền"
-                              : item.isTrue
-                              ? "Đã khóa"
-                              : "Nhập ghi chú..."
-                          }
-                          onChange={(e) =>
-                            handleActualChange(item._id, "note", e.target.value)
-                          }
-                          className={`w-full border rounded-md px-2 py-1.5 outline-none transition ${
-                            item.isTrue || !canManageTrip(item)
-                              ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
-                              : "bg-white border-blue-300 focus:ring-2 focus:ring-blue-200"
-                          }`}
-                        />
+                      <td className="border border-gray-300 px-2 py-1 min-w-[220px] max-w-[350px]">
+                        {item.isTrue ? (
+                          // =========================
+                          // ĐÃ KHÓA -> HIỆN TOÀN BỘ TEXT
+                          // =========================
+                          <div
+                            className="w-full px-2 py-1.5 whitespace-normal break-words"
+                            title={item.note || ""}
+                          >
+                            {item.note || ""}
+                          </div>
+                        ) : (
+                          // =========================
+                          // CHƯA KHÓA -> CHO NHẬP
+                          // =========================
+                          <input
+                            type="text"
+                            value={item.note || ""}
+                            disabled={
+                              !canManageTrip(item) || isSaving || isUpdating
+                            }
+                            placeholder={
+                              !canManageTrip(item)
+                                ? "Không có quyền"
+                                : "Nhập ghi chú..."
+                            }
+                            onChange={(e) =>
+                              handleActualChange(
+                                item._id,
+                                "note",
+                                e.target.value
+                              )
+                            }
+                            className={`w-full border rounded-md px-2 py-1.5 outline-none transition ${
+                              !canManageTrip(item)
+                                ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
+                                : "bg-white border-blue-300 focus:ring-2 focus:ring-blue-200"
+                            }`}
+                          />
+                        )}
                       </td>
 
                       {/* TRẠNG THÁI */}
