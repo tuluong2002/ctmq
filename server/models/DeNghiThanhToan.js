@@ -134,6 +134,8 @@ const deNghiThanhToanSchema = new mongoose.Schema(
       },
     ],
 
+    huyPhieuTT: { type: Boolean, default: false },
+
     // ==========================================
     // NGƯỜI TẠO / CẬP NHẬT
     // ==========================================
@@ -149,7 +151,7 @@ const deNghiThanhToanSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 // Index để lấy danh sách theo tháng nhanh hơn

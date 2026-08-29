@@ -24,7 +24,7 @@ export default function DeNghiThanhToanPage({}) {
   const now = new Date();
 
   const [month, setMonth] = useState(
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
   );
 
   // =========================================================
@@ -98,7 +98,7 @@ export default function DeNghiThanhToanPage({}) {
       console.error("fetchNccList:", error);
 
       alert(
-        error.response?.data?.message || "Không thể lấy danh sách nhà cung cấp",
+        error.response?.data?.message || "Không thể lấy danh sách nhà cung cấp"
       );
     } finally {
       setLoadingNcc(false);
@@ -207,19 +207,47 @@ export default function DeNghiThanhToanPage({}) {
     try {
       await axios.post(
         `${API}/de-nghi-thanh-toan/${item._id}/print`,
-        {},
+        {
+          user: user,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
+
+      await fetchData();
 
       window.open(`/ke-toan/de-nghi-thanh-toan/${item._id}/print`, "_blank");
     } catch (error) {
       console.error("handlePrint:", error);
 
       alert(error.response?.data?.message || "Không thể ghi nhận lịch sử in");
+    }
+  };
+
+  const handleCancel = async (item) => {
+    const ok = window.confirm(`Bạn có chắc muốn hủy phiếu ${item.maPhieu}?`);
+
+    if (!ok) return;
+
+    try {
+      await axios.patch(
+        `${API}/de-nghi-thanh-toan/${item._id}/huy-phieu-tt`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      await fetchData();
+    } catch (error) {
+      console.error("handleCancel:", error);
+
+      alert(error.response?.data?.message || "Không thể hủy phiếu");
     }
   };
 
@@ -433,34 +461,64 @@ export default function DeNghiThanhToanPage({}) {
                   {/* THAO TÁC */}
 
                   <td className="border px-2 py-2">
-                    <div className="flex gap-1 justify-center">
-                      {/* SỬA */}
+                    {item.huyPhieuTT ? (
+                      // =====================================================
+                      // ĐÃ HỦY
+                      // =====================================================
+                      <div className="text-center text-red-600 font-semibold">
+                        Phiếu bị hủy
+                      </div>
+                    ) : item.lichSuIn?.length > 0 ? (
+                      // =====================================================
+                      // ĐÃ IN → IN + HỦY
+                      // =====================================================
+                      <div className="flex gap-1 justify-center">
+                        {/* IN */}
+                        <button
+                          onClick={() => handlePrint(item)}
+                          className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                        >
+                          In phiếu
+                        </button>
 
-                      <button
-                        onClick={() => openEdit(item)}
-                        className="px-2 py-1 border rounded hover:bg-gray-100"
-                      >
-                        Sửa
-                      </button>
+                        {/* HỦY */}
+                        <button
+                          onClick={() => handleCancel(item)}
+                          className="px-2 py-1 bg-orange-600 text-white rounded hover:bg-orange-700"
+                        >
+                          Hủy phiếu
+                        </button>
+                      </div>
+                    ) : (
+                      // =====================================================
+                      // CHƯA IN → SỬA + IN + XÓA
+                      // =====================================================
+                      <div className="flex gap-1 justify-center">
+                        {/* SỬA */}
+                        <button
+                          onClick={() => openEdit(item)}
+                          className="px-2 py-1 border rounded hover:bg-gray-100"
+                        >
+                          Sửa
+                        </button>
 
-                      {/* IN */}
+                        {/* IN */}
+                        <button
+                          onClick={() => handlePrint(item)}
+                          className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                        >
+                          In phiếu
+                        </button>
 
-                      <button
-                        onClick={() => handlePrint(item)}
-                        className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-                      >
-                        In phiếu
-                      </button>
-
-                      {/* XÓA */}
-
-                      <button
-                        onClick={() => handleDelete(item)}
-                        className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
-                      >
-                        Xóa
-                      </button>
-                    </div>
+                        {/* XÓA */}
+                        <button
+                          onClick={() => handleDelete(item)}
+                          className="px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))

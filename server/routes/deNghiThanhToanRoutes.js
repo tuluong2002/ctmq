@@ -10,6 +10,7 @@ const {
   updateDeNghiThanhToan,
   deleteDeNghiThanhToan,
   printDeNghiThanhToan,
+  cancelDeNghiThanhToan,
 } = require("../controllers/deNghiThanhToanController");
 
 // Nếu project có authMiddleware thì import ở đây
@@ -23,7 +24,7 @@ const {
 router.get(
   "/",
   // authMiddleware,
-  getDeNghiThanhToan,
+  getDeNghiThanhToan
 );
 
 router.get("/ncc-unique", getNCCUnique);
@@ -35,7 +36,7 @@ router.get("/ncc-unique", getNCCUnique);
 router.get(
   "/:id",
   // authMiddleware,
-  getOneDeNghiThanhToan,
+  getOneDeNghiThanhToan
 );
 
 /* =========================================================
@@ -45,7 +46,7 @@ router.get(
 router.post(
   "/",
   // authMiddleware,
-  createDeNghiThanhToan,
+  createDeNghiThanhToan
 );
 
 /* =========================================================
@@ -55,7 +56,7 @@ router.post(
 router.put(
   "/:id",
   // authMiddleware,
-  updateDeNghiThanhToan,
+  updateDeNghiThanhToan
 );
 
 /* =========================================================
@@ -65,7 +66,7 @@ router.put(
 router.delete(
   "/:id",
   // authMiddleware,
-  deleteDeNghiThanhToan,
+  deleteDeNghiThanhToan
 );
 
 /* =========================================================
@@ -76,7 +77,18 @@ router.delete(
 router.post(
   "/:id/print",
   // authMiddleware,
-  printDeNghiThanhToan,
+  printDeNghiThanhToan
+);
+
+/* =========================================================
+   HỦY PHIẾU THANH TOÁN
+   PATCH /api/de-nghi-thanh-toan/:id/huy-phieu-tt
+========================================================= */
+
+router.patch(
+  "/:id/huy-phieu-tt",
+  // authMiddleware,
+  cancelDeNghiThanhToan
 );
 
 module.exports = router;

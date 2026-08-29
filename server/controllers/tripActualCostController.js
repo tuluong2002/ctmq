@@ -88,6 +88,33 @@ const calculateDifference = (record) => {
 };
 
 // =====================================================
+// HELPER: GIÁ TRỊ THỰC TẾ BAN ĐẦU
+// - Gốc là số / chuỗi chỉ chứa số => giữ nguyên giá trị
+// - Gốc có text => 0
+// =====================================================
+
+const getInitialActualValue = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return 0;
+  }
+
+  // Nếu DB trả về Number
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const str = String(value).trim();
+
+  // Chỉ cho phép số nguyên, có thể âm
+  if (/^-?\d+$/.test(str)) {
+    return Number(str);
+  }
+
+  // Có text => thực tế = 0
+  return 0;
+};
+
+// =====================================================
 // 1. NHẬP MÃ CHUYẾN -> TẠO DATA
 // =====================================================
 
@@ -171,13 +198,15 @@ exports.createFromTrip = async (req, res) => {
 
       // =========================
       // GIÁ TRỊ THỰC TẾ
-      // MẶC ĐỊNH TRỐNG
+      // - Gốc là số => lấy số gốc
+      // - Gốc có text => 0
       // =========================
-      bocXepThucTe: trip.bocXep || "",
-      veThucTe: trip.ve || "",
-      hangVeThucTe: trip.hangVe || "",
-      luuCaThucTe: trip.luuCa || "",
-      luatChiPhiKhacThucTe: trip.luatChiPhiKhac || "",
+      bocXepThucTe: getInitialActualValue(trip.bocXep),
+      veThucTe: getInitialActualValue(trip.ve),
+      hangVeThucTe: getInitialActualValue(trip.hangVe),
+      luuCaThucTe: getInitialActualValue(trip.luuCa),
+      luatChiPhiKhacThucTe: getInitialActualValue(trip.luatChiPhiKhac),
+
       tongChenhLech: 0,
 
       // =========================
@@ -452,6 +481,19 @@ exports.updateActual = async (req, res) => {
 // =====================================================
 // 5. CẬP NHẬT THỰC TẾ -> CHUYẾN GỐC
 // =====================================================
+const isNumericValue = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return false;
+  }
+
+  if (typeof value === "number") {
+    return Number.isFinite(value);
+  }
+
+  const str = String(value).trim();
+
+  return /^-?\d+$/.test(str);
+};
 
 exports.updateToOriginalTrip = async (req, res) => {
   const session = await mongoose.startSession();
@@ -518,20 +560,49 @@ exports.updateToOriginalTrip = async (req, res) => {
       });
     }
 
-    // =========================
-    // CẬP NHẬT 5 GIÁ TRỊ
-    // VỀ CHUYẾN GỐC
-    // =========================
+    // =====================================================
+    // CẬP NHẬT 5 GIÁ TRỊ VỀ CHUYẾN GỐC
+    //
+    // 1. Gốc là số:
+    //    -> luôn lấy Thực tế
+    //
+    // 2. Gốc là text:
+    //    -> Thực tế = 0  => giữ nguyên text
+    //    -> Thực tế > 0  => thay text bằng tiền thực tế
+    // =====================================================
 
-    trip.bocXep = record.bocXepThucTe;
+    const updateOriginalValue = (originalValue, actualValue) => {
+      // Gốc là số
+      if (isNumericValue(originalValue)) {
+        return actualValue;
+      }
 
-    trip.ve = record.veThucTe;
+      // Gốc là text
+      const actualNumber = toNumber(actualValue);
 
-    trip.hangVe = record.hangVeThucTe;
+      // Thực tế chưa nhập / bằng 0
+      // => giữ nguyên text gốc
+      if (actualNumber === 0) {
+        return originalValue;
+      }
 
-    trip.luuCa = record.luuCaThucTe;
+      // Thực tế đã có tiền
+      // => thay text bằng tiền
+      return actualNumber;
+    };
 
-    trip.luatChiPhiKhac = record.luatChiPhiKhacThucTe;
+    trip.bocXep = updateOriginalValue(record.bocXep, record.bocXepThucTe);
+
+    trip.ve = updateOriginalValue(record.ve, record.veThucTe);
+
+    trip.hangVe = updateOriginalValue(record.hangVe, record.hangVeThucTe);
+
+    trip.luuCa = updateOriginalValue(record.luuCa, record.luuCaThucTe);
+
+    trip.luatChiPhiKhac = updateOriginalValue(
+      record.luatChiPhiKhac,
+      record.luatChiPhiKhacThucTe
+    );
 
     // =========================
     // KIỂM TRA CHÊNH LỆCH TỪNG KHOẢN
@@ -613,7 +684,7 @@ exports.getUserList = async (req, res) => {
       {
         username: 1,
         fullname: 1,
-      },
+      }
     )
       .sort({ fullname: 1, username: 1 })
       .lean();
@@ -707,10 +778,7 @@ const exportCostValue = (value) => {
   }
 
   const number = Number(
-    String(value)
-      .replace(/,/g, "")
-      .replace(/\./g, "")
-      .trim(),
+    String(value).replace(/,/g, "").replace(/\./g, "").trim()
   );
 
   return Number.isFinite(number) ? number : 0;
@@ -743,10 +811,7 @@ exports.exportExcel = async (req, res) => {
     const fromDate = new Date(`${from}T00:00:00.000+07:00`);
     const toDate = new Date(`${to}T23:59:59.999+07:00`);
 
-    if (
-      Number.isNaN(fromDate.getTime()) ||
-      Number.isNaN(toDate.getTime())
-    ) {
+    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
       return res.status(400).json({
         message: "Ngày không hợp lệ",
       });
@@ -792,7 +857,9 @@ exports.exportExcel = async (req, res) => {
 
     const workbook = new ExcelJS.Workbook();
 
-    await workbook.xlsx.readFile(path.join( __dirname, "../templates/SUA_CP_LX.xlsx"));
+    await workbook.xlsx.readFile(
+      path.join(__dirname, "../templates/SUA_CP_LX.xlsx")
+    );
 
     // ⚠️ Đổi thành đúng tên sheet trong file mẫu
     const sheet = workbook.getWorksheet("Sheet1");
@@ -886,9 +953,7 @@ exports.exportExcel = async (req, res) => {
       // TRẠNG THÁI
       // ======================
 
-      row.getCell("T").value = trip.isTrue
-        ? "Đã cập nhật"
-        : "Chưa cập nhật";
+      row.getCell("T").value = trip.isTrue ? "Đã cập nhật" : "Chưa cập nhật";
 
       row.commit();
     });
@@ -899,12 +964,12 @@ exports.exportExcel = async (req, res) => {
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=CHI_PHI_THUC_TE_${from}_den_${to}.xlsx`,
+      `attachment; filename=CHI_PHI_THUC_TE_${from}_den_${to}.xlsx`
     );
 
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
 
     await workbook.xlsx.write(res);

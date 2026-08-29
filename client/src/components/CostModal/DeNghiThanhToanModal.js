@@ -118,7 +118,7 @@ export default function DeNghiThanhToanModal({
       setForm({
         ngayDeNghi: getToday(),
 
-        nguoiDeNghi: getUserName(),
+        nguoiDeNghi: "",
 
         maSoThue: "",
 
@@ -161,7 +161,7 @@ export default function DeNghiThanhToanModal({
     return nccList.filter((item) =>
       String(item.tenNguoiBan || "")
         .toLowerCase()
-        .includes(keyword),
+        .includes(keyword)
     );
   }, [nccList, form.nhaCungCap]);
 
@@ -177,13 +177,10 @@ export default function DeNghiThanhToanModal({
   const handleSelectNcc = (item) => {
     setForm((prev) => ({
       ...prev,
-
       nhaCungCap: item.tenNguoiBan || "",
-
+      nguoiDeNghi: item.nguoiPhuTrach || prev.nguoiDeNghi || "",
       maSoThue: item.mst || "",
-
       stkNganHang: item.stkNganHang || "",
-
       nhomChiPhi: item.chiTietChiPhi || "",
     }));
 
@@ -326,9 +323,9 @@ export default function DeNghiThanhToanModal({
           <Field label="Người đề nghị *">
             <input
               value={form.nguoiDeNghi}
-              readOnly
-              disabled
-              className="input bg-gray-100 cursor-not-allowed"
+              onChange={(e) => handleChange("nguoiDeNghi", e.target.value)}
+              className="input"
+              placeholder="Nhập nhà cung cấp để lấy người phụ trách..."
             />
           </Field>
 

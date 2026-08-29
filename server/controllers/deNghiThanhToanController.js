@@ -32,6 +32,7 @@ exports.getNCCUnique = async (req, res) => {
             tenNguoiBan: "$tenNguoiBan",
             stkNganHang: "$stkNganHang",
             chiTietChiPhi: "$chiTietChiPhi",
+            nguoiPhuTrach: "$nguoiPhuTrach",
           },
         },
       },
@@ -43,6 +44,7 @@ exports.getNCCUnique = async (req, res) => {
           tenNguoiBan: "$_id.tenNguoiBan",
           stkNganHang: "$_id.stkNganHang",
           chiTietChiPhi: "$_id.chiTietChiPhi",
+          nguoiPhuTrach: "$_id.nguoiPhuTrach",
         },
       },
       { $sort: { stt: 1 } },
@@ -402,7 +404,7 @@ exports.printDeNghiThanhToan = async (req, res) => {
       });
     }
 
-    const user = req.user;
+    const user = req.body.user;
 
     const nguoiIn = user?.fullname || user?.username || "Không xác định";
 
@@ -427,3 +429,36 @@ exports.printDeNghiThanhToan = async (req, res) => {
   }
 };
 
+/* =========================================================
+   HỦY PHIẾU THANH TOÁN
+========================================================= */
+
+exports.cancelDeNghiThanhToan = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const item = await DeNghiThanhToan.findById(id);
+
+    if (!item) {
+      return res.status(404).json({
+        message: "Không tìm thấy phiếu",
+      });
+    }
+
+    item.huyPhieuTT = true;
+
+    await item.save();
+
+    res.json({
+      message: "Đã hủy phiếu thanh toán",
+      data: item,
+    });
+  } catch (error) {
+    console.error("cancelDeNghiThanhToan:", error);
+
+    res.status(500).json({
+      message: "Lỗi hủy phiếu thanh toán",
+      error: error.message,
+    });
+  }
+};

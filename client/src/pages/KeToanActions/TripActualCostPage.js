@@ -91,11 +91,11 @@ const TripActualCostPage = ({ user }) => {
   const [statusFilter, setStatusFilter] = useState("ALL");
 
   const [fromDate, setFromDate] = useState(
-    () => localStorage.getItem("tripActualCost_fromDate") || "",
+    () => localStorage.getItem("tripActualCost_fromDate") || ""
   );
 
   const [toDate, setToDate] = useState(
-    () => localStorage.getItem("tripActualCost_toDate") || "",
+    () => localStorage.getItem("tripActualCost_toDate") || ""
   );
 
   const [maChuyenInput, setMaChuyenInput] = useState("");
@@ -149,16 +149,29 @@ const TripActualCostPage = ({ user }) => {
 
   const formatMoney = (value) => {
     if (value === null || value === undefined || value === "") {
-      return "0";
+      return "-";
     }
 
-    const number = Number(String(value).replace(/[^\d-]/g, ""));
-
-    if (!Number.isFinite(number)) {
-      return "0";
+    // Nếu là số thật
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return new Intl.NumberFormat("vi-VN").format(value);
     }
 
-    return new Intl.NumberFormat("vi-VN").format(number);
+    const str = String(value).trim();
+
+    if (!str) {
+      return "-";
+    }
+
+    // Nếu là chuỗi chỉ chứa số thì format tiền
+    // Ví dụ: "100000" -> "100.000"
+    // "1500000" -> "1.500.000"
+    if (/^-?\d+$/.test(str)) {
+      return new Intl.NumberFormat("vi-VN").format(Number(str));
+    }
+
+    // Có chữ / text thì giữ nguyên
+    return str;
   };
 
   // =====================================================
@@ -209,7 +222,7 @@ const TripActualCostPage = ({ user }) => {
       console.error("fetchUsers error:", error);
 
       alert(
-        error.response?.data?.message || "Không thể tải danh sách người dùng",
+        error.response?.data?.message || "Không thể tải danh sách người dùng"
       );
     }
   };
@@ -220,7 +233,7 @@ const TripActualCostPage = ({ user }) => {
     }
 
     const user = userList.find(
-      (item) => String(item.username).trim() === String(username).trim(),
+      (item) => String(item.username).trim() === String(username).trim()
     );
 
     return user?.fullname?.trim() || username;
@@ -308,7 +321,7 @@ const TripActualCostPage = ({ user }) => {
         },
         {
           responseType: "blob",
-        },
+        }
       );
 
       const blob = new Blob([response.data], {
@@ -445,7 +458,7 @@ const TripActualCostPage = ({ user }) => {
           ...item,
           [field]: value,
         };
-      }),
+      })
     );
   };
 
@@ -475,7 +488,7 @@ const TripActualCostPage = ({ user }) => {
       const updated = response.data?.data;
 
       setData((prev) =>
-        prev.map((row) => (row._id === item._id ? updated : row)),
+        prev.map((row) => (row._id === item._id ? updated : row))
       );
     } catch (error) {
       console.error("handleSaveActual error:", error);
@@ -496,7 +509,7 @@ const TripActualCostPage = ({ user }) => {
     }
 
     const confirmed = window.confirm(
-      `Bạn có chắc muốn cập nhật dữ liệu thực tế về chuyến ${item.maChuyen}?\n\nSau khi cập nhật, dữ liệu này sẽ bị khóa và không thể sửa lại.`,
+      `Bạn có chắc muốn cập nhật dữ liệu thực tế về chuyến ${item.maChuyen}?\n\nSau khi cập nhật, dữ liệu này sẽ bị khóa và không thể sửa lại.`
     );
 
     if (!confirmed) {
@@ -517,13 +530,13 @@ const TripActualCostPage = ({ user }) => {
       const savedItem = saveResponse.data?.data;
 
       const response = await axios.put(
-        `${BASE_URL}/${item._id}/update-original`,
+        `${BASE_URL}/${item._id}/update-original`
       );
 
       const updated = response.data?.data?.record || savedItem;
 
       setData((prev) =>
-        prev.map((row) => (row._id === item._id ? updated : row)),
+        prev.map((row) => (row._id === item._id ? updated : row))
       );
 
       alert(response.data?.message || "Đã cập nhật về chuyến gốc");
@@ -531,7 +544,7 @@ const TripActualCostPage = ({ user }) => {
       console.error("handleUpdateOriginal error:", error);
 
       alert(
-        error.response?.data?.message || "Không thể cập nhật về chuyến gốc",
+        error.response?.data?.message || "Không thể cập nhật về chuyến gốc"
       );
     } finally {
       setUpdatingId(null);
@@ -553,7 +566,7 @@ const TripActualCostPage = ({ user }) => {
     }
 
     const confirmed = window.confirm(
-      `Bạn có chắc muốn xóa dữ liệu thực tế của chuyến ${item.maChuyen}?\n\nDữ liệu sau khi xóa sẽ không thể khôi phục.`,
+      `Bạn có chắc muốn xóa dữ liệu thực tế của chuyến ${item.maChuyen}?\n\nDữ liệu sau khi xóa sẽ không thể khôi phục.`
     );
 
     if (!confirmed) {
@@ -624,7 +637,13 @@ const TripActualCostPage = ({ user }) => {
 
     return (
       <span
-        className={`${number > 0 ? "text-green-600" : number < 0 ? "text-red-600" : "text-gray-500"} font-semibold`}
+        className={`${
+          number > 0
+            ? "text-green-600"
+            : number < 0
+            ? "text-red-600"
+            : "text-gray-500"
+        } font-semibold`}
       >
         {number > 0 ? "+" : ""}
         {formatMoney(number)}
@@ -1187,7 +1206,7 @@ const TripActualCostPage = ({ user }) => {
                       <td className="border border-gray-300 px-3 py-2 text-center">
                         {item.ngayGiaoHang
                           ? new Date(item.ngayGiaoHang).toLocaleDateString(
-                              "vi-VN",
+                              "vi-VN"
                             )
                           : "-"}
                       </td>
@@ -1264,8 +1283,8 @@ const TripActualCostPage = ({ user }) => {
                             !canManageTrip(item)
                               ? "Không có quyền"
                               : item.isTrue
-                                ? "Đã khóa"
-                                : "Nhập ghi chú..."
+                              ? "Đã khóa"
+                              : "Nhập ghi chú..."
                           }
                           onChange={(e) =>
                             handleActualChange(item._id, "note", e.target.value)
