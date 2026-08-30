@@ -1,5 +1,6 @@
 const ExcelJS = require("exceljs");
 const OtherCost = require("../models/OtherCost");
+const DoanhThuTong = require("../models/DoanhThuTong");
 
 /* =========================================================
    LẤY DỮ LIỆU CÓ FILTER
@@ -87,7 +88,7 @@ exports.getUniqueSuppliers = async (req, res) => {
     suppliers.sort((a, b) =>
       String(a).localeCompare(String(b), undefined, {
         sensitivity: "base",
-      }),
+      })
     );
 
     res.json(suppliers);
@@ -150,9 +151,9 @@ exports.removeByMonthYear = async (req, res) => {
       deletedCount: result.deletedCount,
       month: m,
       year: y,
-      message: `Đã xoá ${result.deletedCount} bản ghi chi phí khác tháng ${String(
-        m,
-      ).padStart(2, "0")}/${y}`,
+      message: `Đã xoá ${
+        result.deletedCount
+      } bản ghi chi phí khác tháng ${String(m).padStart(2, "0")}/${y}`,
     });
   } catch (err) {
     console.error("REMOVE OTHER COST BY MONTH YEAR ERROR:", err);
@@ -379,7 +380,7 @@ const getNextOtherCostCode = async (costDate) => {
 
   if (lastCost?.costCode) {
     const match = lastCost.costCode.match(
-      new RegExp(`^CP\\.${month}\\.${year}\\.(\\d+)$`),
+      new RegExp(`^CP\\.${month}\\.${year}\\.(\\d+)$`)
     );
 
     if (match) {
@@ -492,7 +493,7 @@ const parseExcelDate = (value) => {
   ===================================================== */
 
   let match = str.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/,
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/
   );
 
   if (match) {
@@ -524,7 +525,7 @@ const parseExcelDate = (value) => {
   ===================================================== */
 
   match = str.match(
-    /^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/,
+    /^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/
   );
 
   if (match) {
@@ -556,7 +557,7 @@ const parseExcelDate = (value) => {
   ===================================================== */
 
   match = str.match(
-    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/,
+    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/
   );
 
   if (match) {
@@ -665,9 +666,7 @@ exports.importExcel = async (req, res) => {
 
         const isEmptyRow = rowValues.every(
           (value) =>
-            value === null ||
-            value === undefined ||
-            String(value).trim() === "",
+            value === null || value === undefined || String(value).trim() === ""
         );
 
         if (isEmptyRow) {
@@ -705,7 +704,7 @@ exports.importExcel = async (req, res) => {
           errors.push({
             row: i,
             message: `Ngày phát sinh không hợp lệ: ${String(
-              rawCostDate || "",
+              rawCostDate || ""
             )}`,
           });
 
@@ -889,6 +888,144 @@ exports.importExcel = async (req, res) => {
     });
   } catch (err) {
     console.error("IMPORT OTHER COST ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* =========================================================
+   CẬP NHẬT CHI PHÍ KHÁC VÀO DOANH THU TỔNG
+
+   month: YYYY-MM
+   Ví dụ:
+   2026-08
+
+   => maLoiNhuan:
+   LN.8.2026
+
+   => Cộng toàn bộ grandTotal của OtherCost
+      trong tháng theo costDate
+========================================================= */
+exports.updateChiPhiKhac = async (req, res) => {
+  try {
+    const { month } = req.body;
+
+    /* =====================================================
+       KIỂM TRA MONTH
+    ===================================================== */
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "month phải có dạng YYYY-MM",
+      });
+    }
+
+    const [year, mon] = month.split("-");
+
+    const y = Number(year);
+    const m = Number(mon);
+
+    if (!Number.isInteger(y) || !Number.isInteger(m) || m < 1 || m > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng hoặc năm không hợp lệ",
+      });
+    }
+
+    /* =====================================================
+       TẠO MÃ LỢI NHUẬN
+
+       2026-08
+       =>
+       LN.8.2026
+    ===================================================== */
+    const maLoiNhuan = `LN.${m}.${y}`;
+
+    /* =====================================================
+       KHOẢNG THỜI GIAN
+
+       Đầu tháng:
+       01/08/2026 00:00:00
+
+       Đầu tháng tiếp theo:
+       01/09/2026 00:00:00
+    ===================================================== */
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+
+    /* =====================================================
+       TÌM DOANH THU TỔNG THEO MÃ LỢI NHUẬN
+    ===================================================== */
+    const doanhThuTong = await DoanhThuTong.findOne({
+      maLoiNhuan,
+    });
+
+    if (!doanhThuTong) {
+      return res.status(404).json({
+        success: false,
+        message: `Không tìm thấy DoanhThuTong với mã lợi nhuận ${maLoiNhuan}`,
+      });
+    }
+
+    /* =====================================================
+       CỘNG TOÀN BỘ grandTotal TRONG THÁNG
+
+       THEO costDate
+    ===================================================== */
+    const result = await OtherCost.aggregate([
+      {
+        $match: {
+          costDate: {
+            $gte: startDate,
+            $lt: endDate,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalChiPhiKhac: {
+            $sum: {
+              $ifNull: ["$grandTotal", 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const chiPhiKhac =
+      result.length > 0 ? Number(result[0].totalChiPhiKhac) || 0 : 0;
+
+    /* =====================================================
+       CẬP NHẬT DOANH THU TỔNG
+
+       LƯU ĐÚNG TỔNG CỦA THÁNG
+       KHÔNG CỘNG DỒN VỚI GIÁ TRỊ CŨ
+
+       => gọi lại nhiều lần cũng không bị cộng trùng
+    ===================================================== */
+    doanhThuTong.chiPhiKhac = chiPhiKhac;
+
+    await doanhThuTong.save();
+
+    /* =====================================================
+       RESPONSE
+    ===================================================== */
+    return res.json({
+      success: true,
+      month,
+      maLoiNhuan,
+      chiPhiKhac,
+      message: `Đã cập nhật chi phí khác tháng ${String(m).padStart(
+        2,
+        "0"
+      )}/${y}`,
+    });
+  } catch (err) {
+    console.error("UPDATE CHI PHI KHAC ERROR:", err);
 
     return res.status(500).json({
       success: false,

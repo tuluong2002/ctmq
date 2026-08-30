@@ -1,5 +1,6 @@
 const ExcelJS = require("exceljs");
 const Depreciation = require("../models/Depreciation");
+const VehicleProfit = require("../models/VehicleProfit");
 
 /* =======================
    LẤY TẤT CẢ DỮ LIỆU CÓ THÊM FILTER
@@ -187,3 +188,405 @@ exports.importExcel = async (req, res) => {
   }
 };
 
+/* =========================================================
+   CẬP NHẬT CHI PHÍ KHẤU HAO XE THEO THÁNG
+
+   FE gửi:
+   {
+     month: "2026-05"
+   }
+
+   NGUỒN:
+   Depreciation
+      - maTSCD
+      - ngayStart
+      - timeSD
+      - valueKH
+
+   VehicleProfit
+      - bsx
+      - maLoiNhuan
+      - cpKhauHaoXe
+
+   LOGIC:
+   - FE gửi tháng/năm
+   - Tạo mã lợi nhuận: LN.THÁNG.NĂM
+   - So maTSCD của Depreciation với bsx của VehicleProfit
+   - VehicleProfit.bsx có thể có thêm text
+   - Tách BSX thực tế trước khi so khớp
+   - Nếu tháng cần tính nằm trong thời gian khấu hao:
+        cộng valueKH vào cpKhauHaoXe
+   - Chạy lại không bị cộng trùng
+   - KHÔNG tính lại loiNhuan
+========================================================= */
+
+exports.updateVehicleProfitKhauHao = async (req, res) => {
+  try {
+    // =====================================================
+    // 1. LẤY THÁNG FE GỬI XUỐNG
+    // =====================================================
+
+    const { month } = req.body;
+
+    if (!month) {
+      return res.status(400).json({
+        success: false,
+        message: "Vui lòng gửi tháng. Ví dụ: 2026-05",
+      });
+    }
+
+    const [yearStr, monthStr] = String(month).split("-");
+
+    const year = Number(yearStr);
+    const monthNumber = Number(monthStr);
+
+    if (
+      !Number.isInteger(year) ||
+      !Number.isInteger(monthNumber) ||
+      monthNumber < 1 ||
+      monthNumber > 12
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ. Ví dụ: 2026-05",
+      });
+    }
+
+    // =====================================================
+    // 2. MÃ LỢI NHUẬN
+    // =====================================================
+
+    const maLoiNhuan = `LN.${monthNumber}.${year}`;
+
+    // =====================================================
+    // 3. THÁNG CẦN TÍNH
+    //
+    // Ví dụ:
+    // 05/2026
+    // => 2026 * 12 + 4
+    // =====================================================
+
+    const targetMonthIndex = year * 12 + (monthNumber - 1);
+
+    // =====================================================
+    // 4. LẤY DEPRECIATION
+    // =====================================================
+
+    const depreciations = await Depreciation.find({
+      maTSCD: {
+        $exists: true,
+        $nin: [null, ""],
+      },
+
+      ngayStart: {
+        $exists: true,
+        $ne: null,
+      },
+
+      timeSD: {
+        $gt: 0,
+      },
+
+      valueKH: {
+        $ne: null,
+      },
+    }).lean();
+
+    // =====================================================
+    // 5. HÀM CHUẨN HOÁ BSX
+    //
+    // VD:
+    //
+    // 89H-121.123
+    // => 89H121123
+    //
+    // 89H 121 123
+    // => 89H121123
+    // =====================================================
+
+    const normalizeVehicleNo = (value) => {
+      return String(value || "")
+        .trim()
+        .toUpperCase()
+        .replace(/[\s\-–—.]/g, "");
+    };
+
+    // =====================================================
+    // 6. HÀM LẤY BSX THỰC TẾ TỪ VehicleProfit.bsx
+    //
+    // VD:
+    //
+    // "89H121123"
+    // => "89H121123"
+    //
+    // "89H121123 XE CON"
+    // => "89H121123"
+    //
+    // "89H-121.123 - XE CON"
+    // => "89H121123"
+    // =====================================================
+
+    const extractBsx = (value) => {
+      const raw = String(value || "")
+        .trim()
+        .toUpperCase();
+
+      if (!raw) {
+        return "";
+      }
+
+      const normalized = raw.replace(/[\s\-–—.]/g, "");
+
+      /*
+        BSX dạng:
+
+        89H121123
+        89A16935
+        29C12345
+
+        2 số
+        1-2 chữ
+        5-6 số
+      */
+
+      const match = normalized.match(/\d{2}[A-Z]{1,2}\d{5,6}/);
+
+      if (match) {
+        return match[0];
+      }
+
+      // fallback
+      return raw
+        .split(/[\s\-–—]+/)[0]
+        .replace(/[.\s\-–—]/g, "")
+        .trim();
+    };
+
+    // =====================================================
+    // 7. LẤY VEHICLE PROFIT CỦA THÁNG
+    // =====================================================
+
+    const vehicleProfits = await VehicleProfit.find({
+      maLoiNhuan,
+    }).lean();
+
+    // =====================================================
+    // 8. CHUẨN HOÁ BSX VEHICLE PROFIT
+    // =====================================================
+
+    const normalizedProfits = vehicleProfits
+      .map((profit) => {
+        const bsx = extractBsx(profit.bsx);
+
+        return {
+          ...profit,
+          normalizedBsx: bsx,
+        };
+      })
+      .filter((profit) => profit.normalizedBsx);
+
+    // =====================================================
+    // 9. MAP KHẤU HAO THEO VEHICLE PROFIT
+    // =====================================================
+
+    const profitMap = new Map();
+
+    let matchedCount = 0;
+    let notMatchedCount = 0;
+
+    let matchedAmount = 0;
+
+    // =====================================================
+    // 10. DUYỆT TỪNG DEPRECIATION
+    // =====================================================
+
+    for (const item of depreciations) {
+      const maTSCD = normalizeVehicleNo(item.maTSCD);
+
+      const valueKH = Number(item.valueKH || 0);
+      const timeSD = Number(item.timeSD || 0);
+
+      if (!maTSCD) {
+        notMatchedCount++;
+        continue;
+      }
+
+      if (!Number.isFinite(valueKH) || valueKH === 0) {
+        continue;
+      }
+
+      if (!Number.isFinite(timeSD) || timeSD <= 0) {
+        continue;
+      }
+
+      // ===================================================
+      // NGÀY BẮT ĐẦU KHẤU HAO
+      // ===================================================
+
+      const startDate = new Date(item.ngayStart);
+
+      if (isNaN(startDate.getTime())) {
+        notMatchedCount++;
+        continue;
+      }
+
+      const startMonthIndex =
+        startDate.getFullYear() * 12 + startDate.getMonth();
+
+      // ===================================================
+      // THÁNG CUỐI CÙNG ĐƯỢC KHẤU HAO
+      //
+      // VD:
+      //
+      // ngayStart = 05/2026
+      // timeSD = 36
+      //
+      // Bắt đầu:
+      // 05/2026
+      //
+      // Kết thúc:
+      // 04/2029
+      // ===================================================
+
+      const endMonthIndex = startMonthIndex + timeSD - 1;
+
+      // ===================================================
+      // KIỂM TRA THÁNG HIỆN TẠI CÓ ĐƯỢC KHẤU HAO KHÔNG
+      // ===================================================
+
+      if (
+        targetMonthIndex < startMonthIndex ||
+        targetMonthIndex > endMonthIndex
+      ) {
+        continue;
+      }
+
+      // ===================================================
+      // TÌM VEHICLE PROFIT KHỚP BSX
+      //
+      // maTSCD phải nằm trong bsx đã chuẩn hoá
+      // =====================================================
+
+      const matchedProfits = normalizedProfits.filter((profit) => {
+        return (
+          maTSCD.includes(profit.normalizedBsx) ||
+          profit.normalizedBsx.includes(maTSCD)
+        );
+      });
+
+      // ===================================================
+      // KHÔNG MATCH
+      // =====================================================
+
+      if (matchedProfits.length === 0) {
+        notMatchedCount++;
+        continue;
+      }
+
+      // ===================================================
+      // MATCH
+      // =====================================================
+
+      const matchedProfit = matchedProfits[0];
+
+      matchedCount++;
+      matchedAmount += valueKH;
+
+      const key = String(matchedProfit._id);
+
+      if (!profitMap.has(key)) {
+        profitMap.set(key, {
+          id: matchedProfit._id,
+
+          bsx: matchedProfit.bsx,
+
+          maLoiNhuan: matchedProfit.maLoiNhuan,
+
+          amount: 0,
+        });
+      }
+
+      profitMap.get(key).amount += valueKH;
+    }
+
+    // =====================================================
+    // 11. CẬP NHẬT cpKhauHaoXe
+    //
+    // QUAN TRỌNG:
+    //
+    // DÙNG $set
+    //
+    // Không dùng $inc để chạy lại nhiều lần
+    // không bị cộng trùng.
+    // =====================================================
+
+    const bulkOps = [];
+
+    for (const item of vehicleProfits) {
+      const key = String(item._id);
+
+      const khauHaoAmount = profitMap.get(key)?.amount || 0;
+
+      bulkOps.push({
+        updateOne: {
+          filter: {
+            _id: item._id,
+          },
+
+          update: {
+            $set: {
+              cpKhauHaoXe: khauHaoAmount,
+            },
+          },
+        },
+      });
+    }
+
+    // =====================================================
+    // 12. BULK UPDATE
+    //
+    // CHỈ cập nhật:
+    // cpKhauHaoXe
+    //
+    // KHÔNG cập nhật loiNhuan
+    // =====================================================
+
+    if (bulkOps.length > 0) {
+      await VehicleProfit.bulkWrite(bulkOps);
+    }
+
+    // =====================================================
+    // 13. RESPONSE
+    // =====================================================
+
+    return res.json({
+      success: true,
+
+      message: `Đã cập nhật chi phí khấu hao ${maLoiNhuan}`,
+
+      month,
+
+      maLoiNhuan,
+
+      totalDepreciation: depreciations.length,
+
+      matchedCount,
+
+      notMatchedCount,
+
+      matchedAmount,
+
+      updatedCount: bulkOps.length,
+
+      details: Array.from(profitMap.values()),
+    });
+  } catch (error) {
+    console.error("LỖI UPDATE VEHICLE PROFIT KHẤU HAO:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi cập nhật chi phí khấu hao vào VehicleProfit",
+      error: error.message,
+    });
+  }
+};

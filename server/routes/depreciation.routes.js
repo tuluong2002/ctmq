@@ -20,6 +20,10 @@ router.get("/unique-matscd", depreciationController.getUniqueMaTSCD);
 // Thêm 1 bản ghi
 router.post("/", depreciationController.create);
 
+router.post(
+  "/update-khau-hao",
+  depreciationController.updateVehicleProfitKhauHao
+);
 // Sửa
 router.put("/:id", depreciationController.update);
 

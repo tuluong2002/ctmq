@@ -26,7 +26,7 @@ export default function OtherCostPage() {
 
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
       2,
-      "0",
+      "0"
     )}`;
   };
 
@@ -56,7 +56,7 @@ export default function OtherCostPage() {
       alert(
         err.response?.data?.message ||
           err.message ||
-          "Không thể lấy dữ liệu chi phí khác",
+          "Không thể lấy dữ liệu chi phí khác"
       );
     } finally {
       setLoading(false);
@@ -123,7 +123,7 @@ export default function OtherCostPage() {
         alert(
           `Import hoàn tất.\n\n` +
             `Thành công: ${res.data.inserted || 0} dòng\n` +
-            `Lỗi: ${failed} dòng`,
+            `Lỗi: ${failed} dòng`
         );
       } else {
         alert(`Import thành công ${res.data.inserted || 0} dòng.`);
@@ -152,6 +152,57 @@ export default function OtherCostPage() {
   };
 
   // =====================================================
+  // CẬP NHẬT CHI PHÍ KHÁC VÀO DOANH THU TỔNG
+  // =====================================================
+
+  const handleUpdateChiPhiKhac = async () => {
+    if (!monthFilter) {
+      alert("Chưa chọn tháng");
+      return;
+    }
+
+    const [year, month] = monthFilter.split("-");
+
+    const confirmUpdate = window.confirm(
+      `Bạn có chắc muốn cập nhật CHI PHÍ KHÁC vào DoanhThuTong của tháng ${month}/${year}?`
+    );
+
+    if (!confirmUpdate) return;
+
+    try {
+      setLoading(true);
+
+      const res = await axios.put(
+        `${baseUrl}/update-chi-phi-khac`,
+        {
+          month: monthFilter,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      alert(
+        `Đã cập nhật chi phí khác tháng ${month}/${year}.\n\n` +
+          `Mã lợi nhuận: ${res.data.maLoiNhuan}\n` +
+          `Chi phí khác: ${formatMoney(res.data.chiPhiKhac)} VNĐ`
+      );
+    } catch (err) {
+      console.error("Lỗi cập nhật chi phí khác:", err);
+
+      alert(
+        err.response?.data?.message ||
+          err.message ||
+          "Cập nhật chi phí khác thất bại"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =====================================================
   // XOÁ THEO THÁNG / NĂM
   // =====================================================
 
@@ -164,7 +215,7 @@ export default function OtherCostPage() {
     const [year, month] = monthFilter.split("-");
 
     const confirmDelete = window.confirm(
-      `Bạn có chắc muốn xóa TOÀN BỘ chi phí khác của tháng ${month}/${year}?`,
+      `Bạn có chắc muốn xóa TOÀN BỘ chi phí khác của tháng ${month}/${year}?`
     );
 
     if (!confirmDelete) return;
@@ -181,7 +232,9 @@ export default function OtherCostPage() {
       });
 
       alert(
-        `Đã xóa ${res.data.deletedCount || 0} dòng chi phí khác của tháng ${month}/${year}.`,
+        `Đã xóa ${
+          res.data.deletedCount || 0
+        } dòng chi phí khác của tháng ${month}/${year}.`
       );
 
       await fetchData();
@@ -191,7 +244,7 @@ export default function OtherCostPage() {
       alert(
         err.response?.data?.message ||
           err.message ||
-          "Xóa dữ liệu theo tháng thất bại",
+          "Xóa dữ liệu theo tháng thất bại"
       );
     }
   };
@@ -295,6 +348,16 @@ export default function OtherCostPage() {
           Đã nhập {importDone}/{importTotal} dòng hợp lệ
         </span>
       )}
+
+      {/* CẬP NHẬT CHI PHÍ KHÁC */}
+
+      <button
+        onClick={handleUpdateChiPhiKhac}
+        disabled={!monthFilter || loading || importing}
+        className="bg-green-600 text-white px-3 py-1 rounded disabled:opacity-50"
+      >
+        Cập nhật vào doanh thu
+      </button>
     </div>
   );
 
@@ -305,7 +368,7 @@ export default function OtherCostPage() {
   const renderTable = () => {
     const totalMoney = data.reduce(
       (sum, r) => sum + Number(r.grandTotal || 0),
-      0,
+      0
     );
 
     return (

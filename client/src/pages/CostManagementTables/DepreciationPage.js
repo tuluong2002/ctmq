@@ -13,6 +13,13 @@ export default function DepreciationPage() {
   const [importTotal, setImportTotal] = useState(0);
   const [importDone, setImportDone] = useState(0);
 
+  /* ================= TÍNH KHẤU HAO VEHICLE PROFIT ================= */
+  const [showKhauHaoModal, setShowKhauHaoModal] = useState(false);
+  const [khauHaoMonth, setKhauHaoMonth] = useState(
+    new Date().toISOString().slice(0, 7)
+  );
+  const [calculatingKhauHao, setCalculatingKhauHao] = useState(false);
+
   const token = localStorage.getItem("token");
   const baseUrl = `${API}/depreciation`;
 
@@ -112,6 +119,61 @@ export default function DepreciationPage() {
     }
   };
 
+  /* ================= TÍNH KHẤU HAO VEHICLE PROFIT ================= */
+  const handleCalculateKhauHao = async () => {
+    if (!khauHaoMonth) {
+      alert("Vui lòng chọn tháng");
+      return;
+    }
+
+    if (calculatingKhauHao) return;
+
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn tính khấu hao cho tháng ${khauHaoMonth}?`
+    );
+
+    if (!confirmed) return;
+
+    setCalculatingKhauHao(true);
+
+    try {
+      const res = await axios.post(
+        `${baseUrl}/update-khau-hao`,
+        {
+          month: khauHaoMonth,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const result = res.data || {};
+
+      alert(
+        [
+          `Tính khấu hao thành công!`,
+          ``,
+          `Mã lợi nhuận: ${result.maLoiNhuan || ""}`,
+          `Đã tính cho: ${result.matchedCount || 0} BSX`,
+          `Tổng BSX VehicleProfit: ${result.updatedCount || 0}`,
+          `Tổng tiền khấu hao: ${Number(
+            result.matchedAmount || 0
+          ).toLocaleString("vi-VN")}`,
+        ].join("\n")
+      );
+
+      setShowKhauHaoModal(false);
+    } catch (err) {
+      console.error(err);
+
+      alert(err.response?.data?.message || "Tính khấu hao thất bại");
+    } finally {
+      setCalculatingKhauHao(false);
+    }
+  };
+
   /* ================= CRUD ================= */
   const handleEdit = (row) => {
     setEditing(row._id);
@@ -184,6 +246,56 @@ export default function DepreciationPage() {
 
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
+  };
+
+  /* ================= MODAL TÍNH KHẤU HAO ================= */
+  const renderKhauHaoModal = () => {
+    if (!showKhauHaoModal) return null;
+
+    return (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40">
+        <div className="bg-white rounded-lg shadow-xl w-[360px] p-4">
+          <div className="text-lg font-semibold mb-4">
+            Tính khấu hao VehicleProfit
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm mb-1">Chọn tháng</label>
+
+            <input
+              type="month"
+              value={khauHaoMonth}
+              onChange={(e) => setKhauHaoMonth(e.target.value)}
+              className="border rounded px-2 py-1 w-full"
+              disabled={calculatingKhauHao}
+            />
+          </div>
+
+          <div className="text-xs text-gray-500 mb-4">
+            Hệ thống sẽ tính các tài sản đang trong thời gian khấu hao và cập
+            nhật vào mã lợi nhuận tương ứng.
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setShowKhauHaoModal(false)}
+              disabled={calculatingKhauHao}
+              className="border px-3 py-1 rounded"
+            >
+              Hủy
+            </button>
+
+            <button
+              onClick={handleCalculateKhauHao}
+              disabled={calculatingKhauHao || !khauHaoMonth}
+              className="bg-orange-600 text-white px-3 py-1 rounded disabled:opacity-50"
+            >
+              {calculatingKhauHao ? "Đang tính..." : "Tính khấu hao"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   /* ================= RENDER ================= */
@@ -507,7 +619,7 @@ export default function DepreciationPage() {
                         style={{ width: colWidths.tenTSCD, minWidth: 0 }}
                       >
                         <div
-                          style={{  
+                          style={{
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
@@ -608,6 +720,13 @@ export default function DepreciationPage() {
           Đã nhập {importDone}/{importTotal}
         </span>
       )}
+
+      <button
+        onClick={() => setShowKhauHaoModal(true)}
+        className="bg-orange-600 text-white px-2 py-1"
+      >
+        Thêm khấu hao vào doanh thu
+      </button>
     </div>
   );
 
@@ -616,6 +735,7 @@ export default function DepreciationPage() {
       <Toolbar />
       {loading && <p>Đang tải...</p>}
       {renderTable()}
+      {renderKhauHaoModal()}
     </div>
   );
 }

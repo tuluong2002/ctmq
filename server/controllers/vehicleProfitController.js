@@ -1,6 +1,9 @@
 const VehicleProfit = require("../models/VehicleProfit");
 const VehiclePlate = require("../models/VehiclePlate");
 const ScheduleAdmin = require("../models/ScheduleAdmin");
+
+const DoanhThuTong = require("../models/DoanhThuTong");
+
 const ExcelJS = require("exceljs");
 
 // =====================================================
@@ -75,6 +78,77 @@ const calculateProfit = (record) => {
   record.loiNhuan = doanhThu - tongChiPhi;
 
   return record;
+};
+
+// =====================================================
+// HELPER
+// TỔNG HỢP DOANH THU TỔNG TỪ VEHICLE PROFIT
+// =====================================================
+const updateDoanhThuTong = async (maLoiNhuan) => {
+  const profits = await VehicleProfit.find({
+    maLoiNhuan,
+  });
+
+  if (!profits.length) {
+    return null;
+  }
+
+  // ==========================================
+  // TỔNG DOANH THU
+  // ==========================================
+  const tongDoanhThu = profits.reduce(
+    (sum, item) => sum + toNumber(item.doanhThu),
+    0
+  );
+
+  // ==========================================
+  // TỔNG CHI PHÍ THEO XE
+  // ==========================================
+  const tongChiPhiTheoXe = profits.reduce(
+    (sum, item) => sum + calculateTotalCost(item),
+    0
+  );
+
+  // ==========================================
+  // CHI PHÍ KHÁC
+  //
+  // HIỆN TẠI CHƯA CÓ NGUỒN TÍNH
+  // => GIỮ GIÁ TRỊ ĐÃ CÓ
+  // ==========================================
+  const oldTong = await DoanhThuTong.findOne({
+    maLoiNhuan,
+  });
+
+  const chiPhiKhac = oldTong ? toNumber(oldTong.chiPhiKhac) : 0;
+
+  // ==========================================
+  // LỢI NHUẬN
+  // ==========================================
+  const loiNhuan = tongDoanhThu - tongChiPhiTheoXe - chiPhiKhac;
+
+  // ==========================================
+  // UPSERT
+  // ==========================================
+  const result = await DoanhThuTong.findOneAndUpdate(
+    {
+      maLoiNhuan,
+    },
+    {
+      $set: {
+        maLoiNhuan,
+        tongDoanhThu,
+        tongChiPhiTheoXe,
+        chiPhiKhac,
+        loiNhuan,
+      },
+    },
+    {
+      new: true,
+      upsert: true,
+    }
+  );
+
+  return result;
 };
 
 // =====================================================
@@ -450,6 +524,11 @@ exports.createMonthlyProfit = async (req, res) => {
     }
 
     // ==========================================
+    // TẠO / CẬP NHẬT DOANH THU TỔNG
+    // ==========================================
+    const doanhThuTong = await updateDoanhThuTong(normalizedMaLoiNhuan);
+
+    // ==========================================
     // LẤY LẠI DATA
     // ==========================================
     const results = await VehicleProfit.find({
@@ -470,6 +549,9 @@ exports.createMonthlyProfit = async (req, res) => {
       skippedCount,
 
       totalVehicles: results.length,
+
+      // DOANH THU TỔNG
+      doanhThuTong,
 
       data: results,
     });
@@ -595,10 +677,18 @@ exports.updateVehicleProfit = async (req, res) => {
 
     await profit.save();
 
+    // ==========================================
+    // CẬP NHẬT DOANH THU TỔNG
+    // ==========================================
+    const doanhThuTong = await updateDoanhThuTong(normalizedMaLoiNhuan);
+
     return res.json({
       success: true,
 
       message: "Đã cập nhật chi phí lương",
+
+      // DOANH THU TỔNG
+      doanhThuTong,
 
       data: profit,
     });
@@ -703,6 +793,8 @@ exports.recalculateMonthlyProfit = async (req, res) => {
       await VehicleProfit.bulkWrite(bulkOps);
     }
 
+    const doanhThuTong = await updateDoanhThuTong(normalizedMaLoiNhuan);
+
     // ==========================================
     // LẤY LẠI
     // ==========================================
@@ -794,6 +886,8 @@ exports.recalculateMonthlyProfit = async (req, res) => {
       tongChiPhi,
 
       tongLoiNhuan,
+      // DOANH THU TỔNG
+      doanhThuTong,
 
       data: results,
     });
@@ -826,6 +920,9 @@ exports.getMonthlyProfit = async (req, res) => {
 
     const { normalizedMaLoiNhuan } = dateRange;
 
+    // ==========================================
+    // LẤY VEHICLE PROFIT
+    // ==========================================
     const results = await VehicleProfit.find({
       maLoiNhuan: normalizedMaLoiNhuan,
     }).sort({
@@ -833,7 +930,14 @@ exports.getMonthlyProfit = async (req, res) => {
     });
 
     // ==========================================
-    // TỔNG
+    // LẤY DOANH THU TỔNG
+    // ==========================================
+    const doanhThuTong = await DoanhThuTong.findOne({
+      maLoiNhuan: normalizedMaLoiNhuan,
+    });
+
+    // ==========================================
+    // TỔNG THEO XE
     // ==========================================
     const tongDoanhThu = results.reduce(
       (sum, item) => sum + toNumber(item.doanhThu),
@@ -886,6 +990,9 @@ exports.getMonthlyProfit = async (req, res) => {
 
     const tongLoiNhuan = tongDoanhThu - tongChiPhi;
 
+    // ==========================================
+    // RESPONSE
+    // ==========================================
     return res.json({
       success: true,
 
@@ -893,6 +1000,9 @@ exports.getMonthlyProfit = async (req, res) => {
 
       totalVehicles: results.length,
 
+      // ==========================================
+      // TỔNG THEO XE
+      // ==========================================
       tongDoanhThu,
 
       tongCpLuong,
@@ -912,6 +1022,12 @@ exports.getMonthlyProfit = async (req, res) => {
       tongChiPhi,
 
       tongLoiNhuan,
+
+      // ==========================================
+      // DOANH THU TỔNG
+      // LẤY TRỰC TIẾP TỪ DoanhThuTong
+      // ==========================================
+      doanhThuTong,
 
       data: results,
     });

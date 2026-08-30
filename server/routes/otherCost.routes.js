@@ -31,7 +31,9 @@ router.delete("/remove-by-month-year", otherCostController.removeByMonthYear);
 router.post(
   "/import-excel",
   upload.single("file"),
-  otherCostController.importExcel,
+  otherCostController.importExcel
 );
+
+router.put("/update-chi-phi-khac", otherCostController.updateChiPhiKhac);
 
 module.exports = router;

@@ -109,6 +109,8 @@ const VehicleProfitPage = ({ user }) => {
 
   const [monthYear, setMonthYear] = useState("");
   const [data, setData] = useState([]);
+  const [doanhThuTong, setDoanhThuTong] = useState(null);
+
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -141,6 +143,8 @@ const VehicleProfitPage = ({ user }) => {
   // =====================================================
 
   const formatMoney = (value) => {
+    if (Number(value) === 0) return "";
+
     return Number(value || 0).toLocaleString("vi-VN");
   };
 
@@ -193,6 +197,7 @@ const VehicleProfitPage = ({ user }) => {
 
       if (res.data.success) {
         setData(res.data.data || []);
+        setDoanhThuTong(res.data.doanhThuTong || null);
 
         setMessage(
           `Đã tải dữ liệu ${maLoiNhuan}: ${res.data.data?.length || 0} xe`
@@ -202,6 +207,7 @@ const VehicleProfitPage = ({ user }) => {
       console.error(err);
 
       setData([]);
+      setDoanhThuTong(null);
 
       setError(
         err.response?.data?.message || "Không lấy được dữ liệu lợi nhuận"
@@ -234,6 +240,8 @@ const VehicleProfitPage = ({ user }) => {
 
       if (res.data.success) {
         setData(res.data.data || []);
+
+        setDoanhThuTong(res.data.doanhThuTong || null);
 
         setMessage(
           `Đã tạo kỳ ${res.data.maLoiNhuan}. ` +
@@ -283,6 +291,7 @@ const VehicleProfitPage = ({ user }) => {
 
       if (res.data.success) {
         setData(res.data.data || []);
+        setDoanhThuTong(res.data.doanhThuTong || null);
 
         setMessage(`Đã tính lại doanh thu và lợi nhuận ${maLoiNhuan}`);
       }
@@ -365,6 +374,8 @@ const VehicleProfitPage = ({ user }) => {
         setData((prev) =>
           prev.map((row) => (row._id === item._id ? res.data.data : row))
         );
+
+        setDoanhThuTong(res.data.doanhThuTong || null);
 
         setMessage(`Đã lưu chi phí lương cho ${item.bsx}`);
       }
@@ -976,59 +987,59 @@ const VehicleProfitPage = ({ user }) => {
       {canViewAllDoanhThu && (
         <div
           className="
-          grid
-          grid-cols-1
-          md:grid-cols-3
-          gap-4
-          mb-4
-        "
+  grid
+  grid-cols-1
+  md:grid-cols-4
+  gap-4
+  mb-4
+"
         >
           {/* DOANH THU */}
 
           <div
             className="
-            bg-white
-            rounded-lg
-            shadow-sm
-            border
-            p-4
-          "
+    bg-white
+    rounded-lg
+    shadow-sm
+    border
+    p-4
+  "
           >
             <div
               className="
-              flex
-              items-center
-              justify-between
-            "
+      flex
+      items-center
+      justify-between
+    "
             >
               <div>
                 <p
                   className="
-                  text-sm
-                  text-gray-500
-                "
+          text-sm
+          text-gray-500
+        "
                 >
                   Tổng doanh thu
                 </p>
 
                 <p
                   className="
-                  text-2xl
-                  font-bold
-                  text-blue-600
-                  mt-1
-                "
+          text-2xl
+          font-bold
+          text-blue-600
+          mt-1
+        "
                 >
-                  {formatMoney(totals.doanhThu)} VNĐ
+                  {formatMoney(doanhThuTong?.tongDoanhThu)} VNĐ
                 </p>
               </div>
 
               <div
                 className="
-                p-3
-                rounded-full
-                bg-blue-50
-              "
+        p-3
+        rounded-full
+        bg-blue-50
+      "
               >
                 <FiTrendingUp size={22} className="text-blue-600" />
               </div>
@@ -1039,50 +1050,102 @@ const VehicleProfitPage = ({ user }) => {
 
           <div
             className="
-            bg-white
-            rounded-lg
-            shadow-sm
-            border
-            p-4
-          "
+    bg-white
+    rounded-lg
+    shadow-sm
+    border
+    p-4
+  "
           >
             <div
               className="
-              flex
-              items-center
-              justify-between
-            "
+      flex
+      items-center
+      justify-between
+    "
             >
               <div>
                 <p
                   className="
-                  text-sm
-                  text-gray-500
-                "
+          text-sm
+          text-gray-500
+        "
                 >
-                  Tổng chi phí
+                  Tổng chi phí theo xe
                 </p>
 
                 <p
                   className="
-                  text-2xl
-                  font-bold
-                  text-orange-600
-                  mt-1
-                "
+          text-2xl
+          font-bold
+          text-orange-600
+          mt-1
+        "
                 >
-                  {formatMoney(totals.chiPhi)} VNĐ
+                  {formatMoney(doanhThuTong?.tongChiPhiTheoXe)} VNĐ
                 </p>
               </div>
 
               <div
                 className="
-                p-3
-                rounded-full
-                bg-orange-50
-              "
+        p-3
+        rounded-full
+        bg-orange-50
+      "
               >
                 <FiDollarSign size={22} className="text-orange-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* CHI PHÍ KHÁC - THÊM MỚI */}
+
+          <div
+            className="
+    bg-white
+    rounded-lg
+    shadow-sm
+    border
+    p-4
+  "
+          >
+            <div
+              className="
+      flex
+      items-center
+      justify-between
+    "
+            >
+              <div>
+                <p
+                  className="
+          text-sm
+          text-gray-500
+        "
+                >
+                  Chi phí khác
+                </p>
+
+                <p
+                  className="
+          text-2xl
+          font-bold
+          text-purple-600
+          mt-1
+        "
+                >
+                  {formatMoney(doanhThuTong?.chiPhiKhac) || 0} VNĐ
+                </p>
+              </div>
+
+              <div
+                className="
+        p-3
+        rounded-full
+        bg-purple-50
+      "
+              >
+                <FiDollarSign size={22} className="text-purple-600" />
               </div>
             </div>
           </div>
@@ -1091,48 +1154,48 @@ const VehicleProfitPage = ({ user }) => {
 
           <div
             className="
-            bg-white
-            rounded-lg
-            shadow-sm
-            border
-            p-4
-          "
+    bg-white
+    rounded-lg
+    shadow-sm
+    border
+    p-4
+  "
           >
             <div
               className="
-              flex
-              items-center
-              justify-between
-            "
+      flex
+      items-center
+      justify-between
+    "
             >
               <div>
                 <p
                   className="
-                  text-sm
-                  text-gray-500
-                "
+          text-sm
+          text-gray-500
+        "
                 >
                   Tổng lợi nhuận
                 </p>
 
                 <p
                   className={`
-                    text-2xl
-                    font-bold
-                    mt-1
-                    ${totals.loiNhuan >= 0 ? "text-green-600" : "text-red-600"}
-                  `}
+            text-2xl
+            font-bold
+            mt-1
+            ${totals.loiNhuan >= 0 ? "text-green-600" : "text-red-600"}
+          `}
                 >
-                  {formatMoney(totals.loiNhuan)} VNĐ
+                  {formatMoney(doanhThuTong?.loiNhuan)} VNĐ
                 </p>
               </div>
 
               <div
                 className="
-                p-3
-                rounded-full
-                bg-green-50
-              "
+        p-3
+        rounded-full
+        bg-green-50
+      "
               >
                 <FiBarChart2 size={22} className="text-green-600" />
               </div>
