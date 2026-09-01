@@ -48,6 +48,8 @@ const SalarySchema = new mongoose.Schema(
     soTienLuongDaGiu: { type: Number, default: 0 },   // Số tiền lương đã giữ
     soTienLuongConPhaiGiu: { type: Number, default: 0 }, // Số tiền lương còn phải giữ
 
+    isDontMatchCP: {type: Boolean, default: false}
+
   },
   {
     timestamps: true,

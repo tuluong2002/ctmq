@@ -1358,6 +1358,7 @@ exports.getVehicleRepairCostByMonth = async (req, res) => {
         _id: 1,
         maLoiNhuan: 1,
         bsx: 1,
+        company: 1,
         cpSuaXe: 1,
       },
     )

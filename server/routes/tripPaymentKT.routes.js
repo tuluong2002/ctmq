@@ -23,6 +23,7 @@ const {
   getUniqueLicensePlates,
   deleteByMonth,
   importTripPaymentKTExcel,
+  updateTripPaymentKT,
 
   // =========================
   // VEHICLE PROFIT
@@ -82,5 +83,9 @@ router.post("/vehicle-profit/update", updateVehicleProfitThanhToanLichTrinh);
 // /trip-payment-kt/vehicle-profit?month=2026-08
 
 router.get("/vehicle-profit", getVehicleProfitThanhToanLichTrinh);
+
+// Sửa
+router.put("/:id", updateTripPaymentKT);
+
 
 module.exports = router;

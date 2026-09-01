@@ -155,6 +155,8 @@ export default function VehicleProfitEpassMonthModal({ month, onClose }) {
 
                 <th className="border p-2">BSX</th>
 
+                <th className="border p-2">ĐƠN VỊ VẬN TẢI</th>
+
                 <th className="border p-2">CHI PHÍ EPASS THÁNG</th>
               </tr>
             </thead>
@@ -163,7 +165,7 @@ export default function VehicleProfitEpassMonthModal({ month, onClose }) {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="border p-8 text-center text-gray-500"
                   >
                     Đang tải dữ liệu...
@@ -172,7 +174,7 @@ export default function VehicleProfitEpassMonthModal({ month, onClose }) {
               ) : data.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="border p-8 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -189,6 +191,8 @@ export default function VehicleProfitEpassMonthModal({ month, onClose }) {
 
                     <td className="border p-2 font-medium">{item.bsx || ""}</td>
 
+                    <td className="border p-2 text-center">{item.company || ""}</td>
+
                     <td className="border p-2 text-right font-medium">
                       {formatMoney(item.cpEpassMonth)}
                     </td>
@@ -203,7 +207,7 @@ export default function VehicleProfitEpassMonthModal({ month, onClose }) {
             {!loading && data.length > 0 && (
               <tfoot>
                 <tr className="bg-gray-100 font-semibold">
-                  <td colSpan={3} className="border p-2 text-right">
+                  <td colSpan={4} className="border p-2 text-right">
                     TỔNG
                   </td>
 

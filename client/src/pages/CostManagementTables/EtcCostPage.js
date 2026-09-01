@@ -41,27 +41,34 @@ export default function ETCPage() {
 
   const [monthFilter, setMonthFilter] = useState("");
 
+  const [updatingETC, setUpdatingETC] = useState(false);
+
   /* ================= FETCH DATA ================= */
   const fetchData = async () => {
     setLoading(true);
-    try {
-      const res = await axios.get(baseUrl, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
 
-      let fetchedData = res.data || [];
+    try {
+      const params = {};
+
       if (monthFilter) {
-        fetchedData = fetchedData.filter((r) => {
-          const d = new Date(r.dayBill);
-          const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-            2,
-            "0"
-          )}`;
-          return ym === monthFilter;
-        });
+        const [year, month] = monthFilter.split("-");
+
+        params.month = Number(month);
+        params.year = Number(year);
       }
 
-      setData(fetchedData);
+      const res = await axios.get(baseUrl, {
+        params,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setData(res.data || []);
+    } catch (err) {
+      console.error("Lỗi lấy dữ liệu ETC:", err);
+
+      alert(err.response?.data?.message || "Lỗi lấy danh sách ETC");
     } finally {
       setLoading(false);
     }
@@ -117,6 +124,48 @@ export default function ETCPage() {
         setImportTotal(0);
         setImportDone(0);
       }, 2000);
+    }
+  };
+
+  /* ================= CẬP NHẬT CHI PHÍ ETC ================= */
+  const handleUpdateVehicleProfitETC = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng");
+      return;
+    }
+
+    const [year, month] = monthFilter.split("-");
+
+    const maLoiNhuan = `LN.${Number(month)}.${year}`;
+
+    const confirmUpdate = window.confirm(
+      `Bạn có chắc muốn cập nhật chi phí ETC cho ${maLoiNhuan}?`,
+    );
+
+    if (!confirmUpdate) return;
+
+    try {
+      setUpdatingETC(true);
+
+      const res = await axios.post(
+        `${baseUrl}/update-vehicle-profit-etc`,
+        {
+          month: monthFilter,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert(res.data?.message || `Đã cập nhật chi phí ETC cho ${maLoiNhuan}`);
+    } catch (err) {
+      console.error(err);
+
+      alert(err.response?.data?.message || "Cập nhật chi phí ETC thất bại");
+    } finally {
+      setUpdatingETC(false);
     }
   };
 
@@ -212,6 +261,14 @@ export default function ETCPage() {
           Đã nhập {importDone}/{importTotal} dòng hợp lệ
         </span>
       )}
+
+      <button
+        onClick={handleUpdateVehicleProfitETC}
+        disabled={!monthFilter || updatingETC}
+        className="bg-purple-600 text-white px-3 py-1 disabled:opacity-50"
+      >
+        {updatingETC ? "Đang cập nhật..." : "Cập nhật chi phí ETC"}
+      </button>
     </div>
   );
 
@@ -322,8 +379,8 @@ export default function ETCPage() {
                               form[f.key] !== undefined
                                 ? form[f.key]
                                 : isMoney
-                                ? 0
-                                : ""
+                                  ? 0
+                                  : ""
                             }
                             onChange={handleChange}
                             className="w-full border px-1 py-0.5 text-sm text-right"

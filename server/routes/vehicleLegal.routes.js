@@ -25,4 +25,6 @@ router.delete("/", VehicleLegalController.removeAll); // Xoá tất cả
 // =======================
 router.post("/import", upload.single("file"), VehicleLegalController.importExcel);
 
+router.post("/update-vehicle-profit-dkdkbh", VehicleLegalController.updateVehicleProfitDKDKBH);
+
 module.exports = router;

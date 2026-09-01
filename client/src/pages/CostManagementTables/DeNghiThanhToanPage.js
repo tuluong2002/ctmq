@@ -263,7 +263,7 @@ export default function DeNghiThanhToanPage({}) {
 
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h1 className="text-lg font-bold">Sổ phiếu đề nghị thanh toán</h1>
+          <h1 className="text-lg font-bold">SỔ PHIẾU ĐỀ NGHỊ THANH TOÁN</h1>
 
           <div className="text-gray-500 mt-1">
             Quản lý phiếu đề nghị thanh toán

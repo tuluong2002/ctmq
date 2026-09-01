@@ -36,6 +36,7 @@ export default function VehicleLegalPage() {
   const [importFile, setImportFile] = useState(null);
 
   const [monthFilter, setMonthFilter] = useState("");
+  const [updatingDKDKBH, setUpdatingDKDKBH] = useState(false);
 
   // Filter biển số xe
   const [vehicleFilterOptions, setVehicleFilterOptions] = useState([]);
@@ -65,36 +66,31 @@ export default function VehicleLegalPage() {
   // Fetch data
   const fetchData = async () => {
     setLoading(true);
+
     try {
+      const params = {};
+
+      // Truyền tháng dạng YYYY-MM xuống backend
+      if (monthFilter) {
+        params.month = monthFilter;
+      }
+
+      // Truyền danh sách biển số xe xuống backend
+      if (vehicleFilter && vehicleFilter.length > 0) {
+        params.vehicleNos = JSON.stringify(vehicleFilter);
+      }
+
       const res = await axios.get(baseUrl, {
-        headers: { Authorization: `Bearer ${token}` },
+        params,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      let fetchedData = res.data || [];
-
-      // lọc theo tháng
-      if (monthFilter) {
-        fetchedData = fetchedData.filter((r) => {
-          if (!r.ngayGhiTang) return false;
-          const d = new Date(r.ngayGhiTang);
-          const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-            2,
-            "0"
-          )}`;
-          return ym === monthFilter;
-        });
-      }
-
-      // lọc theo biển số xe
-      if (vehicleFilter && vehicleFilter.length > 0) {
-        fetchedData = fetchedData.filter((r) =>
-          vehicleFilter.includes(r.bienSoXe)
-        );
-      } else {
-        fetchedData = [];
-      }
-
-      setData(fetchedData);
+      setData(res.data || []);
+    } catch (err) {
+      console.error(err);
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -143,6 +139,48 @@ export default function VehicleLegalPage() {
         setImportTotal(0);
         setImportDone(0);
       }, 2000);
+    }
+  };
+
+  /* ================= CẬP NHẬT CHI PHÍ CCDC ================= */
+  const handleUpdateVehicleProfitDKDKBH = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng");
+      return;
+    }
+
+    const [year, month] = monthFilter.split("-");
+
+    const maLoiNhuan = `LN.${Number(month)}.${year}`;
+
+    const confirmUpdate = window.confirm(
+      `Bạn có chắc muốn cập nhật chi phí CCDC cho ${maLoiNhuan}?`,
+    );
+
+    if (!confirmUpdate) return;
+
+    try {
+      setUpdatingDKDKBH(true);
+
+      const res = await axios.post(
+        `${baseUrl}/update-vehicle-profit-dkdkbh`,
+        {
+          month: monthFilter,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert(res.data?.message || `Đã cập nhật chi phí CCDC cho ${maLoiNhuan}`);
+    } catch (err) {
+      console.error(err);
+
+      alert(err.response?.data?.message || "Cập nhật chi phí CCDC thất bại");
+    } finally {
+      setUpdatingDKDKBH(false);
     }
   };
 
@@ -233,6 +271,13 @@ export default function VehicleLegalPage() {
       >
         Xóa tất cả
       </button>
+      <button
+        onClick={handleUpdateVehicleProfitDKDKBH}
+        disabled={!monthFilter || updatingDKDKBH}
+        className="bg-purple-600 text-white px-3 py-1 disabled:opacity-50"
+      >
+        {updatingDKDKBH ? "Đang cập nhật..." : "Cập nhật chi phí CCDC"}
+      </button>
     </div>
   );
 
@@ -243,7 +288,10 @@ export default function VehicleLegalPage() {
         <thead className="sticky top-0 bg-blue-600 z-10 text-white text-center">
           <tr>
             {fieldMap.map((f) => (
-              <th key={f.key} className="border px-2 py-1 whitespace-nowrap relative">
+              <th
+                key={f.key}
+                className="border px-2 py-1 whitespace-nowrap relative"
+              >
                 {f.key === "bienSoXe" ? (
                   <div className="flex flex-col relative">
                     <span
@@ -272,19 +320,22 @@ export default function VehicleLegalPage() {
                           placeholder="Tìm biển số..."
                           className="w-full border rounded px-1 mb-1"
                           value={vehicleFilterSearch}
-                          onChange={(e) => setVehicleFilterSearch(e.target.value)}
+                          onChange={(e) =>
+                            setVehicleFilterSearch(e.target.value)
+                          }
                         />
                         <label className="flex items-center gap-1 mb-1">
                           <input
                             type="checkbox"
                             checked={
-                              vehicleFilter.length === vehicleFilterOptions.length
+                              vehicleFilter.length ===
+                              vehicleFilterOptions.length
                             }
                             onChange={(e) =>
                               setVehicleFilter(
                                 e.target.checked
                                   ? [...vehicleFilterOptions]
-                                  : []
+                                  : [],
                               )
                             }
                           />
@@ -293,10 +344,15 @@ export default function VehicleLegalPage() {
                         <div className="max-h-40 overflow-auto">
                           {vehicleFilterOptions
                             .filter((v) =>
-                              v.toLowerCase().includes(vehicleFilterSearch.toLowerCase())
+                              v
+                                .toLowerCase()
+                                .includes(vehicleFilterSearch.toLowerCase()),
                             )
                             .map((v) => (
-                              <label key={v} className="flex items-center gap-1 mb-1">
+                              <label
+                                key={v}
+                                className="flex items-center gap-1 mb-1"
+                              >
                                 <input
                                   type="checkbox"
                                   checked={vehicleFilter.includes(v)}
@@ -304,7 +360,7 @@ export default function VehicleLegalPage() {
                                     setVehicleFilter((p) =>
                                       e.target.checked
                                         ? [...p, v]
-                                        : p.filter((x) => x !== v)
+                                        : p.filter((x) => x !== v),
                                     )
                                   }
                                 />
@@ -364,7 +420,7 @@ export default function VehicleLegalPage() {
                         value={
                           f.key.includes("ngay") && form[f.key]
                             ? form[f.key].slice(0, 10)
-                            : form[f.key] ?? ""
+                            : (form[f.key] ?? "")
                         }
                         onChange={handleChange}
                         className="w-full border px-1 py-0.5 text-sm"
@@ -375,20 +431,25 @@ export default function VehicleLegalPage() {
                     <td
                       key={f.key}
                       className={`border px-2 py-1 ${
-                        typeof r[f.key] === "number" ? "text-right" : "text-left"
+                        typeof r[f.key] === "number"
+                          ? "text-right"
+                          : "text-left"
                       }`}
                     >
                       {f.key.includes("ngayGhiTang") && r[f.key]
                         ? new Date(r[f.key]).toLocaleDateString("vi-VN")
                         : typeof r[f.key] === "number"
-                        ? r[f.key].toLocaleString()
-                        : r[f.key]}
+                          ? r[f.key].toLocaleString()
+                          : r[f.key]}
                     </td>
                   ))}
               <td className="border px-2 py-1 text-center">
                 {editing === r._id ? (
                   <>
-                    <button onClick={handleSave} className="text-green-600 mr-2">
+                    <button
+                      onClick={handleSave}
+                      className="text-green-600 mr-2"
+                    >
                       Lưu
                     </button>
                     <button onClick={handleCancel} className="text-gray-600">

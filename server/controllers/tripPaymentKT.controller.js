@@ -229,6 +229,167 @@ exports.getAllTripPaymentKT = async (req, res) => {
 
 /**
  * =========================================================
+ * ✏️ SỬA TRIP PAYMENT KT
+ *
+ * FE gửi:
+ * PUT /api/trip-payment-kt/:id
+ *
+ * Body:
+ * {
+ *   ngayThang: "2026-08-15",
+ *   maXe: "XE001",
+ *   totalMoney: 1500000,
+ *   bienSoXe: "89C11496",
+ *   tenLaiXe: "Nguyễn Văn A",
+ *   ghiChu: "Ghi chú"
+ * }
+ * =========================================================
+ */
+exports.updateTripPaymentKT = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { ngayThang, maXe, totalMoney, bienSoXe, tenLaiXe, ghiChu } =
+      req.body;
+
+    // =====================================================
+    // 1. KIỂM TRA ID
+    // =====================================================
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Thiếu id cần sửa",
+      });
+    }
+
+    // =====================================================
+    // 2. XỬ LÝ NGÀY
+    // =====================================================
+
+    let parsedNgayThang = null;
+
+    if (ngayThang !== null && ngayThang !== undefined && ngayThang !== "") {
+      parsedNgayThang = parseExcelDate(ngayThang);
+
+      if (!parsedNgayThang) {
+        parsedNgayThang = new Date(ngayThang);
+      }
+
+      if (isNaN(parsedNgayThang.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Ngày tháng không hợp lệ",
+        });
+      }
+    }
+
+    // =====================================================
+    // 3. XỬ LÝ TIỀN
+    // =====================================================
+
+    let parsedTotalMoney = 0;
+
+    if (typeof totalMoney === "number" && Number.isFinite(totalMoney)) {
+      parsedTotalMoney = totalMoney;
+    } else if (
+      totalMoney !== null &&
+      totalMoney !== undefined &&
+      totalMoney !== ""
+    ) {
+      const moneyString = String(totalMoney)
+        .trim()
+        .replace(/\s/g, "")
+        .replace(/\./g, "")
+        .replace(/,/g, "")
+        .replace(/[^\d.-]/g, "");
+
+      parsedTotalMoney = Number(moneyString);
+
+      if (!Number.isFinite(parsedTotalMoney)) {
+        return res.status(400).json({
+          success: false,
+          message: "Số tiền không hợp lệ",
+        });
+      }
+    }
+
+    // =====================================================
+    // 4. CHUẨN HÓA DỮ LIỆU
+    // =====================================================
+
+    const updateData = {
+      ngayThang: parsedNgayThang,
+      maXe: maXe !== null && maXe !== undefined ? String(maXe).trim() : "",
+      totalMoney: parsedTotalMoney,
+      bienSoXe:
+        bienSoXe !== null && bienSoXe !== undefined
+          ? String(bienSoXe).trim()
+          : "",
+      tenLaiXe:
+        tenLaiXe !== null && tenLaiXe !== undefined
+          ? String(tenLaiXe).trim()
+          : "",
+      ghiChu:
+        ghiChu !== null && ghiChu !== undefined ? String(ghiChu).trim() : "",
+    };
+
+    // =====================================================
+    // 5. UPDATE
+    // =====================================================
+
+    const updated = await TripPaymentKT.findByIdAndUpdate(
+      id,
+      {
+        $set: updateData,
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    ).lean();
+
+    // =====================================================
+    // 6. KHÔNG TÌM THẤY
+    // =====================================================
+
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy dữ liệu thanh toán lịch trình",
+      });
+    }
+
+    // =====================================================
+    // 7. RESPONSE
+    // =====================================================
+
+    return res.json({
+      success: true,
+      message: "Đã sửa thanh toán lịch trình",
+      data: updated,
+    });
+  } catch (error) {
+    console.error("updateTripPaymentKT:", error);
+
+    // Lỗi ObjectId
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        success: false,
+        message: "ID không hợp lệ",
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: "Lỗi sửa thanh toán lịch trình",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * =========================================================
  * 👨‍✈️ DANH SÁCH TÊN LÁI XE UNIQUE
  * =========================================================
  */
@@ -1164,6 +1325,7 @@ exports.getVehicleProfitThanhToanLichTrinh = async (req, res) => {
         _id: 1,
         maLoiNhuan: 1,
         bsx: 1,
+        company: 1,
         cpThanhToanLichTrinh: 1,
       },
     )

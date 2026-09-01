@@ -45,25 +45,6 @@ router.post("/create", createMonthlyProfit);
 // STT | BSX | Doanh thu | Chi phí | Lợi nhuận | Mã LN
 router.get("/export", exportMonthlyProfit);
 
-
-// =====================================================
-// NHẬP CHI PHÍ THEO THÁNG
-// =====================================================
-// POST
-// /api/vehicle-profit/import-cost
-//
-// FormData:
-// file = file Excel
-//
-// Excel:
-// STT | BSX | Doanh thu | Chi phí | Lợi nhuận | Mã LN
-router.post(
-  "/import-cost",
-  upload.single("file"),
-  importMonthlyCost
-);
-
-
 // =====================================================
 // TÍNH LẠI TOÀN BỘ KỲ
 // =====================================================

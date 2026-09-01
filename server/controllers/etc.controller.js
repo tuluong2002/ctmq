@@ -1,5 +1,6 @@
 const ExcelJS = require("exceljs");
 const ETC = require("../models/ETC");
+const VehicleProfit = require("../models/VehicleProfit");
 
 /* =======================
    LẤY TẤT CẢ DỮ LIỆU CÓ FILTER THEO THÁNG
@@ -11,20 +12,24 @@ exports.getAll = async (req, res) => {
     const filter = {};
 
     if (month && year) {
-      month = parseInt(month) - 1; // JS tháng 0-11
+      month = parseInt(month);
       year = parseInt(year);
-      const start = new Date(year, month, 1);
-      const end = new Date(year, month + 1, 1);
-      filter.dayBill = { $gte: start, $lt: end };
+
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 1);
+
+      filter.dayBuy = { $lt: end };
+      filter.dayExp = { $gte: start };
     }
 
-    const data = await ETC.find(filter).sort({ dayBill: -1 });
+    const data = await ETC.find(filter).sort({ dayBuy: -1 });
+
     res.json(data);
   } catch (err) {
+    console.error("getAll ETC Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
-
 /* =======================
    LẤY DANH SÁCH nameDV DUY NHẤT
 ======================= */
@@ -108,8 +113,13 @@ exports.importExcel = async (req, res) => {
       if (!cell || cell.value === null || cell.value === undefined) return "";
       if (typeof cell.value === "object") {
         if ("result" in cell.value) {
-          if (cell.value.result === null || cell.value.result === undefined) return "";
-          if (typeof cell.value.result === "object" && "error" in cell.value.result) return "#N/A";
+          if (cell.value.result === null || cell.value.result === undefined)
+            return "";
+          if (
+            typeof cell.value.result === "object" &&
+            "error" in cell.value.result
+          )
+            return "#N/A";
           return String(cell.value.result).trim();
         }
         if ("text" in cell.value) return cell.value.text?.trim() || "";
@@ -121,7 +131,11 @@ exports.importExcel = async (req, res) => {
     const getCellNumber = (cell) => {
       if (!cell || cell.value === null || cell.value === undefined) return 0;
       if (typeof cell.value === "object" && "result" in cell.value) {
-        if (typeof cell.value.result === "object" && "error" in cell.value.result) return 0;
+        if (
+          typeof cell.value.result === "object" &&
+          "error" in cell.value.result
+        )
+          return 0;
         const num = Number(cell.value.result);
         return isNaN(num) ? 0 : num;
       }
@@ -132,7 +146,11 @@ exports.importExcel = async (req, res) => {
     const getCellDate = (cell) => {
       if (!cell || cell.value === null || cell.value === undefined) return null;
       if (cell.value instanceof Date) return cell.value;
-      if (typeof cell.value === "object" && "result" in cell.value && cell.value.result instanceof Date) 
+      if (
+        typeof cell.value === "object" &&
+        "result" in cell.value &&
+        cell.value.result instanceof Date
+      )
         return cell.value.result;
       return null;
     };
@@ -194,5 +212,119 @@ exports.importExcel = async (req, res) => {
   } catch (err) {
     console.error("Import Excel Error:", err);
     res.status(500).json({ message: err.message });
+  }
+};
+
+/* =======================
+   CẬP NHẬT CHI PHÍ ETC 
+======================= */
+const normalizeBSX = (value) => {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+};
+
+exports.updateVehicleProfitETC = async (req, res) => {
+  try {
+    const { month } = req.body;
+
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        message: "month không hợp lệ. Ví dụ: 2026-05",
+      });
+    }
+
+    const [yearStr, monthStr] = month.split("-");
+
+    const year = Number(yearStr);
+    const monthNumber = Number(monthStr);
+
+    const maLoiNhuan = `LN.${monthNumber}.${year}`;
+
+    // Ngày đầu kỳ lợi nhuận
+    const startDate = new Date(year, monthNumber - 1, 1);
+
+    // =====================================================
+    // LẤY ETC ĐANG CÒN HIỆU LỰC TRONG KỲ
+    //
+    // dayBuy <= ngày đầu tháng
+    // dayExp > ngày đầu tháng
+    // =====================================================
+
+    const etcList = await ETC.find({
+      dayBuy: { $lte: startDate },
+      dayExp: { $gt: startDate },
+    });
+
+    // =====================================================
+    // CỘNG CP ETC THEO BSX
+    // =====================================================
+
+    const cpETCByBSX = {};
+
+    for (const item of etcList) {
+      const bsx = normalizeBSX(item.bsx);
+
+      if (!bsx) continue;
+
+      const timeUse = Number(item.timeUse || 0);
+
+      // Không chia cho 0
+      if (timeUse <= 0) continue;
+
+      const tongETC =
+        Number(item.phiGPS || 0) +
+        Number(item.DVmaychu || 0) +
+        Number(item.DVsimcard || 0) +
+        Number(item.camBienDau || 0) +
+        Number(item.camHT || 0) +
+        Number(item.suaChua || 0);
+
+      const cpETC = tongETC / timeUse;
+
+      cpETCByBSX[bsx] = (cpETCByBSX[bsx] || 0) + cpETC;
+    }
+
+    // =====================================================
+    // LẤY VEHICLE PROFIT CỦA KỲ
+    // =====================================================
+
+    const vehicleProfits = await VehicleProfit.find({
+      maLoiNhuan,
+    });
+
+    let updated = 0;
+
+    for (const vehicle of vehicleProfits) {
+      const bsx = normalizeBSX(vehicle.bsx);
+
+      const cpETC = cpETCByBSX[bsx] || 0;
+
+      await VehicleProfit.updateOne(
+        { _id: vehicle._id },
+        {
+          $set: {
+            cpETC,
+          },
+        },
+      );
+
+      updated++;
+    }
+
+    res.json({
+      success: true,
+      message: `Đã cập nhật cpETC cho ${maLoiNhuan}`,
+      maLoiNhuan,
+      soETC: etcList.length,
+      soXe: updated,
+    });
+  } catch (err) {
+    console.error("updateVehicleProfitETC:", err);
+
+    res.status(500).json({
+      message: err.message,
+    });
   }
 };

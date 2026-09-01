@@ -58,6 +58,9 @@ export default function TripPaymentKTPage() {
   /* ================= VEHICLE PROFIT ================= */
   const [showVehicleProfitModal, setShowVehicleProfitModal] = useState(false);
 
+  const [editingRow, setEditingRow] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const [updatingVehicleProfit, setUpdatingVehicleProfit] = useState(false);
 
   /* ================= PAGINATION ================= */
@@ -235,6 +238,60 @@ export default function TripPaymentKTPage() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  /* =========================================================
+     SỬA CHUYẾN SAI THÔNG TIN
+  ========================================================= */
+  const handleEdit = (row) => {
+    setEditingRow({
+      _id: row._id,
+      ngayThang: row.ngayThang
+        ? new Date(row.ngayThang).toISOString().split("T")[0]
+        : "",
+      maXe: row.maXe || "",
+      totalMoney: row.totalMoney ?? 0,
+      bienSoXe: row.bienSoXe || "",
+      tenLaiXe: row.tenLaiXe || "",
+      ghiChu: row.ghiChu || "",
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRow?._id) return;
+
+    setSavingEdit(true);
+
+    try {
+      await axios.put(
+        `${baseUrl}/${editingRow._id}`,
+        {
+          ngayThang: editingRow.ngayThang,
+          maXe: editingRow.maXe,
+          totalMoney: editingRow.totalMoney,
+          bienSoXe: editingRow.bienSoXe,
+          tenLaiXe: editingRow.tenLaiXe,
+          ghiChu: editingRow.ghiChu,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      setEditingRow(null);
+
+      await fetchData();
+
+      alert("Sửa thành công. Hãy cập nhật lại chi phí lịch trình.");
+    } catch (err) {
+      console.error("Lỗi sửa:", err);
+
+      alert(err.response?.data?.message || "Sửa dữ liệu thất bại");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -709,9 +766,24 @@ export default function TripPaymentKTPage() {
                 >
                   {/* NGÀY THÁNG */}
                   <td className="border px-2 text-center whitespace-nowrap">
-                    {r.ngayThang
-                      ? new Date(r.ngayThang).toLocaleDateString("vi-VN")
-                      : ""}
+                    <div className="relative flex items-center justify-center">
+                      {/* NÚT SỬA SÁT BÊN TRÁI */}
+                      {r.isDontMatchCP === true && (
+                        <button
+                          onClick={() => handleEdit(r)}
+                          className="absolute left-0 bg-yellow-500 hover:bg-yellow-600 text-white px-1.5 py-0.25 rounded text-[10px]"
+                        >
+                          Sửa
+                        </button>
+                      )}
+
+                      {/* NGÀY CĂN GIỮA */}
+                      <span>
+                        {r.ngayThang
+                          ? new Date(r.ngayThang).toLocaleDateString("vi-VN")
+                          : ""}
+                      </span>
+                    </div>
                   </td>
 
                   {/* MÃ XE */}
@@ -766,6 +838,176 @@ export default function TripPaymentKTPage() {
         month={month}
         onClose={() => setShowVehicleProfitModal(false)}
       />
+
+      {/* =======================================================
+        MODAL SỬA TRIP PAYMENT KT
+      ======================================================= */}
+      {editingRow && (
+        <div className="fixed inset-0 z-[1000] bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            {/* HEADER */}
+            <div className="px-4 py-3 border-b flex justify-between items-center">
+              <h2 className="font-semibold text-lg">
+                Sửa thanh toán lịch trình
+              </h2>
+
+              <button
+                onClick={() => setEditingRow(null)}
+                disabled={savingEdit}
+                className="text-gray-500 hover:text-black text-xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* BODY */}
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* NGÀY */}
+              <div>
+                <label className="block text-xs font-semibold mb-1">
+                  Ngày tháng
+                </label>
+
+                <input
+                  type="date"
+                  value={editingRow.ngayThang}
+                  onChange={(e) =>
+                    setEditingRow((prev) => ({
+                      ...prev,
+                      ngayThang: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded px-2 py-1"
+                />
+              </div>
+
+              {/* MÃ XE */}
+              <div>
+                <label className="block text-xs font-semibold mb-1">
+                  Mã xe
+                </label>
+
+                <input
+                  type="text"
+                  value={editingRow.maXe}
+                  onChange={(e) =>
+                    setEditingRow((prev) => ({
+                      ...prev,
+                      maXe: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded px-2 py-1"
+                />
+              </div>
+
+              {/* TỔNG TIỀN */}
+              <div>
+                <label className="block text-xs font-semibold mb-1">
+                  Tổng tiền
+                </label>
+
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={
+                    editingRow.totalMoney !== null &&
+                    editingRow.totalMoney !== undefined &&
+                    editingRow.totalMoney !== ""
+                      ? Number(editingRow.totalMoney).toLocaleString("vi-VN")
+                      : ""
+                  }
+                  onChange={(e) => {
+                    // Chỉ giữ lại số
+                    const rawValue = e.target.value.replace(/\D/g, "");
+
+                    setEditingRow((prev) => ({
+                      ...prev,
+                      totalMoney: rawValue ? Number(rawValue) : "",
+                    }));
+                  }}
+                  className="w-full border rounded px-2 py-1"
+                />
+              </div>
+
+              {/* BIỂN SỐ */}
+              <div>
+                <label className="block text-xs font-semibold mb-1">
+                  Biển số xe
+                </label>
+
+                <input
+                  type="text"
+                  value={editingRow.bienSoXe}
+                  onChange={(e) =>
+                    setEditingRow((prev) => ({
+                      ...prev,
+                      bienSoXe: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded px-2 py-1"
+                />
+              </div>
+
+              {/* TÊN LÁI XE */}
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold mb-1">
+                  Tên lái xe
+                </label>
+
+                <input
+                  type="text"
+                  value={editingRow.tenLaiXe}
+                  onChange={(e) =>
+                    setEditingRow((prev) => ({
+                      ...prev,
+                      tenLaiXe: e.target.value,
+                    }))
+                  }
+                  className="w-full border rounded px-2 py-1"
+                />
+              </div>
+
+              {/* GHI CHÚ */}
+              <div className="md:col-span-2">
+                <label className="block text-xs font-semibold mb-1">
+                  Ghi chú
+                </label>
+
+                <textarea
+                  value={editingRow.ghiChu}
+                  onChange={(e) =>
+                    setEditingRow((prev) => ({
+                      ...prev,
+                      ghiChu: e.target.value,
+                    }))
+                  }
+                  rows={3}
+                  className="w-full border rounded px-2 py-1"
+                />
+              </div>
+            </div>
+
+            {/* FOOTER */}
+            <div className="px-4 py-3 border-t flex justify-end gap-2">
+              <button
+                onClick={() => setEditingRow(null)}
+                disabled={savingEdit}
+                className="border px-3 py-1 rounded"
+              >
+                Hủy
+              </button>
+
+              <button
+                onClick={handleSaveEdit}
+                disabled={savingEdit}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded disabled:opacity-50"
+              >
+                {savingEdit ? "Đang lưu..." : "Lưu"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

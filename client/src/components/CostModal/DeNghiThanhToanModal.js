@@ -161,7 +161,7 @@ export default function DeNghiThanhToanModal({
     return nccList.filter((item) =>
       String(item.tenNguoiBan || "")
         .toLowerCase()
-        .includes(keyword)
+        .includes(keyword),
     );
   }, [nccList, form.nhaCungCap]);
 
@@ -303,37 +303,10 @@ export default function DeNghiThanhToanModal({
 
         <div className="p-5 grid grid-cols-2 gap-4">
           {/* =================================================
-              NGÀY ĐỀ NGHỊ
-          ================================================= */}
-
-          <Field label="Ngày đề nghị *">
-            <input
-              type="date"
-              value={form.ngayDeNghi}
-              readOnly
-              disabled
-              className="input bg-gray-100 cursor-not-allowed"
-            />
-          </Field>
-
-          {/* =================================================
-              NGƯỜI ĐỀ NGHỊ
-          ================================================= */}
-
-          <Field label="Người đề nghị *">
-            <input
-              value={form.nguoiDeNghi}
-              onChange={(e) => handleChange("nguoiDeNghi", e.target.value)}
-              className="input"
-              placeholder="Nhập nhà cung cấp để lấy người phụ trách..."
-            />
-          </Field>
-
-          {/* =================================================
               NHÀ CUNG CẤP
           ================================================= */}
 
-          <Field label="Nhà cung cấp">
+          <Field label="Nhà cung cấp *">
             <div className="relative">
               <input
                 value={form.nhaCungCap}
@@ -392,6 +365,19 @@ export default function DeNghiThanhToanModal({
           </Field>
 
           {/* =================================================
+              HÓA ĐƠN
+          ================================================= */}
+
+          <Field label="Hóa đơn số">
+            <input
+              value={form.hoaDonSo}
+              onChange={(e) => handleChange("hoaDonSo", e.target.value)}
+              className="input"
+              placeholder="Nhập số hóa đơn"
+            />
+          </Field>
+
+          {/* =================================================
               MÃ SỐ THUẾ
           ================================================= */}
 
@@ -401,6 +387,22 @@ export default function DeNghiThanhToanModal({
               onChange={(e) => handleChange("maSoThue", e.target.value)}
               className="input"
               placeholder="Nhập mã số thuế"
+            />
+          </Field>
+
+          {/* =================================================
+              TRƯỚC THUẾ
+          ================================================= */}
+
+          <Field label="Số tiền đề nghị trước thuế">
+            <input
+              inputMode="numeric"
+              value={formatMoney(form.soTienTruocThue)}
+              onChange={(e) =>
+                handleMoneyChange("soTienTruocThue", e.target.value)
+              }
+              className="input text-right"
+              placeholder="0"
             />
           </Field>
 
@@ -418,15 +420,16 @@ export default function DeNghiThanhToanModal({
           </Field>
 
           {/* =================================================
-              HÓA ĐƠN
+              THUẾ
           ================================================= */}
 
-          <Field label="Hóa đơn số">
+          <Field label="Thuế">
             <input
-              value={form.hoaDonSo}
-              onChange={(e) => handleChange("hoaDonSo", e.target.value)}
-              className="input"
-              placeholder="Nhập số hóa đơn"
+              inputMode="numeric"
+              value={formatMoney(form.thue)}
+              onChange={(e) => handleMoneyChange("thue", e.target.value)}
+              className="input text-right"
+              placeholder="0"
             />
           </Field>
 
@@ -456,33 +459,17 @@ export default function DeNghiThanhToanModal({
             />
           </Field>
 
-          {/* =================================================
-              TRƯỚC THUẾ
-          ================================================= */}
-
-          <Field label="Số tiền đề nghị trước thuế">
-            <input
-              inputMode="numeric"
-              value={formatMoney(form.soTienTruocThue)}
-              onChange={(e) =>
-                handleMoneyChange("soTienTruocThue", e.target.value)
-              }
-              className="input text-right"
-              placeholder="0"
-            />
-          </Field>
 
           {/* =================================================
-              THUẾ
+              NGƯỜI ĐỀ NGHỊ
           ================================================= */}
 
-          <Field label="Thuế">
+          <Field label="Người phụ trách">
             <input
-              inputMode="numeric"
-              value={formatMoney(form.thue)}
-              onChange={(e) => handleMoneyChange("thue", e.target.value)}
-              className="input text-right"
-              placeholder="0"
+              value={form.nguoiDeNghi}
+              onChange={(e) => handleChange("nguoiDeNghi", e.target.value)}
+              className="input"
+              placeholder="Nhập nhà cung cấp để lấy người phụ trách..."
             />
           </Field>
 

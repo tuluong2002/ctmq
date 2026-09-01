@@ -62,7 +62,9 @@ const calculateTotalCost = (record) => {
     toNumber(record.cpEpassMonth) +
     toNumber(record.cpEpassTurn) +
     toNumber(record.cpKhauHaoXe) +
-    toNumber(record.cpThanhToanLichTrinh)
+    toNumber(record.cpThanhToanLichTrinh) +
+    toNumber(record.cpETC) +
+    toNumber(record.cpDKDKBH)
   );
 };
 
@@ -98,7 +100,7 @@ const updateDoanhThuTong = async (maLoiNhuan) => {
   // ==========================================
   const tongDoanhThu = profits.reduce(
     (sum, item) => sum + toNumber(item.doanhThu),
-    0
+    0,
   );
 
   // ==========================================
@@ -106,7 +108,7 @@ const updateDoanhThuTong = async (maLoiNhuan) => {
   // ==========================================
   const tongChiPhiTheoXe = profits.reduce(
     (sum, item) => sum + calculateTotalCost(item),
-    0
+    0,
   );
 
   // ==========================================
@@ -145,7 +147,7 @@ const updateDoanhThuTong = async (maLoiNhuan) => {
     {
       new: true,
       upsert: true,
-    }
+    },
   );
 
   return result;
@@ -419,7 +421,7 @@ exports.createMonthlyProfit = async (req, res) => {
     const existingProfits = await VehicleProfit.find({
       maLoiNhuan: normalizedMaLoiNhuan,
     }).select(
-      "bsx doanhThu loiNhuan cpLuong cpNhienLieu cpSuaXe cpEpassMonth cpEpassTurn cpKhauHaoXe cpThanhToanLichTrinh"
+      "bsx doanhThu loiNhuan cpLuong cpNhienLieu cpSuaXe cpEpassMonth cpEpassTurn cpKhauHaoXe cpThanhToanLichTrinh cpETC cpDKDKBH",
     );
 
     const existingMap = new Map();
@@ -467,9 +469,9 @@ exports.createMonthlyProfit = async (req, res) => {
       // ========================================
       const doanhThu = revenueMap.get(vehicleKey) || 0;
 
-      // ========================================
+      // ==========================================
       // CHI PHÍ BAN ĐẦU
-      // ========================================
+      // ==========================================
       const cpLuong = 0;
       const cpNhienLieu = 0;
       const cpSuaXe = 0;
@@ -477,6 +479,8 @@ exports.createMonthlyProfit = async (req, res) => {
       const cpEpassTurn = 0;
       const cpKhauHaoXe = 0;
       const cpThanhToanLichTrinh = 0;
+      const cpETC = 0;
+      const cpDKDKBH = 0;
 
       // ========================================
       // LỢI NHUẬN
@@ -489,7 +493,9 @@ exports.createMonthlyProfit = async (req, res) => {
         cpEpassMonth -
         cpEpassTurn -
         cpKhauHaoXe -
-        cpThanhToanLichTrinh;
+        cpThanhToanLichTrinh -
+        cpETC -
+        cpDKDKBH;
 
       // ========================================
       // INSERT
@@ -498,6 +504,7 @@ exports.createMonthlyProfit = async (req, res) => {
         insertOne: {
           document: {
             bsx,
+            company: vehicle.company || "",
 
             maLoiNhuan: normalizedMaLoiNhuan,
 
@@ -508,9 +515,10 @@ exports.createMonthlyProfit = async (req, res) => {
             cpEpassTurn,
             cpKhauHaoXe,
             cpThanhToanLichTrinh,
+            cpETC,
+            cpDKDKBH,
 
             doanhThu,
-
             loiNhuan,
           },
         },
@@ -642,7 +650,7 @@ exports.updateVehicleProfit = async (req, res) => {
     }).select("plateNumber");
 
     const vehicle = vehicles.find(
-      (item) => getVehicleKey(item.plateNumber) === requestedKey
+      (item) => getVehicleKey(item.plateNumber) === requestedKey,
     );
 
     if (!vehicle) {
@@ -782,6 +790,10 @@ exports.recalculateMonthlyProfit = async (req, res) => {
 
               cpThanhToanLichTrinh: toNumber(profit.cpThanhToanLichTrinh),
 
+              cpETC: toNumber(profit.cpETC),
+
+              cpDKDKBH: toNumber(profit.cpDKDKBH),
+
               loiNhuan,
             },
           },
@@ -809,42 +821,52 @@ exports.recalculateMonthlyProfit = async (req, res) => {
     // ==========================================
     const tongDoanhThu = results.reduce(
       (sum, item) => sum + toNumber(item.doanhThu),
-      0
+      0,
     );
 
     const tongCpLuong = results.reduce(
       (sum, item) => sum + toNumber(item.cpLuong),
-      0
+      0,
     );
 
     const tongCpNhienLieu = results.reduce(
       (sum, item) => sum + toNumber(item.cpNhienLieu),
-      0
+      0,
     );
 
     const tongCpSuaXe = results.reduce(
       (sum, item) => sum + toNumber(item.cpSuaXe),
-      0
+      0,
     );
 
     const tongCpEpassMonth = results.reduce(
       (sum, item) => sum + toNumber(item.cpEpassMonth),
-      0
+      0,
     );
 
     const tongCpEpassTurn = results.reduce(
       (sum, item) => sum + toNumber(item.cpEpassTurn),
-      0
+      0,
     );
 
     const tongCpKhauHaoXe = results.reduce(
       (sum, item) => sum + toNumber(item.cpKhauHaoXe),
-      0
+      0,
     );
 
     const tongCpThanhToanLichTrinh = results.reduce(
       (sum, item) => sum + toNumber(item.cpThanhToanLichTrinh),
-      0
+      0,
+    );
+
+    const tongCpETC = results.reduce(
+      (sum, item) => sum + toNumber(item.cpETC),
+      0,
+    );
+
+    const tongCpDKDKBH = results.reduce(
+      (sum, item) => sum + toNumber(item.cpDKDKBH),
+      0,
     );
 
     const tongChiPhi =
@@ -854,7 +876,9 @@ exports.recalculateMonthlyProfit = async (req, res) => {
       tongCpEpassMonth +
       tongCpEpassTurn +
       tongCpKhauHaoXe +
-      tongCpThanhToanLichTrinh;
+      tongCpThanhToanLichTrinh +
+      tongCpETC +
+      tongCpDKDKBH;
 
     const tongLoiNhuan = tongDoanhThu - tongChiPhi;
 
@@ -882,6 +906,10 @@ exports.recalculateMonthlyProfit = async (req, res) => {
       tongCpKhauHaoXe,
 
       tongCpThanhToanLichTrinh,
+
+      tongCpETC,
+
+      tongCpDKDKBH,
 
       tongChiPhi,
 
@@ -941,42 +969,52 @@ exports.getMonthlyProfit = async (req, res) => {
     // ==========================================
     const tongDoanhThu = results.reduce(
       (sum, item) => sum + toNumber(item.doanhThu),
-      0
+      0,
     );
 
     const tongCpLuong = results.reduce(
       (sum, item) => sum + toNumber(item.cpLuong),
-      0
+      0,
     );
 
     const tongCpNhienLieu = results.reduce(
       (sum, item) => sum + toNumber(item.cpNhienLieu),
-      0
+      0,
     );
 
     const tongCpSuaXe = results.reduce(
       (sum, item) => sum + toNumber(item.cpSuaXe),
-      0
+      0,
     );
 
     const tongCpEpassMonth = results.reduce(
       (sum, item) => sum + toNumber(item.cpEpassMonth),
-      0
+      0,
     );
 
     const tongCpEpassTurn = results.reduce(
       (sum, item) => sum + toNumber(item.cpEpassTurn),
-      0
+      0,
     );
 
     const tongCpKhauHaoXe = results.reduce(
       (sum, item) => sum + toNumber(item.cpKhauHaoXe),
-      0
+      0,
     );
 
     const tongCpThanhToanLichTrinh = results.reduce(
       (sum, item) => sum + toNumber(item.cpThanhToanLichTrinh),
-      0
+      0,
+    );
+
+    const tongCpETC = results.reduce(
+      (sum, item) => sum + toNumber(item.cpETC),
+      0,
+    );
+
+    const tongCpDKDKBH = results.reduce(
+      (sum, item) => sum + toNumber(item.cpDKDKBH),
+      0,
     );
 
     const tongChiPhi =
@@ -986,7 +1024,9 @@ exports.getMonthlyProfit = async (req, res) => {
       tongCpEpassMonth +
       tongCpEpassTurn +
       tongCpKhauHaoXe +
-      tongCpThanhToanLichTrinh;
+      tongCpThanhToanLichTrinh +
+      tongCpETC +
+      tongCpDKDKBH;
 
     const tongLoiNhuan = tongDoanhThu - tongChiPhi;
 
@@ -1018,6 +1058,10 @@ exports.getMonthlyProfit = async (req, res) => {
       tongCpKhauHaoXe,
 
       tongCpThanhToanLichTrinh,
+
+      tongCpETC,
+
+      tongCpDKDKBH,
 
       tongChiPhi,
 
@@ -1148,13 +1192,14 @@ exports.exportMonthlyProfit = async (req, res) => {
     const workbook = new ExcelJS.Workbook();
 
     const worksheet = workbook.addWorksheet(
-      `Lợi nhuận ${normalizedMaLoiNhuan}`
+      `Lợi nhuận ${normalizedMaLoiNhuan}`,
     );
 
     // ==========================================
     // TITLE
+    // A1:O1
     // ==========================================
-    worksheet.mergeCells("A1:L1");
+    worksheet.mergeCells("A1:O1");
 
     const titleCell = worksheet.getCell("A1");
 
@@ -1176,18 +1221,21 @@ exports.exportMonthlyProfit = async (req, res) => {
     // HEADER
     // ==========================================
     worksheet.getRow(3).values = [
-      "STT",
-      "BSX",
-      "Nhiên liệu",
-      "Sửa xe",
-      "Epass tháng",
-      "Epass lượt",
-      "Khấu hao xe",
-      "Thanh toán lịch trình",
-      "Lương",
-      "Doanh thu",
-      "Lợi nhuận",
-      "MÃ LN",
+      "STT", // A
+      "BSX", // B
+      "Đơn vị Vận tải", // C
+      "Nhiên liệu", // D
+      "Sửa xe", // E
+      "Epass tháng", // F
+      "Epass lượt", // G
+      "Khấu hao xe", // H
+      "Thanh toán lịch trình", // I
+      "Lương", // J
+      "ETC", // K
+      "ĐKĐKBH", // L
+      "Doanh thu", // M
+      "Lợi nhuận", // N
+      "MÃ LN", // O
     ];
 
     const headerRow = worksheet.getRow(3);
@@ -1199,6 +1247,7 @@ exports.exportMonthlyProfit = async (req, res) => {
     headerRow.alignment = {
       horizontal: "center",
       vertical: "middle",
+      wrapText: true,
     };
 
     headerRow.eachCell((cell) => {
@@ -1229,36 +1278,44 @@ exports.exportMonthlyProfit = async (req, res) => {
         // B - BSX
         item.bsx,
 
-        // C - NHIÊN LIỆU
+        // C - ĐƠN VỊ VẬN TẢI
+        item.company || "",
+
+        // D - NHIÊN LIỆU
         toNumber(item.cpNhienLieu),
 
-        // D - SỬA XE
+        // E - SỬA XE
         toNumber(item.cpSuaXe),
 
-        // E - EPASS THÁNG
+        // F - EPASS THÁNG
         toNumber(item.cpEpassMonth),
 
-        // F - EPASS LƯỢT
+        // G - EPASS LƯỢT
         toNumber(item.cpEpassTurn),
 
-        // G - KHẤU HAO XE
+        // H - KHẤU HAO XE
         toNumber(item.cpKhauHaoXe),
 
-        // H - THANH TOÁN LỊCH TRÌNH
+        // I - THANH TOÁN LỊCH TRÌNH
         toNumber(item.cpThanhToanLichTrinh),
 
-        // I - LƯƠNG
+        // J - LƯƠNG
         toNumber(item.cpLuong),
 
-        // J - DOANH THU
+        // K - ETC
+        toNumber(item.cpETC),
+
+        // L - ĐKĐKBH
+        toNumber(item.cpDKDKBH),
+
+        // M - DOANH THU
         toNumber(item.doanhThu),
 
-        // K - LỢI NHUẬN
-        // QUAN TRỌNG:
-        // LẤY TRỰC TIẾP GIÁ TRỊ TRONG DATABASE
+        // N - LỢI NHUẬN
+        // LẤY TRỰC TIẾP TỪ DATABASE
         toNumber(item.loiNhuan),
 
-        // L - MÃ LN
+        // O - MÃ LN
         String(item.maLoiNhuan || ""),
       ]);
 
@@ -1283,98 +1340,133 @@ exports.exportMonthlyProfit = async (req, res) => {
       });
 
       // ==========================================
-      // C -> K: ĐỊNH DẠNG SỐ
+      // D -> N: ĐỊNH DẠNG SỐ
       // ==========================================
-      for (let col = 3; col <= 11; col++) {
+      for (let col = 4; col <= 14; col++) {
         row.getCell(col).numFmt = "#,##0";
       }
 
       // ==========================================
-      // L: MÃ LN
+      // O - MÃ LN
       // TEXT + CĂN GIỮA
       // ==========================================
-      row.getCell(12).alignment = {
+      row.getCell(15).alignment = {
         horizontal: "center",
         vertical: "middle",
       };
 
-      row.getCell(12).numFmt = "@";
+      row.getCell(15).numFmt = "@";
     });
 
     // ==========================================
     // TỔNG
-    // CHỈ CỘNG CÁC GIÁ TRỊ ĐANG CÓ TRONG DB
+    // CỘNG TRỰC TIẾP CÁC GIÁ TRỊ TRONG DATABASE
     // ==========================================
     const totalRowNumber = worksheet.rowCount + 1;
 
+    // A - TỔNG
     worksheet.getCell(`A${totalRowNumber}`).value = "TỔNG";
 
-    // C - NHIÊN LIỆU
-    worksheet.getCell(`C${totalRowNumber}`).value = results.reduce(
-      (sum, item) => sum + toNumber(item.cpNhienLieu),
-      0
-    );
-
-    // D - SỬA XE
+    // ==========================================
+    // D - NHIÊN LIỆU
+    // ==========================================
     worksheet.getCell(`D${totalRowNumber}`).value = results.reduce(
-      (sum, item) => sum + toNumber(item.cpSuaXe),
-      0
+      (sum, item) => sum + toNumber(item.cpNhienLieu),
+      0,
     );
 
-    // E - EPASS THÁNG
+    // ==========================================
+    // E - SỬA XE
+    // ==========================================
     worksheet.getCell(`E${totalRowNumber}`).value = results.reduce(
-      (sum, item) => sum + toNumber(item.cpEpassMonth),
-      0
+      (sum, item) => sum + toNumber(item.cpSuaXe),
+      0,
     );
 
-    // F - EPASS LƯỢT
+    // ==========================================
+    // F - EPASS THÁNG
+    // ==========================================
     worksheet.getCell(`F${totalRowNumber}`).value = results.reduce(
-      (sum, item) => sum + toNumber(item.cpEpassTurn),
-      0
+      (sum, item) => sum + toNumber(item.cpEpassMonth),
+      0,
     );
 
-    // G - KHẤU HAO
+    // ==========================================
+    // G - EPASS LƯỢT
+    // ==========================================
     worksheet.getCell(`G${totalRowNumber}`).value = results.reduce(
-      (sum, item) => sum + toNumber(item.cpKhauHaoXe),
-      0
+      (sum, item) => sum + toNumber(item.cpEpassTurn),
+      0,
     );
 
-    // H - THANH TOÁN LỊCH TRÌNH
+    // ==========================================
+    // H - KHẤU HAO XE
+    // ==========================================
     worksheet.getCell(`H${totalRowNumber}`).value = results.reduce(
-      (sum, item) => sum + toNumber(item.cpThanhToanLichTrinh),
-      0
+      (sum, item) => sum + toNumber(item.cpKhauHaoXe),
+      0,
     );
 
-    // I - LƯƠNG
+    // ==========================================
+    // I - THANH TOÁN LỊCH TRÌNH
+    // ==========================================
     worksheet.getCell(`I${totalRowNumber}`).value = results.reduce(
-      (sum, item) => sum + toNumber(item.cpLuong),
-      0
+      (sum, item) => sum + toNumber(item.cpThanhToanLichTrinh),
+      0,
     );
 
-    // J - DOANH THU
+    // ==========================================
+    // J - LƯƠNG
+    // ==========================================
     worksheet.getCell(`J${totalRowNumber}`).value = results.reduce(
-      (sum, item) => sum + toNumber(item.doanhThu),
-      0
+      (sum, item) => sum + toNumber(item.cpLuong),
+      0,
     );
 
-    // K - LỢI NHUẬN
-    // CỘNG TRỰC TIẾP loiNhuan TRONG DATABASE
-    // KHÔNG LẤY doanhThu - tongChiPhi
+    // ==========================================
+    // K - ETC
+    // ==========================================
     worksheet.getCell(`K${totalRowNumber}`).value = results.reduce(
-      (sum, item) => sum + toNumber(item.loiNhuan),
-      0
+      (sum, item) => sum + toNumber(item.cpETC),
+      0,
     );
 
+    // ==========================================
+    // L - ĐKĐKBH
+    // ==========================================
+    worksheet.getCell(`L${totalRowNumber}`).value = results.reduce(
+      (sum, item) => sum + toNumber(item.cpDKDKBH),
+      0,
+    );
+
+    // ==========================================
+    // M - DOANH THU
+    // ==========================================
+    worksheet.getCell(`M${totalRowNumber}`).value = results.reduce(
+      (sum, item) => sum + toNumber(item.doanhThu),
+      0,
+    );
+
+    // ==========================================
+    // N - LỢI NHUẬN
+    // CỘNG TRỰC TIẾP loiNhuan TRONG DATABASE
+    // ==========================================
+    worksheet.getCell(`N${totalRowNumber}`).value = results.reduce(
+      (sum, item) => sum + toNumber(item.loiNhuan),
+      0,
+    );
+
+    // ==========================================
+    // FORMAT TỔNG
+    // ==========================================
     const totalRow = worksheet.getRow(totalRowNumber);
 
     totalRow.font = {
       bold: true,
     };
 
-    // ==========================================
-    // FORMAT TỔNG
-    // ==========================================
-    for (let col = 3; col <= 11; col++) {
+    // D -> N
+    for (let col = 4; col <= 14; col++) {
       totalRow.getCell(col).numFmt = "#,##0";
     }
 
@@ -1398,19 +1490,22 @@ exports.exportMonthlyProfit = async (req, res) => {
     // ==========================================
     // WIDTH
     // ==========================================
-    worksheet.getColumn(1).width = 8;
-    worksheet.getColumn(2).width = 25;
+    worksheet.getColumn(1).width = 8; // STT
+    worksheet.getColumn(2).width = 25; // BSX
+    worksheet.getColumn(3).width = 30; // Đơn vị Vận tải
 
-    worksheet.getColumn(3).width = 18; // Nhiên liệu
-    worksheet.getColumn(4).width = 18; // Sửa xe
-    worksheet.getColumn(5).width = 18; // Epass tháng
-    worksheet.getColumn(6).width = 18; // Epass lượt
-    worksheet.getColumn(7).width = 18; // Khấu hao
-    worksheet.getColumn(8).width = 25; // Thanh toán lịch trình
-    worksheet.getColumn(9).width = 18; // Lương
-    worksheet.getColumn(10).width = 18; // Doanh thu
-    worksheet.getColumn(11).width = 18; // Lợi nhuận
-    worksheet.getColumn(12).width = 16; // Mã LN
+    worksheet.getColumn(4).width = 18; // Nhiên liệu
+    worksheet.getColumn(5).width = 18; // Sửa xe
+    worksheet.getColumn(6).width = 18; // Epass tháng
+    worksheet.getColumn(7).width = 18; // Epass lượt
+    worksheet.getColumn(8).width = 18; // Khấu hao
+    worksheet.getColumn(9).width = 25; // Thanh toán lịch trình
+    worksheet.getColumn(10).width = 18; // Lương
+    worksheet.getColumn(11).width = 18; // ETC
+    worksheet.getColumn(12).width = 18; // ĐKĐKBH
+    worksheet.getColumn(13).width = 18; // Doanh thu
+    worksheet.getColumn(14).width = 18; // Lợi nhuận
+    worksheet.getColumn(15).width = 16; // Mã LN
 
     // ==========================================
     // FREEZE
@@ -1429,7 +1524,7 @@ exports.exportMonthlyProfit = async (req, res) => {
 
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
@@ -1447,345 +1542,5 @@ exports.exportMonthlyProfit = async (req, res) => {
         error: error.message,
       });
     }
-  }
-};
-
-// =====================================================
-// 7. IMPORT CHI PHÍ LƯƠNG THEO THÁNG
-//
-// FORMAT EXCEL:
-//
-// A: STT
-// B: BSX
-// C: CP Nhiên liệu
-// D: CP Sửa xe
-// E: CP Epass tháng
-// F: CP Epass lượt
-// G: CP Khấu hao xe
-// H: CP Thanh toán lịch trình
-// I: CP Lương
-// J: Doanh thu
-// K: Lợi nhuận
-// L: Mã LN
-//
-// CHỈ UPDATE:
-//   I - CP Lương
-//
-// CÁC CỘT KHÁC CHỈ ĐỂ THAM KHẢO,
-// KHÔNG GHI ĐÈ DATABASE.
-// =====================================================
-exports.importMonthlyCost = async (req, res) => {
-  try {
-    // ==========================================
-    // CHECK FILE
-    // ==========================================
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Vui lòng chọn file Excel",
-      });
-    }
-
-    // ==========================================
-    // LOAD EXCEL
-    // ==========================================
-    const workbook = new ExcelJS.Workbook();
-
-    await workbook.xlsx.load(req.file.buffer);
-
-    const worksheet = workbook.worksheets[0];
-
-    if (!worksheet) {
-      return res.status(400).json({
-        success: false,
-        message: "File Excel không có sheet dữ liệu",
-      });
-    }
-
-    // ==========================================
-    // ĐỌC DATA
-    //
-    // Dòng 1: title
-    // Dòng 2: trống
-    // Dòng 3: header
-    // Dòng 4+: data
-    // ==========================================
-    const rows = [];
-
-    worksheet.eachRow((row, rowNumber) => {
-      if (rowNumber < 4) {
-        return;
-      }
-
-      const stt = row.getCell(1).value;
-
-      const bsx = String(row.getCell(2).value || "").trim();
-
-      // ========================================
-      // CHỈ LẤY CP LƯƠNG Ở CỘT I
-      // ========================================
-      const cpLuongExcel = row.getCell(9).value;
-
-      // ========================================
-      // MÃ LN Ở CỘT L
-      // ========================================
-      const maLoiNhuan = String(row.getCell(12).value || "").trim();
-
-      // ======================================
-      // BỎ DÒNG TRỐNG
-      // ======================================
-      if (!bsx && !maLoiNhuan) {
-        return;
-      }
-
-      rows.push({
-        rowNumber,
-        stt,
-        bsx,
-
-        cpLuongExcel,
-
-        maLoiNhuan,
-      });
-    });
-
-    if (!rows.length) {
-      return res.status(400).json({
-        success: false,
-        message: "Không có dữ liệu để nhập",
-      });
-    }
-
-    // ==========================================
-    // THỐNG KÊ
-    // ==========================================
-    let updatedCount = 0;
-    let skippedCount = 0;
-
-    const skipped = [];
-
-    // ==========================================
-    // CACHE MÃ LN
-    // ==========================================
-    const maLoiNhuanList = [
-      ...new Set(rows.map((row) => row.maLoiNhuan).filter(Boolean)),
-    ];
-
-    // ==========================================
-    // LẤY PROFIT
-    // ==========================================
-    const profits = await VehicleProfit.find({
-      maLoiNhuan: {
-        $in: maLoiNhuanList,
-      },
-    });
-
-    // ==========================================
-    // MAP
-    //
-    // LN.7.2026__89H11111
-    // ==========================================
-    const profitMap = new Map();
-
-    for (const profit of profits) {
-      const vehicleKey = getVehicleKey(profit.bsx);
-
-      if (!vehicleKey) {
-        continue;
-      }
-
-      const key = `${String(profit.maLoiNhuan).trim()}__${vehicleKey}`;
-
-      profitMap.set(key, profit);
-    }
-
-    // ==========================================
-    // BULK UPDATE
-    // ==========================================
-    const bulkOps = [];
-
-    for (const row of rows) {
-      const { rowNumber, bsx, cpLuongExcel, maLoiNhuan } = row;
-
-      // ========================================
-      // CHECK MÃ LN
-      // ========================================
-      const dateRange = getDateRangeFromMaLoiNhuan(maLoiNhuan);
-
-      if (!dateRange) {
-        skippedCount++;
-
-        skipped.push({
-          row: rowNumber,
-          bsx,
-          maLoiNhuan,
-          reason: "Mã lợi nhuận không hợp lệ",
-        });
-
-        continue;
-      }
-
-      const normalizedMaLoiNhuan = dateRange.normalizedMaLoiNhuan;
-
-      // ========================================
-      // CHECK BSX
-      // ========================================
-      const normalizedBsx = getVehicleKey(bsx);
-
-      if (!normalizedBsx) {
-        skippedCount++;
-
-        skipped.push({
-          row: rowNumber,
-          bsx,
-          maLoiNhuan: normalizedMaLoiNhuan,
-          reason: "Không xác định được biển số xe",
-        });
-
-        continue;
-      }
-
-      // ========================================
-      // KEY
-      // ========================================
-      const key = `${normalizedMaLoiNhuan}__${normalizedBsx}`;
-
-      const profit = profitMap.get(key);
-
-      if (!profit) {
-        skippedCount++;
-
-        skipped.push({
-          row: rowNumber,
-          bsx,
-          maLoiNhuan: normalizedMaLoiNhuan,
-          reason: "Không tìm thấy xe trong kỳ lợi nhuận",
-        });
-
-        continue;
-      }
-
-      // ========================================
-      // CHỈ UPDATE CP LƯƠNG
-      // ========================================
-      const newCpLuong = toNumber(cpLuongExcel);
-
-      // ========================================
-      // LẤY CÁC CHI PHÍ KHÁC TỪ DATABASE
-      // KHÔNG LẤY TỪ EXCEL
-      // ========================================
-      const cpNhienLieu = toNumber(profit.cpNhienLieu);
-
-      const cpSuaXe = toNumber(profit.cpSuaXe);
-
-      const cpEpassMonth = toNumber(profit.cpEpassMonth);
-
-      const cpEpassTurn = toNumber(profit.cpEpassTurn);
-
-      const cpKhauHaoXe = toNumber(profit.cpKhauHaoXe);
-
-      const cpThanhToanLichTrinh = toNumber(profit.cpThanhToanLichTrinh);
-
-      const doanhThu = toNumber(profit.doanhThu);
-
-      // ========================================
-      // TÍNH TỔNG CHI PHÍ
-      // DÙNG DATA DB + CP LƯƠNG MỚI
-      // ========================================
-      const tongChiPhi =
-        newCpLuong +
-        cpNhienLieu +
-        cpSuaXe +
-        cpEpassMonth +
-        cpEpassTurn +
-        cpKhauHaoXe +
-        cpThanhToanLichTrinh;
-
-      // ========================================
-      // TÍNH LẠI LỢI NHUẬN
-      // ========================================
-      const loiNhuan = doanhThu - tongChiPhi;
-
-      // ========================================
-      // UPDATE
-      //
-      // CHỈ CÓ:
-      //   cpLuong
-      //   loiNhuan
-      // ========================================
-      bulkOps.push({
-        updateOne: {
-          filter: {
-            _id: profit._id,
-          },
-
-          update: {
-            $set: {
-              cpLuong: newCpLuong,
-              loiNhuan,
-            },
-          },
-        },
-      });
-
-      updatedCount++;
-    }
-
-    // ==========================================
-    // BULK WRITE
-    // ==========================================
-    if (bulkOps.length > 0) {
-      await VehicleProfit.bulkWrite(bulkOps);
-    }
-
-    // ==========================================
-    // NORMALIZE MÃ LN
-    // ==========================================
-    const normalizedMaList = maLoiNhuanList
-      .map((item) => {
-        const dateRange = getDateRangeFromMaLoiNhuan(item);
-
-        return dateRange ? dateRange.normalizedMaLoiNhuan : null;
-      })
-      .filter(Boolean);
-
-    // ==========================================
-    // LẤY LẠI DATA
-    // ==========================================
-    const results = await VehicleProfit.find({
-      maLoiNhuan: {
-        $in: normalizedMaList,
-      },
-    }).sort({
-      maLoiNhuan: 1,
-      bsx: 1,
-    });
-
-    // ==========================================
-    // RESPONSE
-    // ==========================================
-    return res.json({
-      success: true,
-
-      message: "Đã nhập chi phí lương thành công",
-
-      totalRows: rows.length,
-
-      updatedCount,
-
-      skippedCount,
-
-      skipped,
-
-      data: results,
-    });
-  } catch (error) {
-    console.error("importMonthlyCost error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Lỗi nhập chi phí lương",
-      error: error.message,
-    });
   }
 };

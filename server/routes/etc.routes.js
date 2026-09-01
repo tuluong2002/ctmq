@@ -20,6 +20,8 @@ router.get("/unique-services", ETCController.getUniqueServices);
 // =======================
 router.post("/", ETCController.create);
 
+router.post("/update-vehicle-profit-etc", ETCController.updateVehicleProfitETC);
+
 // =======================
 // SỬA 1 BẢN GHI
 // =======================

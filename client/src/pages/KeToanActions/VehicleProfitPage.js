@@ -9,7 +9,6 @@ import {
   FiTrendingUp,
   FiDollarSign,
   FiBarChart2,
-  FiUpload,
   FiDownload,
 } from "react-icons/fi";
 
@@ -21,40 +20,6 @@ import API from "../../api";
 
 const formatMoneyStatic = (value) => {
   return Number(value || 0).toLocaleString("vi-VN");
-};
-
-/* =====================================================
-   INPUT CHỈ DÙNG CHO CP LƯƠNG
-===================================================== */
-
-const CostInput = ({ value, onChange }) => {
-  return (
-    <div className="flex items-center gap-1">
-      <input
-        type="text"
-        value={
-          value === "" || value === undefined || value === null
-            ? ""
-            : formatMoneyStatic(value)
-        }
-        onChange={(e) => {
-          const raw = e.target.value.replace(/\D/g, "");
-          onChange(raw);
-        }}
-        className="
-          w-full
-          border border-gray-300
-          rounded-md
-          px-2 py-1.5
-          text-right
-          outline-none
-          focus:ring-2
-          focus:ring-blue-400
-          focus:border-blue-400
-        "
-      />
-    </div>
-  );
 };
 
 /* =====================================================
@@ -115,10 +80,8 @@ const VehicleProfitPage = ({ user }) => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
-  const [savingId, setSavingId] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [importing, setImporting] = useState(false);
 
   // =====================================================
   // TẠO MÃ LỢI NHUẬN TỪ THÁNG + NĂM
@@ -159,6 +122,8 @@ const VehicleProfitPage = ({ user }) => {
       Number(item.cpSuaXe || 0) +
       Number(item.cpEpassMonth || 0) +
       Number(item.cpEpassTurn || 0) +
+      Number(item.cpETC || 0) +
+      Number(item.cpDKDKBH || 0) +
       Number(item.cpKhauHaoXe || 0) +
       Number(item.cpThanhToanLichTrinh || 0)
     );
@@ -200,7 +165,7 @@ const VehicleProfitPage = ({ user }) => {
         setDoanhThuTong(res.data.doanhThuTong || null);
 
         setMessage(
-          `Đã tải dữ liệu ${maLoiNhuan}: ${res.data.data?.length || 0} xe`
+          `Đã tải dữ liệu ${maLoiNhuan}: ${res.data.data?.length || 0} xe`,
         );
       }
     } catch (err) {
@@ -210,7 +175,7 @@ const VehicleProfitPage = ({ user }) => {
       setDoanhThuTong(null);
 
       setError(
-        err.response?.data?.message || "Không lấy được dữ liệu lợi nhuận"
+        err.response?.data?.message || "Không lấy được dữ liệu lợi nhuận",
       );
     } finally {
       setLoading(false);
@@ -246,7 +211,7 @@ const VehicleProfitPage = ({ user }) => {
         setMessage(
           `Đã tạo kỳ ${res.data.maLoiNhuan}. ` +
             `Tạo mới: ${res.data.createdCount}, ` +
-            `đã tồn tại: ${res.data.skippedCount}`
+            `đã tồn tại: ${res.data.skippedCount}`,
         );
       }
     } catch (err) {
@@ -273,7 +238,7 @@ const VehicleProfitPage = ({ user }) => {
     const confirmed = window.confirm(
       `Tính lại doanh thu của ${maLoiNhuan}?\n\n` +
         `Doanh thu sẽ được lấy lại từ ScheduleAdmin theo ngày giao hàng.\n` +
-        `Các chi phí đã nhập sẽ được giữ nguyên.`
+        `Các chi phí đã nhập sẽ được giữ nguyên.`,
     );
 
     if (!confirmed) {
@@ -305,90 +270,6 @@ const VehicleProfitPage = ({ user }) => {
   };
 
   // =====================================================
-  // THAY ĐỔI CHI PHÍ
-  // CHỈ CHO PHÉP THAY ĐỔI CP LƯƠNG
-  // =====================================================
-
-  const handleChangeCost = (id, field, value) => {
-    // ==========================================
-    // CHỐNG SỬA NHẦM FIELD KHÁC
-    // ==========================================
-
-    if (field !== "cpLuong") {
-      return;
-    }
-
-    setData((prev) =>
-      prev.map((item) => {
-        if (item._id !== id) {
-          return item;
-        }
-
-        const parsedValue =
-          value === "" ? "" : Number(String(value).replace(/\D/g, ""));
-
-        const updatedItem = {
-          ...item,
-          cpLuong: parsedValue,
-        };
-
-        return {
-          ...updatedItem,
-          loiNhuan: getProfit(updatedItem),
-        };
-      })
-    );
-  };
-
-  // =====================================================
-  // LƯU CHI PHÍ
-  // CHỈ GỬI CP LƯƠNG
-  // =====================================================
-
-  const handleSaveCost = async (item) => {
-    const maLoiNhuan = getMaLoiNhuan();
-
-    if (!maLoiNhuan) {
-      setError("Vui lòng chọn tháng và năm");
-      return;
-    }
-
-    try {
-      setSavingId(item._id);
-      setError("");
-      setMessage("");
-
-      const res = await axios.put(
-        `${API}/vehicle-profit/${encodeURIComponent(item.bsx)}`,
-        {
-          maLoiNhuan,
-
-          // ==========================================
-          // CHỈ ĐƯỢC LƯU CP LƯƠNG
-          // ==========================================
-          cpLuong: Number(item.cpLuong || 0),
-        }
-      );
-
-      if (res.data.success) {
-        setData((prev) =>
-          prev.map((row) => (row._id === item._id ? res.data.data : row))
-        );
-
-        setDoanhThuTong(res.data.doanhThuTong || null);
-
-        setMessage(`Đã lưu chi phí lương cho ${item.bsx}`);
-      }
-    } catch (err) {
-      console.error(err);
-
-      setError(err.response?.data?.message || "Không thể lưu chi phí lương");
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  // =====================================================
   // LỌC BIỂN SỐ
   // =====================================================
 
@@ -402,7 +283,7 @@ const VehicleProfitPage = ({ user }) => {
     return data.filter((item) =>
       String(item.bsx || "")
         .toUpperCase()
-        .includes(keyword)
+        .includes(keyword),
     );
   }, [data, search]);
 
@@ -421,6 +302,8 @@ const VehicleProfitPage = ({ user }) => {
         acc.cpEpassMonth += Number(item.cpEpassMonth || 0);
         acc.cpEpassTurn += Number(item.cpEpassTurn || 0);
         acc.cpKhauHaoXe += Number(item.cpKhauHaoXe || 0);
+        acc.cpETC += Number(item.cpETC || 0);
+        acc.cpDKDKBH += Number(item.cpDKDKBH || 0);
         acc.cpThanhToanLichTrinh += Number(item.cpThanhToanLichTrinh || 0);
 
         acc.chiPhi += getTotalCost(item);
@@ -437,10 +320,12 @@ const VehicleProfitPage = ({ user }) => {
         cpEpassMonth: 0,
         cpEpassTurn: 0,
         cpKhauHaoXe: 0,
+        cpETC: 0,
+        cpDKDKBH: 0,
         cpThanhToanLichTrinh: 0,
         chiPhi: 0,
         loiNhuan: 0,
-      }
+      },
     );
   }, [data]);
 
@@ -508,124 +393,6 @@ const VehicleProfitPage = ({ user }) => {
       }
 
       setError(message);
-    }
-  };
-
-  // =====================================================
-  // NHẬP EXCEL
-  // CHỈ IMPORT CP LƯƠNG
-  // =====================================================
-
-  const handleImportExcel = async (event) => {
-    const file = event.target.files?.[0];
-
-    event.target.value = "";
-
-    if (!file) {
-      return;
-    }
-
-    // ==========================================
-    // KIỂM TRA QUYỀN
-    // ==========================================
-
-    if (!canImportChiPhi) {
-      setError("Bạn không có quyền nhập chi phí lương");
-      return;
-    }
-
-    // ==========================================
-    // KIỂM TRA THÁNG
-    // ==========================================
-
-    const maLoiNhuan = getMaLoiNhuan();
-
-    if (!maLoiNhuan) {
-      setError("Vui lòng chọn tháng và năm trước khi nhập Excel");
-      return;
-    }
-
-    // ==========================================
-    // KIỂM TRA FILE
-    // ==========================================
-
-    const fileName = file.name.toLowerCase();
-
-    if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
-      setError("Vui lòng chọn file Excel (.xlsx hoặc .xls)");
-      return;
-    }
-
-    // ==========================================
-    // XÁC NHẬN
-    // ==========================================
-
-    const confirmed = window.confirm(
-      `Nhập CHI PHÍ LƯƠNG từ file Excel cho ${maLoiNhuan}?\n\n` +
-        `Hệ thống chỉ cập nhật CP LƯƠNG theo BSX + Mã LN.\n\n` +
-        `Các khoản:\n` +
-        `- Doanh thu\n` +
-        `- CP nhiên liệu\n` +
-        `- CP sửa xe\n` +
-        `- CP Epass tháng\n` +
-        `- CP Epass lượt\n` +
-        `- CP khấu hao\n` +
-        `- CP thanh toán lịch trình\n\n` +
-        `sẽ KHÔNG được cập nhật từ file Excel.`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      setImporting(true);
-      setError("");
-      setMessage("");
-
-      const formData = new FormData();
-
-      formData.append("file", file);
-
-      const res = await axios.post(
-        `${API}/vehicle-profit/import-cost`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      if (res.data.success) {
-        const importedData = (res.data.data || []).filter(
-          (item) => item.maLoiNhuan === maLoiNhuan
-        );
-
-        setData(importedData);
-
-        let messageText =
-          `Đã nhập CP LƯƠNG ${maLoiNhuan}. ` +
-          `Cập nhật: ${res.data.updatedCount || 0} dòng`;
-
-        if (res.data.skippedCount > 0) {
-          messageText += `, bỏ qua: ${res.data.skippedCount} dòng`;
-        }
-
-        setMessage(messageText);
-
-        if (res.data.skippedCount > 0) {
-          console.warn("Các dòng bị bỏ qua:", res.data.skipped);
-        }
-      }
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        err.response?.data?.message || "Không thể nhập chi phí lương từ Excel"
-      );
-    } finally {
-      setImporting(false);
     }
   };
 
@@ -909,40 +676,6 @@ const VehicleProfitPage = ({ user }) => {
               Xuất Excel
             </button>
           )}
-
-          {/* IMPORT CP LƯƠNG */}
-
-          {canImportChiPhi && (
-            <label
-              className={`
-                flex
-                items-center
-                gap-2
-                px-4
-                py-2
-                rounded-md
-                bg-teal-600
-                text-white
-                hover:bg-teal-700
-                cursor-pointer
-                ${
-                  importing || !monthYear ? "opacity-50 cursor-not-allowed" : ""
-                }
-              `}
-            >
-              <FiUpload />
-
-              {importing ? "Đang nhập..." : "Nhập CP Lương"}
-
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                className="hidden"
-                disabled={importing || !monthYear}
-                onChange={handleImportExcel}
-              />
-            </label>
-          )}
         </div>
 
         {/* MESSAGE */}
@@ -1204,313 +937,87 @@ const VehicleProfitPage = ({ user }) => {
         </div>
       )}
 
-      {/* =================================================
-          TABLE
-      ================================================= */}
-
-      <div
-        className="
-        bg-white
-        rounded-lg
-        shadow-sm
-        border
-      "
-      >
+      {/* ================================================= TABLE ================================================= */}
+      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {/* SEARCH */}
-
-        <div
-          className="
-          p-4
-          border-b
-          flex
-          items-center
-          justify-between
-          gap-3
-        "
-        >
-          <div
-            className="
-            relative
-            w-full
-            max-w-sm
-          "
-          >
-            <FiSearch
-              className="
-                absolute
-                left-3
-                top-1/2
-                -translate-y-1/2
-                text-gray-400
-              "
-            />
-
+        <div className="p-4 border-b flex items-center justify-between gap-3">
+          <div className="relative w-full max-w-sm">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Tìm biển số xe..."
-              className="
-                w-full
-                border
-                border-gray-300
-                rounded-md
-                pl-9
-                pr-3
-                py-2
-                outline-none
-                focus:ring-2
-                focus:ring-blue-500
-              "
+              className="w-full border border-gray-300 rounded-md pl-9 pr-3 py-2 outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          <div
-            className="
-            text-sm
-            text-gray-500
-            whitespace-nowrap
-          "
-          >
+          <div className="text-sm text-gray-500 whitespace-nowrap">
             {filteredData.length} / {data.length} xe
           </div>
         </div>
 
         {/* TABLE */}
-
-        <div
-          className="
-          overflow-auto
-          max-h-[70vh]
-        "
-        >
-          <table
-            className="
-            min-w-[1800px]
-            w-full
-            text-xs
-            border-collapse
-          "
-          >
-            {/* =================================================
-                HEADER
-            ================================================= */}
-
-            <thead
-              className="
-              sticky
-              top-0
-              z-20
-              bg-blue-600
-              text-white
-            "
-            >
+        <div className="overflow-auto max-h-[70vh]">
+          <table className="min-w-[2000px] w-full text-xs border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20 bg-blue-600 text-white">
               <tr>
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  w-14
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center w-14">
                   STT
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[140px]
-                  sticky
-                  left-0
-                  z-30
-                  bg-blue-600
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[140px] sticky left-0 z-30 bg-blue-600">
                   BIỂN SỐ XE
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[150px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[150px]">
+                  ĐƠN VỊ VẬN TẢI
+                </th>
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[150px]">
                   DOANH THU
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[160px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[160px]">
                   NHIÊN LIỆU
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[150px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[150px]">
                   SỬA XE
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[160px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[160px]">
                   EPASS THÁNG
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[150px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[150px]">
                   EPASS LƯỢT
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[160px]
-                "
-                >
-                  CP KHẤU HAO XE
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[160px]">
+                  KHẤU HAO XE
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[190px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[150px]">
+                  ETC
+                </th>
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[170px]">
+                  ĐK - ĐK - BH XE
+                </th>
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[190px]">
                   THANH TOÁN LỊCH TRÌNH
                 </th>
-
-                {/* CP LƯƠNG - ĐƯỢC SỬA */}
-
-                <th
-                  className="
-                  border
-                  border-blue-400
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[170px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[170px]">
                   LƯƠNG CƠ BẢN
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[160px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[160px]">
                   TỔNG CHI PHÍ
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[160px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[160px]">
                   LỢI NHUẬN
                 </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  min-w-[110px]
-                "
-                >
+                <th className="border border-blue-500 px-3 py-3 text-center min-w-[110px]">
                   MÃ LN
-                </th>
-
-                <th
-                  className="
-                  border
-                  border-blue-500
-                  px-3
-                  py-3
-                  text-center
-                  w-28
-                "
-                >
-                  THAO TÁC
                 </th>
               </tr>
             </thead>
-
-            {/* =================================================
-                BODY
-            ================================================= */}
 
             <tbody>
               {filteredData.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={14}
-                    className="
-                      border
-                      px-4
-                      py-12
-                      text-center
-                      text-gray-500
-                    "
+                    colSpan={15}
+                    className="border px-4 py-12 text-center text-gray-500"
                   >
                     {loading
                       ? "Đang tải dữ liệu..."
@@ -1520,254 +1027,80 @@ const VehicleProfitPage = ({ user }) => {
               ) : (
                 filteredData.map((item, index) => {
                   const totalCost = getTotalCost(item);
-
                   const loiNhuan = getProfit(item);
 
                   return (
-                    <tr
-                      key={item._id}
-                      className="
-                          hover:bg-gray-50
-                        "
-                    >
-                      {/* STT */}
-
-                      <td
-                        className="
-                          border
-                          px-3
-                          py-2
-                          text-center
-                        "
-                      >
+                    <tr key={item._id} className="hover:bg-gray-50">
+                      <td className="border px-3 py-2 text-center">
                         {index + 1}
                       </td>
 
-                      {/* BSX */}
-
-                      <td
-                        className="
-                          border
-                          px-3
-                          py-2
-                          text-center
-                          font-semibold
-                          sticky
-                          left-0
-                          bg-white
-                          z-10
-                        "
-                      >
+                      <td className="border px-3 py-2 text-center font-semibold sticky left-0 bg-white z-10">
                         {item.bsx}
                       </td>
 
-                      {/* DOANH THU */}
+                      <td className="border px-2 py-1 text-center">
+                        {item.company}
+                      </td>
 
-                      <td
-                        className="
-                          border
-                          px-3
-                          py-2
-                          text-right
-                          font-semibold
-                          text-blue-600
-                          whitespace-nowrap
-                        "
-                      >
+                      <td className="border px-3 py-2 text-right font-semibold text-blue-600 whitespace-nowrap">
                         {canViewAllDoanhThu
                           ? `${formatMoney(item.doanhThu)} VNĐ`
                           : "0 VNĐ"}
                       </td>
 
-                      {/* CP NHIÊN LIỆU */}
-
-                      <td
-                        className="
-                          border
-                          px-2
-                          py-1
-                        "
-                      >
+                      <td className="border px-2 py-1">
                         <ReadOnlyCost value={item.cpNhienLieu} />
                       </td>
 
-                      {/* CP SỬA XE */}
-
-                      <td
-                        className="
-                          border
-                          px-2
-                          py-1
-                        "
-                      >
+                      <td className="border px-2 py-1">
                         <ReadOnlyCost value={item.cpSuaXe} />
                       </td>
 
-                      {/* CP EPASS THÁNG */}
-
-                      <td
-                        className="
-                          border
-                          px-2
-                          py-1
-                        "
-                      >
+                      <td className="border px-2 py-1">
                         <ReadOnlyCost value={item.cpEpassMonth} />
                       </td>
 
-                      {/* CP EPASS LƯỢT */}
-
-                      <td
-                        className="
-                          border
-                          px-2
-                          py-1
-                        "
-                      >
+                      <td className="border px-2 py-1">
                         <ReadOnlyCost value={item.cpEpassTurn} />
                       </td>
 
-                      {/* CP KHẤU HAO */}
-
-                      <td
-                        className="
-                          border
-                          px-2
-                          py-1
-                        "
-                      >
+                      <td className="border px-2 py-1">
                         <ReadOnlyCost value={item.cpKhauHaoXe} />
                       </td>
 
-                      {/* CP THANH TOÁN LỊCH TRÌNH */}
+                      <td className="border px-2 py-1">
+                        <ReadOnlyCost value={item.cpETC} />
+                      </td>
 
-                      <td
-                        className="
-                          border
-                          px-2
-                          py-1
-                        "
-                      >
+                      <td className="border px-2 py-1">
+                        <ReadOnlyCost value={item.cpDKDKBH} />
+                      </td>
+
+                      <td className="border px-2 py-1">
                         <ReadOnlyCost value={item.cpThanhToanLichTrinh} />
                       </td>
 
-                      {/* =================================================
-                            CP LƯƠNG
-                            DUY NHẤT ĐƯỢC SỬA
-                        ================================================= */}
-
-                      <td
-                        className="
-                          border
-                          border-orange-200
-                          px-2
-                          py-1
-                          bg-orange-50
-                        "
-                      >
-                        {canImportChiPhi ? (
-                          <CostInput
-                            value={item.cpLuong}
-                            onChange={(value) =>
-                              handleChangeCost(item._id, "cpLuong", value)
-                            }
-                          />
-                        ) : (
-                          <ReadOnlyCost value={item.cpLuong} />
-                        )}
+                      <td className="border px-2 py-1">
+                        <ReadOnlyCost value={item.cpLuong} />
                       </td>
 
-                      {/* TỔNG CHI PHÍ */}
-
-                      <td
-                        className="
-                          border
-                          px-3
-                          py-2
-                          text-right
-                          font-bold
-                          text-orange-600
-                          whitespace-nowrap
-                        "
-                      >
+                      <td className="border px-3 py-2 text-right font-bold text-orange-600 whitespace-nowrap">
                         {canViewAllDoanhThu
                           ? `${formatMoney(totalCost)} VNĐ`
                           : "0 VNĐ"}
                       </td>
 
-                      {/* LỢI NHUẬN */}
-
                       <td
-                        className={`
-                            border
-                            px-3
-                            py-2
-                            text-right
-                            font-bold
-                            whitespace-nowrap
-                            ${
-                              !canViewAllDoanhThu
-                                ? "text-gray-500"
-                                : loiNhuan >= 0
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }
-                          `}
+                        className={`border px-3 py-2 text-right font-bold whitespace-nowrap ${!canViewAllDoanhThu ? "text-gray-500" : loiNhuan >= 0 ? "text-green-600" : "text-red-600"}`}
                       >
                         {canViewAllDoanhThu
                           ? `${formatMoney(loiNhuan)} VNĐ`
                           : "0 VNĐ"}
                       </td>
 
-                      {/* MÃ LN */}
-
-                      <td
-                        className="
-                          border
-                          px-3
-                          py-2
-                          text-center
-                          font-medium
-                          whitespace-nowrap
-                        "
-                      >
+                      <td className="border px-3 py-2 text-center font-medium whitespace-nowrap">
                         {item.maLoiNhuan}
-                      </td>
-
-                      {/* THAO TÁC */}
-
-                      <td
-                        className="
-                          border
-                          px-2
-                          py-2
-                          text-center
-                        "
-                      >
-                        {canImportChiPhi && (
-                          <button
-                            onClick={() => handleSaveCost(item)}
-                            disabled={savingId === item._id}
-                            className="
-                                inline-flex
-                                items-center
-                                justify-center
-                                gap-1
-                                px-3
-                                py-1.5
-                                rounded-md
-                                bg-blue-600
-                                text-white
-                                hover:bg-blue-700
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                              "
-                          >
-                            <FiSave />
-
-                            {savingId === item._id ? "Lưu..." : "Lưu"}
-                          </button>
-                        )}
                       </td>
                     </tr>
                   );
@@ -1775,190 +1108,66 @@ const VehicleProfitPage = ({ user }) => {
               )}
             </tbody>
 
-            {/* =================================================
-                FOOTER
-            ================================================= */}
-
             {data.length > 0 && (
-              <tfoot
-                className="
-                sticky
-                bottom-0
-                z-20
-                bg-gray-100
-                font-bold
-              "
-              >
+              <tfoot className="sticky bottom-0 z-20 bg-gray-100 font-bold">
                 <tr>
-                  <td
-                    colSpan={2}
-                    className="
-                      border
-                      px-3
-                      py-3
-                      text-right
-                    "
-                  >
+                  <td colSpan={3} className="border px-3 py-3 text-right">
                     TỔNG
                   </td>
 
-                  {/* DOANH THU */}
-
-                  <td
-                    className="
-                    border
-                    px-3
-                    py-3
-                    text-right
-                    text-blue-600
-                    whitespace-nowrap
-                  "
-                  >
+                  <td className="border px-3 py-3 text-right text-blue-600 whitespace-nowrap">
                     {canViewAllDoanhThu
                       ? `${formatMoney(totals.doanhThu)} VNĐ`
                       : "0 VNĐ"}
                   </td>
 
-                  {/* CP NHIÊN LIỆU */}
-
-                  <td
-                    className="
-                    border
-                    px-3
-                    py-3
-                    text-right
-                    text-gray-500
-                    whitespace-nowrap
-                  "
-                  >
+                  <td className="border px-3 py-3 text-right text-gray-500 whitespace-nowrap">
                     {formatMoney(totals.cpNhienLieu)} VNĐ
                   </td>
 
-                  {/* CP SỬA XE */}
-
-                  <td
-                    className="
-                    border
-                    px-3
-                    py-3
-                    text-right
-                    text-gray-500
-                    whitespace-nowrap
-                  "
-                  >
+                  <td className="border px-3 py-3 text-right text-gray-500 whitespace-nowrap">
                     {formatMoney(totals.cpSuaXe)} VNĐ
                   </td>
 
-                  {/* EPASS THÁNG */}
-
-                  <td
-                    className="
-                    border
-                    px-3
-                    py-3
-                    text-right
-                    text-gray-500
-                    whitespace-nowrap
-                  "
-                  >
+                  <td className="border px-3 py-3 text-right text-gray-500 whitespace-nowrap">
                     {formatMoney(totals.cpEpassMonth)} VNĐ
                   </td>
 
-                  {/* EPASS LƯỢT */}
-
-                  <td
-                    className="
-                    border
-                    px-3
-                    py-3
-                    text-right
-                    text-gray-500
-                    whitespace-nowrap
-                  "
-                  >
+                  <td className="border px-3 py-3 text-right text-gray-500 whitespace-nowrap">
                     {formatMoney(totals.cpEpassTurn)} VNĐ
                   </td>
 
-                  {/* KHẤU HAO */}
-
-                  <td
-                    className="
-                    border
-                    px-3
-                    py-3
-                    text-right
-                    text-gray-500
-                    whitespace-nowrap
-                  "
-                  >
+                  <td className="border px-3 py-3 text-right text-gray-500 whitespace-nowrap">
                     {formatMoney(totals.cpKhauHaoXe)} VNĐ
                   </td>
 
-                  {/* LỊCH TRÌNH */}
+                  <td className="border px-3 py-3 text-right text-gray-500 whitespace-nowrap">
+                    {formatMoney(totals.cpETC)} VNĐ
+                  </td>
 
-                  <td
-                    className="
-                    border
-                    px-3
-                    py-3
-                    text-right
-                    text-gray-500
-                    whitespace-nowrap
-                  "
-                  >
+                  <td className="border px-3 py-3 text-right text-gray-500 whitespace-nowrap">
+                    {formatMoney(totals.cpDKDKBH)} VNĐ
+                  </td>
+
+                  <td className="border px-3 py-3 text-right text-gray-500 whitespace-nowrap">
                     {formatMoney(totals.cpThanhToanLichTrinh)} VNĐ
                   </td>
 
-                  {/* CP LƯƠNG */}
-
-                  <td
-                    className="
-                    border
-                    px-3
-                    py-3
-                    text-right
-                    text-gray-500
-                    whitespace-nowrap
-                  "
-                  >
+                  <td className="border px-3 py-3 text-right text-gray-500 whitespace-nowrap">
                     {formatMoney(totals.cpLuong)} VNĐ
                   </td>
 
-                  {/* TỔNG CP */}
-
-                  <td
-                    className="
-                    border
-                    px-3
-                    py-3
-                    text-right
-                    text-orange-700
-                    whitespace-nowrap
-                  "
-                  >
+                  <td className="border px-3 py-3 text-right text-orange-700 whitespace-nowrap">
                     {formatMoney(totals.chiPhi)} VNĐ
                   </td>
 
-                  {/* LỢI NHUẬN */}
-
                   <td
-                    className={`
-                      border
-                      px-3
-                      py-3
-                      text-right
-                      whitespace-nowrap
-                      ${
-                        totals.loiNhuan >= 0 ? "text-green-600" : "text-red-600"
-                      }
-                    `}
+                    className={`border px-3 py-3 text-right whitespace-nowrap ${totals.loiNhuan >= 0 ? "text-green-600" : "text-red-600"}`}
                   >
                     {canViewAllDoanhThu
                       ? `${formatMoney(totals.loiNhuan)} VNĐ`
                       : "0 VNĐ"}
                   </td>
-
-                  <td className="border" />
 
                   <td className="border" />
                 </tr>

@@ -168,6 +168,8 @@ export default function VehicleProfitEpassTurnModal({ month, onClose }) {
 
                 <th className="border p-2">BSX</th>
 
+                <th className="border p-2">ĐƠN VỊ VẬN TẢI</th>
+
                 <th className="border p-2">CHI PHÍ EPASS LƯỢT</th>
               </tr>
             </thead>
@@ -176,7 +178,7 @@ export default function VehicleProfitEpassTurnModal({ month, onClose }) {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="
                       border
                       p-8
@@ -190,7 +192,7 @@ export default function VehicleProfitEpassTurnModal({ month, onClose }) {
               ) : data.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="
                       border
                       p-8
@@ -214,6 +216,10 @@ export default function VehicleProfitEpassTurnModal({ month, onClose }) {
                       {item.bsx || ""}
                     </td>
 
+                    <td className="border p-2 text-center">
+                      {item.company || ""}
+                    </td>
+
                     <td className="border p-2 text-right font-medium">
                       {formatMoney(item.cpEpassTurn)}
                     </td>
@@ -229,7 +235,7 @@ export default function VehicleProfitEpassTurnModal({ month, onClose }) {
             {!loading && data.length > 0 && (
               <tfoot>
                 <tr className="bg-gray-100 font-semibold">
-                  <td colSpan={3} className="border p-2 text-right">
+                  <td colSpan={4} className="border p-2 text-right">
                     TỔNG
                   </td>
 

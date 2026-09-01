@@ -197,6 +197,8 @@ export default function VehicleProfitTripPaymentKTModal({
 
                 <th className="border p-2">BSX</th>
 
+                <th className="border p-2">ĐƠN VỊ VẬN TẢI</th>
+
                 <th className="border p-2">CHI PHÍ THANH TOÁN LỊCH TRÌNH</th>
               </tr>
             </thead>
@@ -205,7 +207,7 @@ export default function VehicleProfitTripPaymentKTModal({
               {loading ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="
                       border
                       p-8
@@ -219,7 +221,7 @@ export default function VehicleProfitTripPaymentKTModal({
               ) : data.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="
                       border
                       p-8
@@ -249,6 +251,12 @@ export default function VehicleProfitTripPaymentKTModal({
                       {item.bsx || ""}
                     </td>
 
+                    {/* ĐVVT */}
+
+                    <td className="border p-2 text-center">
+                      {item.company || ""}
+                    </td>
+
                     {/* CHI PHÍ */}
 
                     <td className="border p-2 text-right font-medium">
@@ -266,7 +274,7 @@ export default function VehicleProfitTripPaymentKTModal({
             {!loading && data.length > 0 && (
               <tfoot>
                 <tr className="bg-gray-100 font-semibold">
-                  <td colSpan={3} className="border p-2 text-right">
+                  <td colSpan={4} className="border p-2 text-right">
                     TỔNG
                   </td>
 

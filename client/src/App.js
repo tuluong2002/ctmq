@@ -36,6 +36,7 @@ import VehicleLegalCostPage from "./pages/CostManagementTables/VehicleLegalCostP
 import TripPaymentPage from "./pages/CostManagementTables/TripPaymentPage";
 import NCCPage from "./pages/CostManagementTables/NCCPage";
 import DeNghiThanhToanPage from "./pages/CostManagementTables/DeNghiThanhToanPage";
+import ExcelTemplatePage from "./pages/CostManagementTables/ExcelTemplatePage";
 
 import DeNghiThanhToanPrintPage from "./components/CostModal/DeNghiThanhToanPrintPage";
 
@@ -144,6 +145,7 @@ function App() {
           <Route path="vehicle-legal" element={<VehicleLegalCostPage />} />
           <Route path="trip-payment" element={<TripPaymentPage />} />
           <Route path="ncc" element={<NCCPage />} />
+          <Route path="excel-templates" element={<ExcelTemplatePage />} />
           <Route
             path="de-nghi-thanh-toan"
             user={user}

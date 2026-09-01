@@ -240,3 +240,173 @@ exports.deleteAllNCC = async (req, res) => {
     });
   }
 };
+
+/* =========================================================
+   THÊM NCC
+   POST /api/ncc
+========================================================= */
+
+exports.createNCC = async (req, res) => {
+  try {
+    const {
+      stt,
+      mst,
+      tenNguoiBan,
+      stkNganHang,
+      hangMuc,
+      chiTietChiPhi,
+      nguoiPhuTrach,
+      xuatTu,
+      ghiChu,
+    } = req.body;
+
+    if (!stt || !String(stt).trim()) {
+      return res.status(400).json({
+        message: "Vui lòng nhập STT",
+      });
+    }
+
+    const cleanStt = String(stt).trim();
+
+    // Kiểm tra STT đã tồn tại
+    const existing = await NCC.findOne({
+      stt: cleanStt,
+    });
+
+    if (existing) {
+      return res.status(400).json({
+        message: `STT "${cleanStt}" đã tồn tại`,
+      });
+    }
+
+    const data = await NCC.create({
+      stt: cleanStt,
+      mst: cleanValue(mst),
+      tenNguoiBan: cleanValue(tenNguoiBan),
+      stkNganHang: cleanValue(stkNganHang),
+      hangMuc: cleanValue(hangMuc),
+      chiTietChiPhi: cleanValue(chiTietChiPhi),
+      nguoiPhuTrach: cleanValue(nguoiPhuTrach),
+      xuatTu: cleanValue(xuatTu),
+      ghiChu: cleanValue(ghiChu),
+    });
+
+    return res.status(201).json({
+      message: "Thêm NCC thành công",
+      data,
+    });
+  } catch (error) {
+    console.error("Lỗi createNCC:", error);
+
+    return res.status(500).json({
+      message: "Lỗi thêm NCC",
+      error: error.message,
+    });
+  }
+};
+
+/* =========================================================
+   SỬA NCC
+   PUT /api/ncc/:stt
+========================================================= */
+
+exports.updateNCC = async (req, res) => {
+  try {
+    const { stt } = req.params;
+
+    if (!stt || !String(stt).trim()) {
+      return res.status(400).json({
+        message: "Thiếu STT NCC",
+      });
+    }
+
+    const {
+      mst,
+      tenNguoiBan,
+      stkNganHang,
+      hangMuc,
+      chiTietChiPhi,
+      nguoiPhuTrach,
+      xuatTu,
+      ghiChu,
+    } = req.body;
+
+    const data = await NCC.findOneAndUpdate(
+      {
+        stt: String(stt).trim(),
+      },
+      {
+        $set: {
+          mst: cleanValue(mst),
+          tenNguoiBan: cleanValue(tenNguoiBan),
+          stkNganHang: cleanValue(stkNganHang),
+          hangMuc: cleanValue(hangMuc),
+          chiTietChiPhi: cleanValue(chiTietChiPhi),
+          nguoiPhuTrach: cleanValue(nguoiPhuTrach),
+          xuatTu: cleanValue(xuatTu),
+          ghiChu: cleanValue(ghiChu),
+        },
+      },
+      {
+        new: true,
+      },
+    );
+
+    if (!data) {
+      return res.status(404).json({
+        message: `Không tìm thấy NCC có STT "${stt}"`,
+      });
+    }
+
+    return res.json({
+      message: "Cập nhật NCC thành công",
+      data,
+    });
+  } catch (error) {
+    console.error("Lỗi updateNCC:", error);
+
+    return res.status(500).json({
+      message: "Lỗi cập nhật NCC",
+      error: error.message,
+    });
+  }
+};
+
+/* =========================================================
+   XOÁ 1 NCC
+   DELETE /api/ncc/:stt
+========================================================= */
+
+exports.deleteNCC = async (req, res) => {
+  try {
+    const { stt } = req.params;
+
+    if (!stt || !String(stt).trim()) {
+      return res.status(400).json({
+        message: "Thiếu STT NCC",
+      });
+    }
+
+    const data = await NCC.findOneAndDelete({
+      stt: String(stt).trim(),
+    });
+
+    if (!data) {
+      return res.status(404).json({
+        message: `Không tìm thấy NCC có STT "${stt}"`,
+      });
+    }
+
+    return res.json({
+      message: "Đã xoá NCC thành công",
+      data,
+    });
+  } catch (error) {
+    console.error("Lỗi deleteNCC:", error);
+
+    return res.status(500).json({
+      message: "Lỗi xoá NCC",
+      error: error.message,
+    });
+  }
+};

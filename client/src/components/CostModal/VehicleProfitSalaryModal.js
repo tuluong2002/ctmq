@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import API from "../../api";
 
-export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
+export default function VehicleProfitSalaryModal({ open, onClose, month }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +17,7 @@ export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
   };
 
   // =====================================================
-  // LOAD CP SỬA XE THEO THÁNG
+  // LOAD CP LƯƠNG THEO THÁNG
   // =====================================================
 
   const fetchData = async () => {
@@ -26,11 +26,10 @@ export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
     setLoading(true);
 
     try {
-      const res = await axios.get(`${API}/repair/repair-cost`, {
+      const res = await axios.get(`${API}/salary/vehicle-profit-salary`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-
         params: {
           month,
         },
@@ -40,7 +39,7 @@ export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
     } catch (err) {
       console.error(err);
 
-      alert(err.response?.data?.message || "Lỗi lấy danh sách chi phí sửa xe");
+      alert(err.response?.data?.message || "Lỗi lấy danh sách chi phí lương");
     } finally {
       setLoading(false);
     }
@@ -60,14 +59,10 @@ export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
   // TỔNG
   // =====================================================
 
-  const total = data.reduce((sum, item) => sum + Number(item.cpSuaXe || 0), 0);
-
-  if (!open) {
-    return null;
-  }
+  const total = data.reduce((sum, item) => sum + Number(item.cpLuong || 0), 0);
 
   // =====================================================
-  // HIỂN THỊ THÁNG
+  // FORMAT THÁNG
   // =====================================================
 
   const formatMonth = (value) => {
@@ -78,6 +73,10 @@ export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
     return `${monthNumber}/${year}`;
   };
 
+  if (!open) {
+    return null;
+  }
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-lg shadow-xl w-[700px] max-w-[95vw] max-h-[85vh] flex flex-col">
@@ -87,12 +86,20 @@ export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
 
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div>
-            <h2 className="font-semibold text-lg">CHI PHÍ SỬA XE</h2>
+            <h2 className="font-semibold text-lg">CHI PHÍ LƯƠNG</h2>
 
             <div className="text-xs text-gray-500 flex">
               Mã lợi nhuận:
               <p className="ml-1 text-black font-semibold">
-                LN.{Number(month.split("-")[1])}.{Number(month.split("-")[0])}
+                LN.
+                {Number(month.split("-")[1])}.{Number(month.split("-")[0])}
+              </p>
+            </div>
+
+            <div className="text-xs text-gray-500 flex mt-0.5">
+              Tháng:
+              <p className="ml-1 text-black font-semibold">
+                {formatMonth(month)}
               </p>
             </div>
           </div>
@@ -143,14 +150,14 @@ export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
                         ĐƠN VỊ VẬN TẢI
                       </th>
 
-                      <th className="border px-3 py-2 text-right">CP SỬA XE</th>
+                      <th className="border px-3 py-2 text-right">CP LƯƠNG</th>
                     </tr>
                   </thead>
 
                   <tbody>
                     {data.map((item, index) => (
                       <tr
-                        key={item._id}
+                        key={item._id || item.bsx}
                         className="even:bg-gray-50 hover:bg-blue-50"
                       >
                         <td className="border px-3 py-2 text-center">
@@ -166,7 +173,7 @@ export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
                         </td>
 
                         <td className="border px-3 py-2 text-right font-semibold">
-                          {formatMoney(item.cpSuaXe)}
+                          {formatMoney(item.cpLuong)}
                         </td>
                       </tr>
                     ))}
@@ -174,7 +181,7 @@ export default function RepairCostVehicleProfitModal({ open, onClose, month }) {
                     {!loading && data.length === 0 && (
                       <tr>
                         <td
-                          colSpan={3}
+                          colSpan={4}
                           className="border px-3 py-8 text-center text-gray-500"
                         >
                           Không có dữ liệu

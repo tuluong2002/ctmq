@@ -26,7 +26,8 @@ export default function CostManagementPage({user}) {
           <Menu to="vehicle-legal" label="ĐK - ĐK - BH xe" />
           <Menu to="trip-payment" label="Thanh toán lịch trình" highlight />
           <Menu to="ncc" label="Nhà cung cấp" highlight/>
-          <Menu to="de-nghi-thanh-toan" label="Sổ phiếu đề nghị" highlight/>
+          <Menu to="de-nghi-thanh-toan" label="Phiếu ĐNTT" highlight/>
+          <Menu to="excel-templates" label="Excel mẫu import" />
         </div>
       </div>
 

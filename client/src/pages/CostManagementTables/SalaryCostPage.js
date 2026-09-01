@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
+import VehicleProfitSalaryModal from "../../components/CostModal/VehicleProfitSalaryModal";
 import API from "../../api";
 
 export const SALARY_FIELDS = [
@@ -85,6 +86,12 @@ export default function SalaryCostPage() {
   };
 
   const [monthFilter, setMonthFilter] = useState(getCurrentMonth());
+
+  const [updatingSalaryCost, setUpdatingSalaryCost] = useState(false);
+
+  const [showVehicleProfitModal, setShowVehicleProfitModal] = useState(false);
+
+  const [updatingVehicleProfit, setUpdatingVehicleProfit] = useState(false);
 
   /* ================= IMPORT ================= */
   const fileInputRef = useRef(null);
@@ -177,6 +184,48 @@ export default function SalaryCostPage() {
     }
   };
 
+  /* ================= CẬP NHẬT CHI PHÍ LƯƠNG ================= */
+  const handleUpdateVehicleProfitSalary = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng");
+      return;
+    }
+
+    const [year, month] = monthFilter.split("-");
+
+    const maLoiNhuan = `LN.${Number(month)}.${year}`;
+
+    const confirmUpdate = window.confirm(
+      `Bạn có chắc muốn cập nhật chi phí lương cho ${maLoiNhuan}?`,
+    );
+
+    if (!confirmUpdate) return;
+
+    try {
+      setUpdatingVehicleProfit(true);
+
+      const res = await axios.post(
+        `${API}/salary/update-vehicle-profit-salary`,
+        {
+          month: monthFilter,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      alert(res.data?.message || `Đã cập nhật chi phí lương ${maLoiNhuan}`);
+    } catch (err) {
+      console.error(err);
+
+      alert(err.response?.data?.message || "Cập nhật chi phí lương thất bại");
+    } finally {
+      setUpdatingVehicleProfit(false);
+    }
+  };
+
   /* ================= CRUD ================= */
   const handleEdit = (row) => {
     setEditing(row._id);
@@ -235,7 +284,7 @@ export default function SalaryCostPage() {
     fetchData();
   };
   const [visibleCols, setVisibleCols] = useState(
-    SALARY_FIELDS.map((f) => f.key)
+    SALARY_FIELDS.map((f) => f.key),
   );
   const [showColFilter, setShowColFilter] = useState(false);
 
@@ -289,6 +338,24 @@ export default function SalaryCostPage() {
           Đã nhập {importDone}/{importTotal}
         </span>
       )}
+
+      {/* CẬP NHẬT CHI PHÍ */}
+      <button
+        onClick={handleUpdateVehicleProfitSalary}
+        disabled={!monthFilter || updatingVehicleProfit}
+        className="bg-green-600 text-white px-3 py-1 disabled:opacity-50"
+      >
+        {updatingVehicleProfit ? "Đang cập nhật..." : "Cập nhật chi phí"}
+      </button>
+
+      {/* XEM DANH SÁCH */}
+      <button
+        onClick={() => setShowVehicleProfitModal(true)}
+        disabled={!monthFilter}
+        className="bg-purple-600 text-white px-3 py-1 disabled:opacity-50"
+      >
+        Xem chi phí
+      </button>
     </div>
   );
 
@@ -361,7 +428,7 @@ export default function SalaryCostPage() {
                               }
                               onChange={(e) =>
                                 setDriverFilter(
-                                  e.target.checked ? [...driverOptions] : []
+                                  e.target.checked ? [...driverOptions] : [],
                                 )
                               }
                             />
@@ -373,7 +440,7 @@ export default function SalaryCostPage() {
                               .filter((d) =>
                                 d
                                   .toLowerCase()
-                                  .includes(driverFilterSearch.toLowerCase())
+                                  .includes(driverFilterSearch.toLowerCase()),
                               )
                               .map((d) => (
                                 <label
@@ -387,7 +454,7 @@ export default function SalaryCostPage() {
                                       setDriverFilter((p) =>
                                         e.target.checked
                                           ? [...p, d]
-                                          : p.filter((x) => x !== d)
+                                          : p.filter((x) => x !== d),
                                       )
                                     }
                                   />
@@ -409,9 +476,11 @@ export default function SalaryCostPage() {
                     f.label
                   )}
                 </th>
-              )
+              ),
             )}
-            <th className="sticky top-0 z-40 bg-blue-600 border px-2">Hành động</th>
+            <th className="sticky top-0 z-40 bg-blue-600 border px-2">
+              Hành động
+            </th>
           </tr>
         </thead>
 
@@ -428,13 +497,13 @@ export default function SalaryCostPage() {
                       value={
                         f.type === "date" && form[f.key]
                           ? form[f.key].slice(0, 10)
-                          : form[f.key] ?? ""
+                          : (form[f.key] ?? "")
                       }
                       onChange={handleChange}
                       className="w-full border px-1 text-right"
                     />
                   </td>
-                )
+                ),
               )}
               <td className="border px-2 text-center whitespace-nowrap">
                 <button
@@ -452,7 +521,12 @@ export default function SalaryCostPage() {
 
           {/* ===== DATA ===== */}
           {data.map((r) => (
-            <tr key={r._id} className="hover:bg-gray-50">
+            <tr
+              key={r._id}
+              className={`hover:bg-gray-50 ${
+                r.isDontMatchCP ? "text-red-600" : ""
+              }`}
+            >
               {SALARY_FIELDS.filter((f) => visibleCols.includes(f.key)).map(
                 (f) => (
                   <td
@@ -472,21 +546,24 @@ export default function SalaryCostPage() {
                     {f.type === "date" && r[f.key]
                       ? (() => {
                           const d = new Date(r[f.key]);
+
                           return `${String(d.getMonth() + 1).padStart(
                             2,
-                            "0"
+                            "0",
                           )}/${d.getFullYear()}`;
                         })()
                       : typeof r[f.key] === "number"
-                      ? r[f.key].toLocaleString()
-                      : r[f.key]}
+                        ? r[f.key].toLocaleString()
+                        : r[f.key]}
                   </td>
-                )
+                ),
               )}
+
               <td className="border px-2 text-center whitespace-nowrap">
                 <button onClick={() => handleEdit(r)} className="text-blue-600">
                   Sửa
                 </button>
+
                 <button
                   onClick={() => handleDelete(r._id)}
                   className="text-red-600 ml-2"
@@ -528,7 +605,7 @@ export default function SalaryCostPage() {
             <input
               type="checkbox"
               checked={SALARY_FIELDS.every(
-                (f) => visibleCols.includes(f.key) || STICKY_COLS[f.key]
+                (f) => visibleCols.includes(f.key) || STICKY_COLS[f.key],
               )}
               onChange={(e) => {
                 if (e.target.checked) {
@@ -556,7 +633,7 @@ export default function SalaryCostPage() {
                       setVisibleCols((p) =>
                         e.target.checked
                           ? [...p, f.key]
-                          : p.filter((x) => x !== f.key)
+                          : p.filter((x) => x !== f.key),
                       )
                     }
                   />
@@ -573,6 +650,15 @@ export default function SalaryCostPage() {
 
       {loading && <p>Đang tải...</p>}
       {renderTable()}
+
+      {/* ================= MODAL VEHICLE PROFIT ================= */}
+      {showVehicleProfitModal && (
+        <VehicleProfitSalaryModal
+          open={showVehicleProfitModal}
+          month={monthFilter}
+          onClose={() => setShowVehicleProfitModal(false)}
+        />
+      )}
     </div>
   );
 }

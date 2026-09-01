@@ -44,7 +44,26 @@ router.delete("/", salaryController.removeAllByMonth);
 router.post(
   "/import-excel",
   upload.single("file"),
-  salaryController.importExcel
+  salaryController.importExcel,
+);
+
+/* =======================
+   CẬP NHẬT CP LƯƠNG VÀO VEHICLE PROFIT
+   - POST /update-vehicle-profit-salary
+   - Body: { month: "2026-08" }
+======================= */
+router.post(
+  "/update-vehicle-profit-salary",
+  salaryController.updateVehicleProfitSalary,
+);
+
+/* =======================
+   LẤY VEHICLE PROFIT THEO THÁNG
+   - GET /vehicle-profit-salary?month=2026-08
+======================= */
+router.get(
+  "/vehicle-profit-salary",
+  salaryController.getVehicleProfitSalaryByMonth,
 );
 
 module.exports = router;
