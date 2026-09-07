@@ -1,4 +1,5 @@
 const ExcelJS = require("exceljs");
+const path = require("path");
 const FuelNgocLong = require("../models/FuelNgocLong");
 
 /* =========================================================
@@ -155,7 +156,7 @@ exports.getUniqueVehiclePlates = async (req, res) => {
     vehiclePlates.sort((a, b) =>
       String(a).localeCompare(String(b), undefined, {
         sensitivity: "base",
-      }),
+      })
     );
 
     res.json(vehiclePlates);
@@ -582,6 +583,209 @@ exports.importExcel = async (req, res) => {
     console.error("IMPORT FUEL NGOC LONG ERROR:", err);
 
     res.status(500).json({
+      message: err.message,
+    });
+  }
+};
+
+/* =========================================================
+   XUẤT EXCEL THEO THÁNG
+   FE gửi:
+   GET /api/fuel-ngoc-long/export-excel?month=2026-09
+========================================================= */
+exports.exportExcel = async (req, res) => {
+  try {
+    const { month } = req.query;
+
+    // =========================
+    // KIỂM TRA THÁNG
+    // =========================
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ. Ví dụ: 2026-09",
+      });
+    }
+
+    const [year, mon] = month.split("-");
+
+    const y = Number(year);
+    const m = Number(mon);
+
+    if (m < 1 || m > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ",
+      });
+    }
+
+    // =========================
+    // KHOẢNG THỜI GIAN
+    // =========================
+    const startDate = new Date(y, m - 1, 1);
+
+    const endDate = new Date(y, m, 1);
+
+    // =========================
+    // LẤY DỮ LIỆU THEO THÁNG
+    // =========================
+    const data = await FuelNgocLong.find({
+      dateFull: {
+        $gte: startDate,
+        $lt: endDate,
+      },
+    }).sort({
+      dateFull: 1,
+      vehiclePlate: 1,
+    });
+
+    // =========================
+    // FILE EXCEL MẪU
+    // =========================
+    const templatePath = path.join(
+      __dirname,
+      "../templates/FuelNgocLongTemplate.xlsx"
+    );
+
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(templatePath);
+
+    const sheet = workbook.worksheets[0];
+
+    if (!sheet) {
+      return res.status(500).json({
+        success: false,
+        message: "File Excel mẫu không có sheet",
+      });
+    }
+
+    // =====================================================
+    // XÓA DỮ LIỆU CŨ TRONG VÙNG A:O
+    // GIỮ NGUYÊN FORM / ĐỊNH DẠNG
+    // =====================================================
+    for (let rowIndex = 2; rowIndex <= sheet.rowCount; rowIndex++) {
+      for (let colIndex = 1; colIndex <= 15; colIndex++) {
+        sheet.getCell(rowIndex, colIndex).value = null;
+      }
+    }
+
+    // =====================================================
+    // GHI DỮ LIỆU
+    // =====================================================
+    data.forEach((item, index) => {
+      const rowIndex = index + 2;
+      const row = sheet.getRow(rowIndex);
+
+      // =========================
+      // A - NGÀY THÁNG NĂM
+      // =========================
+      if (item.dateFull) {
+        const d = new Date(item.dateFull);
+        d.setHours(d.getHours() + 7);
+        row.getCell(1).value = d;
+      } else {
+        row.getCell(1).value = null;
+      }
+
+      row.getCell(1).numFmt = "dd/mm/yyyy";
+
+      // =========================
+      // B - NGÀY
+      // =========================
+      row.getCell(2).value = item.day ?? null;
+
+      // =========================
+      // C - BIỂN SỐ XE
+      // =========================
+      row.getCell(3).value = item.vehiclePlate ?? "";
+
+      // =========================
+      // D - MÃ XE
+      // =========================
+      row.getCell(4).value = item.vehicleCode ?? "";
+
+      // =========================
+      // E - SỐ TIỀN
+      // =========================
+      row.getCell(5).value = item.amount ?? null;
+
+      // =========================
+      // F - SỐ LÍT
+      // =========================
+      row.getCell(6).value = item.liter ?? null;
+
+      // =========================
+      // G - MÁY ĐỔ
+      // =========================
+      row.getCell(7).value = item.mayDo ?? "";
+
+      // =========================
+      // H - SỐ ĐIỆN TỬ MÁY 1
+      // =========================
+      row.getCell(8).value = item.cumulativeMechanical1 ?? null;
+
+      // =========================
+      // I - SỐ ĐIỆN TỬ MÁY 2
+      // =========================
+      row.getCell(9).value = item.cumulativeMechanical2 ?? null;
+
+      // =========================
+      // J - CHECK SỐ ĐIỆN TỬ MÁY 1
+      // =========================
+      row.getCell(10).value = item.checkElectronic1 ?? null;
+
+      // =========================
+      // K - CHECK SỐ ĐIỆN TỬ MÁY 2
+      // =========================
+      row.getCell(11).value = item.checkElectronic2 ?? null;
+
+      // =========================
+      // L - TỒN DẦU
+      // =========================
+      row.getCell(12).value = item.fuelRemaining ?? null;
+
+      // =========================
+      // M - GIÁ DẦU NỘI BỘ ĐÃ GỒM VAT
+      // =========================
+      row.getCell(13).value = item.internalFuelPrice ?? null;
+
+      // =========================
+      // N - THÔNG TIN XE
+      // =========================
+      row.getCell(14).value = item.infoVehicle ?? "";
+
+      // =========================
+      // O - NƠI ĐỔ
+      // =========================
+      row.getCell(15).value = item.placeFuel ?? "";
+
+      row.commit();
+    });
+
+    // =====================================================
+    // TÊN FILE
+    // =====================================================
+    const fileName = `Nhien_Lieu_Ngoc_Long_${month}.xlsx`;
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    res.send(buffer);
+  } catch (err) {
+    console.error("XUẤT EXCEL NHIÊN LIỆU NGỌC LONG:", err);
+
+    res.status(500).json({
+      success: false,
       message: err.message,
     });
   }

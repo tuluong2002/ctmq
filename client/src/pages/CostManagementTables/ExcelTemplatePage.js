@@ -4,12 +4,14 @@ export default function ExcelTemplatePage() {
   const templates = [
     {
       name: "Mẫu nhập chi phí nhiên liệu Vĩnh Khúc - Đổ ngoài",
-      description: "File Excel mẫu để nhập dữ liệu chi phí nhiên liệu Vĩnh Khúc và Đổ ngoài.",
+      description:
+        "File Excel mẫu để nhập dữ liệu chi phí nhiên liệu Vĩnh Khúc và Đổ ngoài.",
       file: "/excel-templates/nhien_lieu_Vinh_Khuc.xlsx",
     },
     {
       name: "Mẫu nhập chi phí nhiên liệu Ngọc Long",
-      description: "File Excel mẫu để nhập dữ liệu chi phí nhiên liệu Ngọc Long.",
+      description:
+        "File Excel mẫu để nhập dữ liệu chi phí nhiên liệu Ngọc Long.",
       file: "/excel-templates/nhien_lieu_Ngoc_Long.xlsx",
     },
     {
@@ -25,28 +27,28 @@ export default function ExcelTemplatePage() {
     {
       name: "Mẫu nhập lương",
       description: "File Excel mẫu để nhập chi phí lương.",
-      file: "/excel-templates/chi-phi-luong.xlsx",
+      file: "/excel-templates/luong.xlsx",
     },
     {
       name: "Mẫu nhập Epass tháng",
       description: "File Excel mẫu để nhập chi phí Epass theo tháng.",
-      file: "/excel-templates/epass-thang.xlsx",
+      file: "/excel-templates/epass-month.xlsx",
     },
     {
       name: "Mẫu nhập Epass lượt",
       description: "File Excel mẫu để nhập chi phí Epass theo lượt.",
-      file: "/excel-templates/epass-luot.xlsx",
+      file: "/excel-templates/epass-turn.xlsx",
     },
     {
-      name: "Mẫu nhập ETC",
-      description: "File Excel mẫu để nhập chi phí ETC.",
-      file: "/excel-templates/etc.xlsx",
+      name: "Mẫu nhập TCT",
+      description: "File Excel mẫu để nhập chi phí TCT.",
+      file: "/excel-templates/tct.xlsx",
     },
     {
       name: "Mẫu nhập đăng kiểm - đăng ký - bảo hiểm",
       description:
         "File Excel mẫu để nhập chi phí đăng ký, đăng kiểm và bảo hiểm xe.",
-      file: "/excel-templates/xe-phap-ly.xlsx",
+      file: "/excel-templates/dk-dk-bh.xlsx",
     },
     {
       name: "Mẫu thanh toán lịch trình",

@@ -61,7 +61,7 @@ exports.getUniqueDrivers = async (req, res) => {
   try {
     const names = await Salary.distinct("tenNhanVien");
     names.sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: "base" }),
+      a.localeCompare(b, undefined, { sensitivity: "base" })
     );
     res.json(names);
   } catch (err) {
@@ -243,7 +243,7 @@ exports.importExcel = async (req, res) => {
    - Tạo mã lợi nhuận: LN.THÁNG.NĂM
    - Chỉ lấy Salary trong đúng tháng đó
    - Đối chiếu Salary.bienSoXe với VehicleProfit.bsx
-   - Cộng tongSo của các Salary cùng BSX
+   - Cộng soTienConDuocLinh của các Salary cùng BSX
    - Ghi tổng vào cpLuong
    - Dùng $set để chạy nhiều lần không bị cộng trùng
 ========================================================= */
@@ -308,7 +308,7 @@ exports.updateVehicleProfitSalary = async (req, res) => {
         $nin: [null, ""],
       },
 
-      tongSo: {
+      soTienConDuocLinh: {
         $ne: null,
       },
     }).lean();
@@ -333,7 +333,7 @@ exports.updateVehicleProfitSalary = async (req, res) => {
     };
 
     // =====================================================
-    // 7. GOM TỔNG tongSo THEO BIỂN SỐ
+    // 7. GOM TỔNG soTienConDuocLinh THEO BIỂN SỐ
     // =====================================================
 
     const salaryMap = new Map();
@@ -345,17 +345,17 @@ exports.updateVehicleProfitSalary = async (req, res) => {
 
       if (!bsx) continue;
 
-      const tongSo = Number(salary.tongSo || 0);
+      const soTienConDuocLinh = Number(salary.soTienConDuocLinh || 0);
 
-      if (!Number.isFinite(tongSo)) continue;
+      if (!Number.isFinite(soTienConDuocLinh)) continue;
 
       if (!salaryMap.has(bsx)) {
         salaryMap.set(bsx, 0);
       }
 
-      salaryMap.set(bsx, salaryMap.get(bsx) + tongSo);
+      salaryMap.set(bsx, salaryMap.get(bsx) + soTienConDuocLinh);
 
-      totalSalary += tongSo;
+      totalSalary += soTienConDuocLinh;
     }
 
     // =====================================================
@@ -487,7 +487,7 @@ exports.getVehicleProfitSalaryByMonth = async (req, res) => {
         bsx: 1,
         company: 1,
         cpLuong: 1,
-      },
+      }
     )
       .sort({ bsx: 1 })
       .lean();

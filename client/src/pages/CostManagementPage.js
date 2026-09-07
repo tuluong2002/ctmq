@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import React from "react";
 
-export default function CostManagementPage({user}) {
+export default function CostManagementPage({ user }) {
   const navigate = useNavigate();
   return (
     <div className="h-screen flex flex-col">
@@ -22,18 +22,18 @@ export default function CostManagementPage({user}) {
           <Menu to="depreciation" label="Khấu hao xe" />
           <Menu to="epass-month" label="Epass (tháng)" />
           <Menu to="epass-turn" label="Epass (lượt)" />
-          <Menu to="etc" label="ETC" />
+          <Menu to="etc" label="TCT" />
           <Menu to="vehicle-legal" label="ĐK - ĐK - BH xe" />
           <Menu to="trip-payment" label="Thanh toán lịch trình" highlight />
-          <Menu to="ncc" label="Nhà cung cấp" highlight/>
-          <Menu to="de-nghi-thanh-toan" label="Phiếu ĐNTT" highlight/>
+          <Menu to="ncc" label="Nhà cung cấp" highlight />
+          <Menu to="de-nghi-thanh-toan" label="Phiếu ĐNTT" highlight />
           <Menu to="excel-templates" label="Excel mẫu import" />
         </div>
       </div>
 
       {/* ===== NỘI DUNG ===== */}
       <div className="flex-1 mt-14 overflow-auto p-4 bg-gray-50 text-xs">
-        <Outlet  context={{ user }}/>
+        <Outlet context={{ user }} />
       </div>
     </div>
   );
