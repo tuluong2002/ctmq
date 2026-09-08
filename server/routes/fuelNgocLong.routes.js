@@ -9,6 +9,7 @@ router.get("/", controller.getAll);
 router.delete("/remove-by-month-year", controller.removeByMonthYear);
 router.post("/import", upload.single("file"), controller.importExcel);
 router.put("/:id", controller.update);
-router.get("/fuel-vehicle", controller.getUniqueVehiclePlates)
+router.get("/fuel-vehicle", controller.getUniqueVehiclePlates);
+router.get("/export-excel", controller.exportExcel);
 
 module.exports = router;

@@ -12,5 +12,6 @@ router.post("/update-vehicle-profit-fuel", controller.updateVehicleProfitFuel);
 router.put("/:id", controller.update);
 router.get("/fuel-vehicle", controller.getUniqueVehicleNos);
 router.get("/by-month", controller.getVehicleProfitByMonth);
+router.get("/export-excel", controller.exportExcel);
 
 module.exports = router;

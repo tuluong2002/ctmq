@@ -159,17 +159,18 @@ exports.importExcel = async (req, res) => {
       const row = sheet.getRow(i);
       console.log("Row", i, row.values);
 
-      const bsx = getCellString(row.getCell(2));
-      const xecoCB = getCellString(row.getCell(3));
-      const dayBuy = getCellDate(row.getCell(4));
-      const dayExp = getCellDate(row.getCell(5));
-      const timeUse = getCellNumber(row.getCell(6));
-      const phiGPS = getCellNumber(row.getCell(7));
-      const DVmaychu = getCellNumber(row.getCell(8));
-      const DVsimcard = getCellNumber(row.getCell(9));
-      const camBienDau = getCellNumber(row.getCell(10));
-      const camHT = getCellNumber(row.getCell(11));
-      const suaChua = getCellNumber(row.getCell(12));
+      const bsx = getCellString(row.getCell(1));
+      const xecoCB = getCellString(row.getCell(2));
+      const dayBuy = getCellDate(row.getCell(3));
+      const dayExp = getCellDate(row.getCell(4));
+      const timeUse = getCellNumber(row.getCell(5));
+      const phiGPS = getCellNumber(row.getCell(6));
+      const DVmaychu = getCellNumber(row.getCell(7));
+      const DVsimcard = getCellNumber(row.getCell(8));
+      const camBienDau = getCellNumber(row.getCell(9));
+      const camHT = getCellNumber(row.getCell(10));
+      const suaChua = getCellNumber(row.getCell(11));
+      const total = getCellNumber(row.getCell(12));
       const ghiChu = getCellString(row.getCell(13));
       const nameDV = getCellString(row.getCell(14));
       const nameCompany = getCellString(row.getCell(15));
@@ -193,6 +194,7 @@ exports.importExcel = async (req, res) => {
         camBienDau,
         camHT,
         suaChua,
+        total,
         ghiChu,
         nameDV,
         nameCompany,
@@ -307,7 +309,7 @@ exports.updateVehicleProfitETC = async (req, res) => {
           $set: {
             cpETC,
           },
-        },
+        }
       );
 
       updated++;

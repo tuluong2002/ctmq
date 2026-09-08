@@ -48,8 +48,8 @@ export default function FuelCostPage() {
     source === "vinh-khuc"
       ? `${API}/fuel-vinh-khuc`
       : source === "ngoc-long"
-        ? `${API}/fuel-ngoc-long`
-        : `${API}/fuel-dau-ngoai`;
+      ? `${API}/fuel-ngoc-long`
+      : `${API}/fuel-dau-ngoai`;
 
   /* ================= LẤY DANH SÁCH SỐ XE ================= */
   const fetchVehicleFilterOptions = async () => {
@@ -152,7 +152,7 @@ export default function FuelCostPage() {
     const maLoiNhuan = `LN.${Number(month)}.${year}`;
 
     const confirmUpdate = window.confirm(
-      `Bạn có chắc muốn cập nhật chi phí nhiên liệu cho ${maLoiNhuan}?`,
+      `Bạn có chắc muốn cập nhật chi phí nhiên liệu cho ${maLoiNhuan}?`
     );
 
     if (!confirmUpdate) return;
@@ -169,17 +169,17 @@ export default function FuelCostPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       alert(
-        res.data?.message || `Đã cập nhật chi phí nhiên liệu ${maLoiNhuan}`,
+        res.data?.message || `Đã cập nhật chi phí nhiên liệu ${maLoiNhuan}`
       );
     } catch (err) {
       console.error(err);
 
       alert(
-        err.response?.data?.message || "Cập nhật chi phí nhiên liệu thất bại",
+        err.response?.data?.message || "Cập nhật chi phí nhiên liệu thất bại"
       );
     } finally {
       setUpdatingVehicleProfit(false);
@@ -238,6 +238,86 @@ export default function FuelCostPage() {
         setImportTotal(0);
         setImportDone(0);
       }, 2000);
+    }
+  };
+
+  /* ================= XUẤT EXCEL THEO THÁNG ================= */
+  const handleExportExcel = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng cần xuất");
+      return;
+    }
+
+    try {
+      const exportUrl =
+        source === "vinh-khuc"
+          ? `${API}/fuel-vinh-khuc/export-excel`
+          : source === "ngoc-long"
+          ? `${API}/fuel-ngoc-long/export-excel`
+          : `${API}/fuel-dau-ngoai/export-excel`;
+
+      const res = await axios.get(exportUrl, {
+        params: {
+          month: monthFilter,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      });
+
+      // =========================
+      // TÊN FILE
+      // =========================
+      const sourceName =
+        source === "vinh-khuc"
+          ? "Nhien_Lieu_Vinh_Khuc"
+          : source === "ngoc-long"
+          ? "Nhien_Lieu_Ngoc_Long"
+          : "Nhien_Lieu_Dau_Ngoai";
+
+      const fileName = `${sourceName}_${monthFilter}.xlsx`;
+
+      // =========================
+      // TẠO FILE DOWNLOAD
+      // =========================
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Lỗi xuất Excel:", err);
+
+      // =========================
+      // BACKEND TRẢ LỖI DẠNG BLOB
+      // =========================
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const errorData = JSON.parse(text);
+
+          alert(errorData?.message || "Xuất Excel thất bại");
+
+          return;
+        } catch (e) {
+          console.error("Không đọc được lỗi từ backend:", e);
+        }
+      }
+
+      alert(err.response?.data?.message || "Xuất Excel thất bại");
     }
   };
 
@@ -386,7 +466,7 @@ export default function FuelCostPage() {
     const [year, month] = monthFilter.split("-");
 
     const confirmDelete = window.confirm(
-      `Bạn có chắc muốn xóa toàn bộ dữ liệu tháng ${month}/${year}?`,
+      `Bạn có chắc muốn xóa toàn bộ dữ liệu tháng ${month}/${year}?`
     );
 
     if (!confirmDelete) {
@@ -413,7 +493,7 @@ export default function FuelCostPage() {
 
       alert(
         err.response?.data?.message ||
-          `Xóa dữ liệu tháng ${month}/${year} thất bại`,
+          `Xóa dữ liệu tháng ${month}/${year} thất bại`
       );
     }
   };
@@ -493,7 +573,7 @@ export default function FuelCostPage() {
                 .filter((v) =>
                   String(v)
                     .toLowerCase()
-                    .includes(vehicleFilterSearch.toLowerCase()),
+                    .includes(vehicleFilterSearch.toLowerCase())
                 )
                 .map((v) => (
                   <label key={v} className="flex items-center gap-1">
@@ -725,13 +805,13 @@ export default function FuelCostPage() {
 
                     <td className="border px-2 text-right">
                       {Number(r.cumulativeMechanical1 || 0).toLocaleString(
-                        "vi-VN",
+                        "vi-VN"
                       )}
                     </td>
 
                     <td className="border px-2 text-right">
                       {Number(r.cumulativeMechanical2 || 0).toLocaleString(
-                        "vi-VN",
+                        "vi-VN"
                       )}
                     </td>
 
@@ -839,6 +919,15 @@ export default function FuelCostPage() {
         className="bg-purple-600 text-white px-3 py-1 disabled:opacity-50"
       >
         Xem chi phí
+      </button>
+
+      {/* XUẤT EXCEL */}
+      <button
+        onClick={handleExportExcel}
+        disabled={!monthFilter}
+        className="bg-green-700 text-white px-3 py-1 disabled:opacity-50"
+      >
+        Xuất Excel
       </button>
     </div>
   );

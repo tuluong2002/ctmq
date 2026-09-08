@@ -14,6 +14,7 @@ const fieldMap = [
   { key: "camBienDau", label: "Cảm biến dầu" },
   { key: "camHT", label: "Cam hành trình" },
   { key: "suaChua", label: "Sửa chữa" },
+  { key: "total", label: "Tổng tiền" },
   { key: "ghiChu", label: "Ghi chú" },
   { key: "nameDV", label: "Tên dịch vụ" },
   { key: "nameCompany", label: "Tên công ty" },
@@ -139,7 +140,7 @@ export default function ETCPage() {
     const maLoiNhuan = `LN.${Number(month)}.${year}`;
 
     const confirmUpdate = window.confirm(
-      `Bạn có chắc muốn cập nhật chi phí ETC cho ${maLoiNhuan}?`,
+      `Bạn có chắc muốn cập nhật chi phí ETC cho ${maLoiNhuan}?`
     );
 
     if (!confirmUpdate) return;
@@ -156,7 +157,7 @@ export default function ETCPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       alert(res.data?.message || `Đã cập nhật chi phí ETC cho ${maLoiNhuan}`);
@@ -379,8 +380,8 @@ export default function ETCPage() {
                               form[f.key] !== undefined
                                 ? form[f.key]
                                 : isMoney
-                                  ? 0
-                                  : ""
+                                ? 0
+                                : ""
                             }
                             onChange={handleChange}
                             className="w-full border px-1 py-0.5 text-sm text-right"
