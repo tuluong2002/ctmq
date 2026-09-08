@@ -151,6 +151,71 @@ export default function OtherCostPage() {
     }
   };
 
+  /* ================= XUẤT EXCEL THEO THÁNG ================= */
+  const handleExportExcel = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng cần xuất");
+      return;
+    }
+
+    try {
+      const exportUrl = `${API}/other-cost/export-excel`;
+
+      const res = await axios.get(exportUrl, {
+        params: {
+          month: monthFilter,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      });
+
+      const fileName = `CP-khac_${monthFilter}.xlsx`;
+
+      // =========================
+      // TẠO FILE DOWNLOAD
+      // =========================
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Lỗi xuất Excel:", err);
+
+      // =========================
+      // BACKEND TRẢ LỖI DẠNG BLOB
+      // =========================
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const errorData = JSON.parse(text);
+
+          alert(errorData?.message || "Xuất Excel thất bại");
+
+          return;
+        } catch (e) {
+          console.error("Không đọc được lỗi từ backend:", e);
+        }
+      }
+
+      alert(err.response?.data?.message || "Xuất Excel thất bại");
+    }
+  };
+
   // =====================================================
   // CẬP NHẬT CHI PHÍ KHÁC VÀO DOANH THU TỔNG
   // =====================================================
@@ -357,6 +422,15 @@ export default function OtherCostPage() {
         className="bg-green-600 text-white px-3 py-1 rounded disabled:opacity-50"
       >
         Cập nhật vào doanh thu
+      </button>
+
+      {/* XUẤT EXCEL */}
+      <button
+        onClick={handleExportExcel}
+        disabled={!monthFilter}
+        className="bg-green-700 text-white px-3 py-1 disabled:opacity-50"
+      >
+        Xuất Excel
       </button>
     </div>
   );

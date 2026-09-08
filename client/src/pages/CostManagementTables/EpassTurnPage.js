@@ -48,7 +48,7 @@ export default function EpassTurnPage() {
 
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
       2,
-      "0",
+      "0"
     )}`;
   };
 
@@ -332,6 +332,71 @@ export default function EpassTurnPage() {
     }
   };
 
+  /* ================= XUẤT EXCEL THEO THÁNG ================= */
+  const handleExportExcel = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng cần xuất");
+      return;
+    }
+
+    try {
+      const exportUrl = `${API}/epass-turn/export-excel`;
+
+      const res = await axios.get(exportUrl, {
+        params: {
+          month: monthFilter,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      });
+
+      const fileName = `Epass-luot_${monthFilter}.xlsx`;
+
+      // =========================
+      // TẠO FILE DOWNLOAD
+      // =========================
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Lỗi xuất Excel:", err);
+
+      // =========================
+      // BACKEND TRẢ LỖI DẠNG BLOB
+      // =========================
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const errorData = JSON.parse(text);
+
+          alert(errorData?.message || "Xuất Excel thất bại");
+
+          return;
+        } catch (e) {
+          console.error("Không đọc được lỗi từ backend:", e);
+        }
+      }
+
+      alert(err.response?.data?.message || "Xuất Excel thất bại");
+    }
+  };
+
   /* =====================================================
      CẬP NHẬT
   ===================================================== */
@@ -346,7 +411,7 @@ export default function EpassTurnPage() {
 
     if (
       !window.confirm(
-        `Bạn có chắc muốn cập nhật chi phí Epass lượt vào VehicleProfit tháng ${monthFilter}?`,
+        `Bạn có chắc muốn cập nhật chi phí Epass lượt vào VehicleProfit tháng ${monthFilter}?`
       )
     ) {
       return;
@@ -366,7 +431,7 @@ export default function EpassTurnPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       alert(res.data?.message || "Cập nhật chi phí Epass lượt thành công");
@@ -380,7 +445,7 @@ export default function EpassTurnPage() {
         err.response?.data?.message ||
           err.response?.data?.error ||
           err.message ||
-          "Cập nhật chi phí Epass lượt thất bại",
+          "Cập nhật chi phí Epass lượt thất bại"
       );
     } finally {
       setUpdatingVehicleProfit(false);
@@ -400,7 +465,7 @@ export default function EpassTurnPage() {
 
     if (
       !window.confirm(
-        `Bạn có chắc muốn xoá toàn bộ Epass lượt có thời gian giao dịch trong tháng ${month}/${year}?`,
+        `Bạn có chắc muốn xoá toàn bộ Epass lượt có thời gian giao dịch trong tháng ${month}/${year}?`
       )
     ) {
       return;
@@ -438,7 +503,7 @@ export default function EpassTurnPage() {
       console.error("DELETE EPASS TURN ERROR:", err);
 
       alert(
-        err.response?.data?.message || err.message || "Xoá dữ liệu thất bại",
+        err.response?.data?.message || err.message || "Xoá dữ liệu thất bại"
       );
     }
   };
@@ -591,6 +656,14 @@ export default function EpassTurnPage() {
       >
         Xem chi phí
       </button>
+      {/* XUẤT EXCEL */}
+      <button
+        onClick={handleExportExcel}
+        disabled={!monthFilter}
+        className="bg-green-700 text-white px-3 py-1 disabled:opacity-50"
+      >
+        Xuất Excel
+      </button>
     </div>
   );
 
@@ -707,7 +780,7 @@ export default function EpassTurnPage() {
                               }
                               onChange={(e) => {
                                 setBsxFilter(
-                                  e.target.checked ? [...bsxOptions] : [],
+                                  e.target.checked ? [...bsxOptions] : []
                                 );
 
                                 setPage(1);
@@ -724,7 +797,7 @@ export default function EpassTurnPage() {
                               .filter((v) =>
                                 String(v)
                                   .toLowerCase()
-                                  .includes(bsxSearch.toLowerCase()),
+                                  .includes(bsxSearch.toLowerCase())
                               )
                               .map((v) => (
                                 <label
@@ -738,7 +811,7 @@ export default function EpassTurnPage() {
                                       setBsxFilter((prev) =>
                                         e.target.checked
                                           ? [...prev, v]
-                                          : prev.filter((x) => x !== v),
+                                          : prev.filter((x) => x !== v)
                                       );
 
                                       setPage(1);

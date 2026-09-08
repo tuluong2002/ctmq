@@ -59,14 +59,6 @@ export default function DeNghiThanhToanModal({
   };
 
   /* =========================================================
-     NGƯỜI ĐỀ NGHỊ
-  ========================================================= */
-
-  const getUserName = () => {
-    return user?.fullname || user?.username || "";
-  };
-
-  /* =========================================================
      KHỞI TẠO FORM
   ========================================================= */
 
@@ -76,11 +68,6 @@ export default function DeNghiThanhToanModal({
     setShowNccSuggestions(false);
 
     if (editing) {
-      // =====================================================
-      // SỬA
-      // Giữ nguyên ngày + người đề nghị cũ
-      // =====================================================
-
       setForm({
         ngayDeNghi: editing.ngayDeNghi
           ? new Date(editing.ngayDeNghi).toISOString().split("T")[0]
@@ -109,12 +96,6 @@ export default function DeNghiThanhToanModal({
         tongTien: editing.tongTien ?? "",
       });
     } else {
-      // =====================================================
-      // THÊM MỚI
-      // Ngày = hôm nay
-      // Người đề nghị = user.fullname || user.username
-      // =====================================================
-
       setForm({
         ngayDeNghi: getToday(),
 
@@ -141,12 +122,12 @@ export default function DeNghiThanhToanModal({
         tongTien: "",
       });
     }
-  }, [open, editing, user]);
+  }, [open, editing]);
 
   /* =========================================================
      DANH SÁCH NCC GỢI Ý
-     
-     Gợi ý theo tenNguoiBan
+
+     Tìm theo tên nhà cung cấp
   ========================================================= */
 
   const filteredNccList = useMemo(() => {
@@ -161,34 +142,101 @@ export default function DeNghiThanhToanModal({
     return nccList.filter((item) =>
       String(item.tenNguoiBan || "")
         .toLowerCase()
-        .includes(keyword),
+        .includes(keyword)
     );
   }, [nccList, form.nhaCungCap]);
 
   /* =========================================================
      CHỌN NHÀ CUNG CẤP
-     
-     Tự động điền:
+
+     4 trường bắt buộc lấy theo NCC:
      - MST
      - STK
-     - Nhóm chi phí = chiTietChiPhi
+     - Nhóm chi phí
+     - Người phụ trách
   ========================================================= */
 
   const handleSelectNcc = (item) => {
     setForm((prev) => ({
       ...prev,
+
       nhaCungCap: item.tenNguoiBan || "",
-      nguoiDeNghi: item.nguoiPhuTrach || prev.nguoiDeNghi || "",
+
+      // TỰ ĐỘNG LẤY THEO NCC
       maSoThue: item.mst || "",
+
       stkNganHang: item.stkNganHang || "",
+
       nhomChiPhi: item.chiTietChiPhi || "",
+
+      nguoiDeNghi: item.nguoiPhuTrach || "",
     }));
 
     setShowNccSuggestions(false);
   };
 
   /* =========================================================
-     CHANGE
+     THAY ĐỔI NHÀ CUNG CẤP
+
+     Khi người dùng gõ/chỉnh sửa tên NCC:
+     - Nếu tìm thấy đúng NCC => tự động lấy 4 thông tin
+     - Nếu chưa chọn đúng NCC => xóa 4 thông tin cũ
+     
+     Mục đích:
+     Không để trường hợp đổi NCC nhưng MST/STK/
+     nhóm chi phí/người phụ trách vẫn còn của NCC cũ.
+  ========================================================= */
+
+  const handleNccChange = (value) => {
+    const keyword = String(value || "")
+      .trim()
+      .toLowerCase();
+
+    // Tìm NCC có tên trùng chính xác
+    const matchedNcc = nccList.find(
+      (item) =>
+        String(item.tenNguoiBan || "")
+          .trim()
+          .toLowerCase() === keyword
+    );
+
+    if (matchedNcc) {
+      setForm((prev) => ({
+        ...prev,
+
+        nhaCungCap: matchedNcc.tenNguoiBan || "",
+
+        maSoThue: matchedNcc.mst || "",
+
+        stkNganHang: matchedNcc.stkNganHang || "",
+
+        nhomChiPhi: matchedNcc.chiTietChiPhi || "",
+
+        nguoiDeNghi: matchedNcc.nguoiPhuTrach || "",
+      }));
+    } else {
+      // Đang đổi NCC / chưa chọn NCC mới
+      // => XÓA thông tin NCC cũ
+      setForm((prev) => ({
+        ...prev,
+
+        nhaCungCap: value,
+
+        maSoThue: "",
+
+        stkNganHang: "",
+
+        nhomChiPhi: "",
+
+        nguoiDeNghi: "",
+      }));
+    }
+
+    setShowNccSuggestions(true);
+  };
+
+  /* =========================================================
+     CHANGE CÁC TRƯỜNG KHÁC
   ========================================================= */
 
   const handleChange = (field, value) => {
@@ -196,19 +244,6 @@ export default function DeNghiThanhToanModal({
       ...prev,
       [field]: value,
     }));
-  };
-
-  /* =========================================================
-     CHANGE NHÀ CUNG CẤP
-  ========================================================= */
-
-  const handleNccChange = (value) => {
-    setForm((prev) => ({
-      ...prev,
-      nhaCungCap: value,
-    }));
-
-    setShowNccSuggestions(true);
   };
 
   /* =========================================================
@@ -244,7 +279,12 @@ export default function DeNghiThanhToanModal({
     }
 
     if (!form.nguoiDeNghi.trim()) {
-      alert("Không xác định được người đề nghị");
+      alert("Vui lòng chọn nhà cung cấp để lấy người phụ trách");
+      return;
+    }
+
+    if (!form.nhaCungCap.trim()) {
+      alert("Vui lòng chọn nhà cung cấp");
       return;
     }
 
@@ -322,10 +362,6 @@ export default function DeNghiThanhToanModal({
                 autoComplete="off"
               />
 
-              {/* ===========================================
-                  DANH SÁCH GỢI Ý NCC
-              =========================================== */}
-
               {showNccSuggestions && filteredNccList.length > 0 && (
                 <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-md shadow-lg z-[50] max-h-60 overflow-auto">
                   {filteredNccList.map((item, index) => (
@@ -348,6 +384,10 @@ export default function DeNghiThanhToanModal({
 
                       <div className="text-gray-500 text-[11px]">
                         Chi phí: {item.chiTietChiPhi || "—"}
+                      </div>
+
+                      <div className="text-gray-500 text-[11px]">
+                        Người phụ trách: {item.nguoiPhuTrach || "—"}
                       </div>
                     </button>
                   ))}
@@ -379,14 +419,15 @@ export default function DeNghiThanhToanModal({
 
           {/* =================================================
               MÃ SỐ THUẾ
+              KHÔNG CHO NHẬP
           ================================================= */}
 
           <Field label="Mã số thuế">
             <input
               value={form.maSoThue}
-              onChange={(e) => handleChange("maSoThue", e.target.value)}
-              className="input"
-              placeholder="Nhập mã số thuế"
+              readOnly
+              className="input bg-gray-100 cursor-not-allowed"
+              placeholder="Tự động theo NCC, nếu chưa có vui lòng bổ sung."
             />
           </Field>
 
@@ -408,14 +449,15 @@ export default function DeNghiThanhToanModal({
 
           {/* =================================================
               STK
+              KHÔNG CHO NHẬP
           ================================================= */}
 
           <Field label="STK ngân hàng">
             <input
               value={form.stkNganHang}
-              onChange={(e) => handleChange("stkNganHang", e.target.value)}
-              className="input"
-              placeholder="Nhập số tài khoản"
+              readOnly
+              className="input bg-gray-100 cursor-not-allowed"
+              placeholder="Tự động theo NCC, nếu chưa có vui lòng bổ sung."
             />
           </Field>
 
@@ -435,20 +477,21 @@ export default function DeNghiThanhToanModal({
 
           {/* =================================================
               NHÓM CHI PHÍ
+              KHÔNG CHO NHẬP
           ================================================= */}
 
           <Field label="Nhóm chi phí">
             <input
               value={form.nhomChiPhi}
-              onChange={(e) => handleChange("nhomChiPhi", e.target.value)}
-              className="input"
-              placeholder="Nhập nhóm chi phí"
+              readOnly
+              className="input bg-gray-100 cursor-not-allowed"
+              placeholder="Tự động theo NCC, nếu chưa có vui lòng bổ sung."
             />
           </Field>
 
           {/* =================================================
-             TỔNG TIỀN
-           ================================================= */}
+              TỔNG TIỀN
+          ================================================= */}
 
           <Field label="Tổng tiền sau thuế">
             <input
@@ -460,15 +503,16 @@ export default function DeNghiThanhToanModal({
           </Field>
 
           {/* =================================================
-              NGƯỜI ĐỀ NGHỊ
+              NGƯỜI PHỤ TRÁCH
+              KHÔNG CHO NHẬP
           ================================================= */}
 
           <Field label="Người phụ trách">
             <input
               value={form.nguoiDeNghi}
-              onChange={(e) => handleChange("nguoiDeNghi", e.target.value)}
-              className="input"
-              placeholder="Nhập nhà cung cấp để lấy người phụ trách..."
+              readOnly
+              className="input bg-gray-100 cursor-not-allowed"
+              placeholder="Tự động theo NCC, nếu chưa có vui lòng bổ sung."
             />
           </Field>
 
@@ -549,6 +593,10 @@ export default function DeNghiThanhToanModal({
         .input:disabled {
           color: #4b5563;
           opacity: 1;
+        }
+
+        .input[readonly] {
+          color: #4b5563;
         }
       `}</style>
     </div>

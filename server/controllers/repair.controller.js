@@ -1,4 +1,5 @@
 const ExcelJS = require("exceljs");
+const path = require("path");
 const Repair = require("../models/Repair");
 const VehicleProfit = require("../models/VehicleProfit");
 
@@ -87,7 +88,7 @@ exports.getAll = async (req, res) => {
     // LẤY DỮ LIỆU
     // =====================================================
     const data = await Repair.find(filter).sort({
-      repairDate: -1,
+      repairCode: -1,
     });
 
     res.json(data);
@@ -108,7 +109,7 @@ exports.getUniqueVehiclePlates = async (req, res) => {
     vehiclePlates.sort((a, b) =>
       a.localeCompare(b, undefined, {
         sensitivity: "base",
-      }),
+      })
     );
 
     res.json(vehiclePlates);
@@ -127,7 +128,7 @@ exports.getUniqueRepairUnits = async (req, res) => {
     repairUnits.sort((a, b) =>
       a.localeCompare(b, undefined, {
         sensitivity: "base",
-      }),
+      })
     );
 
     res.json(repairUnits);
@@ -190,7 +191,7 @@ exports.removeByMonthYear = async (req, res) => {
       month: m,
       year: y,
       message: `Đã xoá ${result.deletedCount} bản ghi sửa chữa tháng ${String(
-        m,
+        m
       ).padStart(2, "0")}/${y}`,
     });
   } catch (err) {
@@ -598,7 +599,7 @@ const getNextRepairCode = async (repairDate) => {
 
   if (lastRepair?.repairCode) {
     const match = lastRepair.repairCode.match(
-      new RegExp(`^SX\\.${month}\\.${year}\\.(\\d+)$`),
+      new RegExp(`^SX\\.${month}\\.${year}\\.(\\d+)$`)
     );
 
     if (match) {
@@ -1259,7 +1260,7 @@ exports.updateVehicleProfitRepair = async (req, res) => {
 
     console.log(
       "Tổng grandTotal:",
-      (matchedAmount + notMatchedAmount).toLocaleString("vi-VN"),
+      (matchedAmount + notMatchedAmount).toLocaleString("vi-VN")
     );
 
     console.log("VehicleProfit cập nhật:", bulkOps.length);
@@ -1360,7 +1361,7 @@ exports.getVehicleRepairCostByMonth = async (req, res) => {
         bsx: 1,
         company: 1,
         cpSuaXe: 1,
-      },
+      }
     )
       .sort({
         bsx: 1,
@@ -1375,6 +1376,255 @@ exports.getVehicleRepairCostByMonth = async (req, res) => {
       message: "Lỗi lấy danh sách chi phí sửa xe theo tháng",
 
       error: error.message,
+    });
+  }
+};
+
+/* =========================================================
+   XUẤT EXCEL THEO THÁNG
+   FE gửi:
+   GET /api/repair/export-excel?month=2026-09
+========================================================= */
+
+exports.exportExcel = async (req, res) => {
+  try {
+    const { month } = req.query;
+
+    // =========================
+    // KIỂM TRA THÁNG
+    // =========================
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ. Ví dụ: 2026-09",
+      });
+    }
+
+    const [year, mon] = month.split("-");
+
+    const y = Number(year);
+    const m = Number(mon);
+
+    if (m < 1 || m > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ",
+      });
+    }
+
+    // =========================
+    // KHOẢNG THỜI GIAN
+    // =========================
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+
+    // =========================
+    // LẤY DỮ LIỆU THEO THÁNG
+    // =========================
+    const data = await Repair.find({
+      repairDate: {
+        $gte: startDate,
+        $lt: endDate,
+      },
+    }).sort({
+      repairCode: 1,
+    });
+
+    // =========================
+    // FILE EXCEL MẪU
+    // =========================
+    const templatePath = path.join(
+      __dirname,
+      "../templates/RepairTemplate.xlsx"
+    );
+
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(templatePath);
+
+    const sheet = workbook.worksheets[0];
+
+    if (!sheet) {
+      return res.status(500).json({
+        success: false,
+        message: "File Excel mẫu không có sheet",
+      });
+    }
+
+    // =====================================================
+    // XÓA DỮ LIỆU CŨ TRONG VÙNG A:Q
+    // GIỮ NGUYÊN FORM / ĐỊNH DẠNG
+    // =====================================================
+    for (let rowIndex = 2; rowIndex <= sheet.rowCount; rowIndex++) {
+      for (let colIndex = 1; colIndex <= 17; colIndex++) {
+        sheet.getCell(rowIndex, colIndex).value = null;
+      }
+    }
+
+    // =====================================================
+    // GHI DỮ LIỆU
+    //
+    // THỨ TỰ Y HỆT MODEL
+    //
+    // A  - repairCode
+    // B  - taxCode
+    // C  - repairUnit
+    // D  - repairDate
+    // E  - vehiclePlate
+    // F  - repairDetails
+    // G  - unit
+    // H  - quantity
+    // I  - unitPrice
+    // J  - totalAmount
+    // K  - vat
+    // L  - grandTotal
+    // M  - note
+    // N  - invoiceNumber
+    // O  - personInCharge
+    // P  - paymentVoucherNumber
+    // Q  - paymentDate
+    // =====================================================
+
+    data.forEach((item, index) => {
+      const rowIndex = index + 2;
+      const row = sheet.getRow(rowIndex);
+
+      // =========================
+      // A - MÃ SỬA XE
+      // =========================
+      row.getCell(1).value = item.repairCode ?? "";
+
+      // =========================
+      // B - MÃ SỐ THUẾ
+      // =========================
+      row.getCell(2).value = item.taxCode ?? "";
+
+      // =========================
+      // C - ĐƠN VỊ SỬA CHỮA
+      // =========================
+      row.getCell(3).value = item.repairUnit ?? "";
+
+      // =========================
+      // D - NGÀY SỬA CHỮA
+      // =========================
+      if (item.repairDate) {
+        const d = new Date(item.repairDate);
+
+        // Database đang lưu lệch UTC nên cộng 7 tiếng
+        d.setHours(d.getHours() + 7);
+
+        row.getCell(4).value = d;
+      } else {
+        row.getCell(4).value = null;
+      }
+
+      row.getCell(4).numFmt = "dd/mm/yyyy";
+
+      // =========================
+      // E - BIỂN SỐ XE
+      // =========================
+      row.getCell(5).value = item.vehiclePlate ?? "";
+
+      // =========================
+      // F - CHI TIẾT SỬA CHỮA
+      // =========================
+      row.getCell(6).value = item.repairDetails ?? "";
+
+      // =========================
+      // G - ĐƠN VỊ TÍNH
+      // =========================
+      row.getCell(7).value = item.unit ?? "";
+
+      // =========================
+      // H - SỐ LƯỢNG
+      // =========================
+      row.getCell(8).value = item.quantity ?? 0;
+
+      // =========================
+      // I - ĐƠN GIÁ
+      // =========================
+      row.getCell(9).value = item.unitPrice ?? 0;
+
+      // =========================
+      // J - THÀNH TIỀN
+      // =========================
+      row.getCell(10).value = item.totalAmount ?? 0;
+
+      // =========================
+      // K - VAT
+      // =========================
+      row.getCell(11).value = item.vat ?? 0;
+
+      // =========================
+      // L - TỔNG CỘNG
+      // =========================
+      row.getCell(12).value = item.grandTotal ?? 0;
+
+      // =========================
+      // M - GHI CHÚ
+      // =========================
+      row.getCell(13).value = item.note ?? "";
+
+      // =========================
+      // N - SỐ HÓA ĐƠN
+      // =========================
+      row.getCell(14).value = item.invoiceNumber ?? "";
+
+      // =========================
+      // O - NGƯỜI PHỤ TRÁCH
+      // =========================
+      row.getCell(15).value = item.personInCharge ?? "";
+
+      // =========================
+      // P - PHIẾU CHI SỐ
+      // =========================
+      row.getCell(16).value = item.paymentVoucherNumber ?? "";
+
+      // =========================
+      // Q - NGÀY THANH TOÁN
+      // =========================
+      if (item.paymentDate) {
+        const paymentDate = new Date(item.paymentDate);
+
+        // Database đang lưu lệch UTC nên cộng 7 tiếng
+        paymentDate.setHours(paymentDate.getHours() + 7);
+
+        row.getCell(17).value = paymentDate;
+      } else {
+        row.getCell(17).value = null;
+      }
+
+      row.getCell(17).numFmt = "dd/mm/yyyy";
+
+      row.commit();
+    });
+
+    // =====================================================
+    // TÊN FILE
+    // =====================================================
+
+    const fileName = `Sua_Xe_${month}.xlsx`;
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    res.send(buffer);
+  } catch (err) {
+    console.error("XUẤT EXCEL SỬA XE:", err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
     });
   }
 };

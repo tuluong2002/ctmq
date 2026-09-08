@@ -1,4 +1,5 @@
 const ExcelJS = require("exceljs");
+const path = require("path");
 const OtherCost = require("../models/OtherCost");
 const DoanhThuTong = require("../models/DoanhThuTong");
 
@@ -65,7 +66,7 @@ exports.getAll = async (req, res) => {
        LẤY DATA
     ===================================================== */
     const data = await OtherCost.find(filter).sort({
-      costDate: -1,
+      costDate: 1,
     });
 
     res.json(data);
@@ -1028,6 +1029,216 @@ exports.updateChiPhiKhac = async (req, res) => {
     console.error("UPDATE CHI PHI KHAC ERROR:", err);
 
     return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+/* =========================================================
+   XUẤT EXCEL CHI PHÍ KHÁC THEO THÁNG
+
+   FE gửi:
+   GET /api/other-cost/export-excel?month=2026-09
+========================================================= */
+
+exports.exportExcel = async (req, res) => {
+  try {
+    const { month } = req.query;
+
+    // =========================
+    // KIỂM TRA THÁNG
+    // =========================
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ. Ví dụ: 2026-09",
+      });
+    }
+
+    const [year, mon] = month.split("-");
+
+    const y = Number(year);
+    const m = Number(mon);
+
+    if (m < 1 || m > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ",
+      });
+    }
+
+    // =========================
+    // KHOẢNG THỜI GIAN
+    // =========================
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+
+    // =========================
+    // LẤY DỮ LIỆU THEO THÁNG
+    // =========================
+    const data = await OtherCost.find({
+      costDate: {
+        $gte: startDate,
+        $lt: endDate,
+      },
+    }).sort({
+      costCode: 1,
+    });
+
+    // =========================
+    // FILE EXCEL MẪU
+    // =========================
+    const templatePath = path.join(
+      __dirname,
+      "../templates/OtherCostTemplate.xlsx"
+    );
+
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(templatePath);
+
+    const sheet = workbook.worksheets[0];
+
+    if (!sheet) {
+      return res.status(500).json({
+        success: false,
+        message: "File Excel mẫu không có sheet",
+      });
+    }
+
+    // =====================================================
+    // XÓA DỮ LIỆU CŨ TRONG VÙNG A:M
+    // GIỮ NGUYÊN FORM / ĐỊNH DẠNG
+    // =====================================================
+    for (let rowIndex = 2; rowIndex <= sheet.rowCount; rowIndex++) {
+      for (let colIndex = 1; colIndex <= 13; colIndex++) {
+        sheet.getCell(rowIndex, colIndex).value = null;
+      }
+    }
+
+    // =====================================================
+    // GHI DỮ LIỆU
+    // =====================================================
+
+    data.forEach((item, index) => {
+      const rowIndex = index + 2;
+      const row = sheet.getRow(rowIndex);
+
+      // =========================
+      // A - MÃ CHI PHÍ
+      // =========================
+      row.getCell(1).value = item.costCode ?? "";
+
+      // =========================
+      // B - MÃ SỐ THUẾ
+      // =========================
+      row.getCell(2).value = item.taxCode ?? "";
+
+      // =========================
+      // C - NHÀ CUNG CẤP
+      // =========================
+      row.getCell(3).value = item.supplier ?? "";
+
+      // =========================
+      // D - NGÀY PHÁT SINH
+      // =========================
+      if (item.costDate) {
+        const d = new Date(item.costDate);
+
+        // Database đang lưu lệch UTC nên cộng 7 tiếng
+        d.setHours(d.getHours() + 7);
+
+        row.getCell(4).value = d;
+      } else {
+        row.getCell(4).value = null;
+      }
+
+      row.getCell(4).numFmt = "dd/mm/yyyy";
+
+      // =========================
+      // E - CHI TIẾT CHI PHÍ
+      // =========================
+      row.getCell(5).value = item.costDetails ?? "";
+
+      // =========================
+      // F - THÀNH TIỀN
+      // =========================
+      row.getCell(6).value = item.totalAmount ?? 0;
+
+      // =========================
+      // G - VAT
+      // =========================
+      row.getCell(7).value = item.vat ?? 0;
+
+      // =========================
+      // H - TỔNG CỘNG
+      // =========================
+      row.getCell(8).value = item.grandTotal ?? 0;
+
+      // =========================
+      // I - GHI CHÚ
+      // =========================
+      row.getCell(9).value = item.note ?? "";
+
+      // =========================
+      // J - SỐ HÓA ĐƠN
+      // =========================
+      row.getCell(10).value = item.invoiceNumber ?? "";
+
+      // =========================
+      // K - NGƯỜI PHỤ TRÁCH
+      // =========================
+      row.getCell(11).value = item.personInCharge ?? "";
+
+      // =========================
+      // L - PHIẾU CHI SỐ
+      // =========================
+      row.getCell(12).value = item.paymentVoucherNumber ?? "";
+
+      // =========================
+      // M - NGÀY THANH TOÁN
+      // =========================
+      if (item.paymentDate) {
+        const paymentDate = new Date(item.paymentDate);
+
+        // Database đang lưu lệch UTC nên cộng 7 tiếng
+        paymentDate.setHours(paymentDate.getHours() + 7);
+
+        row.getCell(13).value = paymentDate;
+      } else {
+        row.getCell(13).value = null;
+      }
+
+      row.getCell(13).numFmt = "dd/mm/yyyy";
+
+      row.commit();
+    });
+
+    // =====================================================
+    // TÊN FILE
+    // =====================================================
+
+    const fileName = `Chi_Phi_Khac_${month}.xlsx`;
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    res.send(buffer);
+  } catch (err) {
+    console.error("XUẤT EXCEL CHI PHÍ KHÁC:", err);
+
+    res.status(500).json({
       success: false,
       message: err.message,
     });

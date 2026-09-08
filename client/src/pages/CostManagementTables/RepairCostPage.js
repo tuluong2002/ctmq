@@ -86,11 +86,11 @@ export default function RepairCostPage() {
 
       // Nếu chưa có filter thì mặc định chọn tất cả
       setVehicleFilter((prev) =>
-        prev.length === 0 ? vehicles : prev.filter((v) => vehicles.includes(v)),
+        prev.length === 0 ? vehicles : prev.filter((v) => vehicles.includes(v))
       );
 
       setUnitFilter((prev) =>
-        prev.length === 0 ? units : prev.filter((v) => units.includes(v)),
+        prev.length === 0 ? units : prev.filter((v) => units.includes(v))
       );
     } catch (err) {
       console.error(err);
@@ -227,6 +227,71 @@ export default function RepairCostPage() {
     }
   };
 
+  /* ================= XUẤT EXCEL THEO THÁNG ================= */
+  const handleExportExcel = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng cần xuất");
+      return;
+    }
+
+    try {
+      const exportUrl = `${API}/repair/export-excel`;
+
+      const res = await axios.get(exportUrl, {
+        params: {
+          month: monthFilter,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      });
+
+      const fileName = `Sua-xe_${monthFilter}.xlsx`;
+
+      // =========================
+      // TẠO FILE DOWNLOAD
+      // =========================
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Lỗi xuất Excel:", err);
+
+      // =========================
+      // BACKEND TRẢ LỖI DẠNG BLOB
+      // =========================
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const errorData = JSON.parse(text);
+
+          alert(errorData?.message || "Xuất Excel thất bại");
+
+          return;
+        } catch (e) {
+          console.error("Không đọc được lỗi từ backend:", e);
+        }
+      }
+
+      alert(err.response?.data?.message || "Xuất Excel thất bại");
+    }
+  };
+
   // =====================================================
   // CẬP NHẬT CHI PHÍ SỬA XE VÀO VEHICLE PROFIT
   // THEO THÁNG ĐANG CHỌN
@@ -241,7 +306,7 @@ export default function RepairCostPage() {
     const [year, month] = monthFilter.split("-");
 
     const confirmUpdate = window.confirm(
-      `Bạn có chắc muốn cập nhật chi phí sửa xe tháng ${month}/${year} vào Doanh thu?`,
+      `Bạn có chắc muốn cập nhật chi phí sửa xe tháng ${month}/${year} vào Doanh thu?`
     );
 
     if (!confirmUpdate) {
@@ -260,12 +325,11 @@ export default function RepairCostPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       alert(
-        res.data?.message ||
-          `Đã cập nhật chi phí sửa xe tháng ${month}/${year}`,
+        res.data?.message || `Đã cập nhật chi phí sửa xe tháng ${month}/${year}`
       );
     } catch (err) {
       console.error(err);
@@ -289,7 +353,7 @@ export default function RepairCostPage() {
     const [year, month] = monthFilter.split("-");
 
     const confirmDelete = window.confirm(
-      `Bạn có chắc muốn xóa toàn bộ dữ liệu sửa chữa tháng ${month}/${year}?`,
+      `Bạn có chắc muốn xóa toàn bộ dữ liệu sửa chữa tháng ${month}/${year}?`
     );
 
     if (!confirmDelete) {
@@ -348,7 +412,7 @@ export default function RepairCostPage() {
   const renderTable = () => {
     const totalMoney = data.reduce(
       (sum, r) => sum + Number(r.grandTotal || 0),
-      0,
+      0
     );
 
     return (
@@ -478,13 +542,13 @@ export default function RepairCostPage() {
                                     setUnitFilter(
                                       e.target.checked
                                         ? [...unitFilterOptions]
-                                        : [],
+                                        : []
                                     );
                                   } else {
                                     setVehicleFilter(
                                       e.target.checked
                                         ? [...vehicleFilterOptions]
-                                        : [],
+                                        : []
                                     );
                                   }
                                 }}
@@ -507,8 +571,8 @@ export default function RepairCostPage() {
                                       (h === "ĐƠN VỊ SỬA CHỮA"
                                         ? unitFilterSearch
                                         : vehicleFilterSearch
-                                      ).toLowerCase(),
-                                    ),
+                                      ).toLowerCase()
+                                    )
                                 )
                                 .map((v) => (
                                   <label
@@ -527,13 +591,13 @@ export default function RepairCostPage() {
                                           setUnitFilter((p) =>
                                             e.target.checked
                                               ? [...p, v]
-                                              : p.filter((x) => x !== v),
+                                              : p.filter((x) => x !== v)
                                           );
                                         } else {
                                           setVehicleFilter((p) =>
                                             e.target.checked
                                               ? [...p, v]
-                                              : p.filter((x) => x !== v),
+                                              : p.filter((x) => x !== v)
                                           );
                                         }
                                       }}
@@ -795,6 +859,15 @@ export default function RepairCostPage() {
         className="bg-purple-600 text-white px-2 py-1 rounded text-xs disabled:opacity-50"
       >
         Xem chi phí
+      </button>
+
+      {/* XUẤT EXCEL */}
+      <button
+        onClick={handleExportExcel}
+        disabled={!monthFilter}
+        className="bg-green-700 text-white px-3 py-1 disabled:opacity-50"
+      >
+        Xuất Excel
       </button>
     </div>
   );

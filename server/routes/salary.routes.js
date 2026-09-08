@@ -17,6 +17,8 @@ router.get("/", salaryController.getAll);
 ======================= */
 router.get("/drivers", salaryController.getUniqueDrivers);
 
+router.get("/export-excel", salaryController.exportExcel);
+
 /* =======================
    THÊM
 ======================= */
@@ -44,7 +46,7 @@ router.delete("/", salaryController.removeAllByMonth);
 router.post(
   "/import-excel",
   upload.single("file"),
-  salaryController.importExcel,
+  salaryController.importExcel
 );
 
 /* =======================
@@ -54,7 +56,7 @@ router.post(
 ======================= */
 router.post(
   "/update-vehicle-profit-salary",
-  salaryController.updateVehicleProfitSalary,
+  salaryController.updateVehicleProfitSalary
 );
 
 /* =======================
@@ -63,7 +65,7 @@ router.post(
 ======================= */
 router.get(
   "/vehicle-profit-salary",
-  salaryController.getVehicleProfitSalaryByMonth,
+  salaryController.getVehicleProfitSalaryByMonth
 );
 
 module.exports = router;

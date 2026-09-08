@@ -1,4 +1,5 @@
 const ExcelJS = require("exceljs");
+const path = require("path");
 const Salary = require("../models/Salary");
 const VehicleProfit = require("../models/VehicleProfit");
 
@@ -499,6 +500,269 @@ exports.getVehicleProfitSalaryByMonth = async (req, res) => {
     return res.status(500).json({
       message: "Lỗi lấy danh sách lợi nhuận lương theo tháng",
       error: error.message,
+    });
+  }
+};
+
+/* =========================================================
+   XUẤT EXCEL LƯƠNG THEO THÁNG
+
+   FE gửi:
+   GET /api/salary/export-excel?month=2026-09
+========================================================= */
+
+exports.exportExcel = async (req, res) => {
+  try {
+    const { month } = req.query;
+
+    // =========================
+    // KIỂM TRA THÁNG
+    // =========================
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ. Ví dụ: 2026-09",
+      });
+    }
+
+    const [year, mon] = month.split("-");
+
+    const y = Number(year);
+    const m = Number(mon);
+
+    if (m < 1 || m > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ",
+      });
+    }
+
+    // =========================
+    // KHOẢNG THỜI GIAN
+    // =========================
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+
+    // =========================
+    // LẤY DỮ LIỆU THEO THÁNG
+    // =========================
+    const data = await Salary.find({
+      ngayThang: {
+        $gte: startDate,
+        $lt: endDate,
+      },
+    }).sort({
+      stt: 1,
+    });
+
+    // =========================
+    // FILE EXCEL MẪU
+    // =========================
+    const templatePath = path.join(
+      __dirname,
+      "../templates/SalaryTemplate.xlsx"
+    );
+
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(templatePath);
+
+    const sheet = workbook.worksheets[0];
+
+    if (!sheet) {
+      return res.status(500).json({
+        success: false,
+        message: "File Excel mẫu không có sheet",
+      });
+    }
+
+    // =====================================================
+    // XÓA DỮ LIỆU CŨ TRONG VÙNG A:AA
+    // GIỮ NGUYÊN FORM / ĐỊNH DẠNG
+    // =====================================================
+    for (let rowIndex = 2; rowIndex <= sheet.rowCount; rowIndex++) {
+      for (let colIndex = 1; colIndex <= 27; colIndex++) {
+        sheet.getCell(rowIndex, colIndex).value = null;
+      }
+    }
+
+    // =====================================================
+    // GHI DỮ LIỆU
+    // THỨ TỰ ĐÚNG THEO SalarySchema
+    // =====================================================
+
+    data.forEach((item, index) => {
+      const rowIndex = index + 2;
+      const row = sheet.getRow(rowIndex);
+
+      // =========================
+      // A - NGÀY THÁNG
+      // =========================
+      if (item.ngayThang) {
+        const ngayThang = new Date(item.ngayThang);
+
+        // Database đang lưu lệch UTC nên cộng 7 tiếng
+        ngayThang.setHours(ngayThang.getHours() + 7);
+
+        row.getCell(1).value = ngayThang;
+      } else {
+        row.getCell(1).value = null;
+      }
+
+      row.getCell(1).numFmt = "dd/mm/yyyy";
+
+      // =========================
+      // B - BIỂN SỐ XE
+      // =========================
+      row.getCell(2).value = item.bienSoXe ?? "";
+
+      // =========================
+      // C - STT
+      // =========================
+      row.getCell(3).value = item.stt ?? "";
+
+      // =========================
+      // D - TÊN NHÂN VIÊN
+      // =========================
+      row.getCell(4).value = item.tenNhanVien ?? "";
+
+      // =========================
+      // E - SỐ TÀI KHOẢN
+      // =========================
+      row.getCell(5).value = item.soTaiKhoan ?? "";
+
+      // =========================
+      // F - TÊN NGÂN HÀNG
+      // =========================
+      row.getCell(6).value = item.tenNganHang ?? "";
+
+      // =========================
+      // G - LƯƠNG THỎA THUẬN
+      // =========================
+      row.getCell(7).value = item.luongThoaThuan ?? 0;
+
+      // =========================
+      // H - ĐƠN GIÁ NGÀY CÔNG
+      // =========================
+      row.getCell(8).value = item.donGiaNgayCong ?? 0;
+
+      // =========================
+      // I - SỐ NGÀY CÔNG ĐI LÀM
+      // =========================
+      row.getCell(9).value = item.soNgayCongDiLam ?? 0;
+
+      // =========================
+      // J - TIỀN CÔNG ĐI LÀM
+      // =========================
+      row.getCell(10).value = item.tienCongDiLam ?? 0;
+
+      // =========================
+      // K - TIỀN ĐIỆN THOẠI
+      // =========================
+      row.getCell(11).value = item.tienDienThoai ?? 0;
+
+      // =========================
+      // L - SỐ NGÀY CÔNG NGHỈ
+      // =========================
+      row.getCell(12).value = item.soNgayCongNghi ?? 0;
+
+      // =========================
+      // M - TIỀN CÔNG NGHỈ
+      // =========================
+      row.getCell(13).value = item.tienCongNghi ?? 0;
+
+      // =========================
+      // N - 10% LƯƠNG
+      // =========================
+      row.getCell(14).value = item.muoiPhanTramLuong ?? 0;
+
+      // =========================
+      // O - TỔNG SỐ
+      // =========================
+      row.getCell(15).value = item.tongSo ?? 0;
+
+      // =========================
+      // P - SỐ TIỀN TẠM ỨNG
+      // =========================
+      row.getCell(16).value = item.soTienTamUng ?? 0;
+
+      // =========================
+      // Q - BHXH
+      // =========================
+      row.getCell(17).value = item.bhxh ?? 0;
+
+      // =========================
+      // R - HỖ TRỢ TIỀN ĐIỆN THOẠI
+      // =========================
+      row.getCell(18).value = item.hoTroTienDienThoai ?? 0;
+
+      // =========================
+      // S - THƯỞNG LỄ TẾT
+      // =========================
+      row.getCell(19).value = item.thuongLeTet ?? 0;
+
+      // =========================
+      // T - ĐI MUỘN / VỀ SỚM
+      // =========================
+      row.getCell(20).value = item.diMuonVeSom ?? 0;
+
+      // =========================
+      // U - ĐÁM HIẾU
+      // =========================
+      row.getCell(21).value = item.damHieu ?? 0;
+
+      // =========================
+      // V - CHUYÊN CẦN
+      // =========================
+      row.getCell(22).value = item.chuyenCan ?? 0;
+
+      // =========================
+      // W - SỐ TIỀN CÒN ĐƯỢC LĨNH
+      // =========================
+      row.getCell(23).value = item.soTienConDuocLinh ?? 0;
+
+      // =========================
+      // X - GHI CHÚ
+      // =========================
+      row.getCell(24).value = item.ghiChu ?? "";
+
+      // =========================
+      // Y - SỐ TIỀN LƯƠNG ĐÃ GIỮ
+      // =========================
+      row.getCell(25).value = item.soTienLuongDaGiu ?? 0;
+
+      // =========================
+      // Z - SỐ TIỀN LƯƠNG CÒN PHẢI GIỮ
+      // =========================
+      row.getCell(26).value = item.soTienLuongConPhaiGiu ?? 0;
+
+      row.commit();
+    });
+
+    // =====================================================
+    // TÊN FILE
+    // =====================================================
+    const fileName = `Luong_${month}.xlsx`;
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    res.send(buffer);
+  } catch (err) {
+    console.error("XUẤT EXCEL LƯƠNG:", err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
     });
   }
 };

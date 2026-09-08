@@ -42,7 +42,7 @@ export default function EpassMonthPage() {
 
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
       2,
-      "0",
+      "0"
     )}`;
   };
 
@@ -249,6 +249,71 @@ export default function EpassMonthPage() {
     }
   };
 
+  /* ================= XUẤT EXCEL THEO THÁNG ================= */
+  const handleExportExcel = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng cần xuất");
+      return;
+    }
+
+    try {
+      const exportUrl = `${API}/epass-month/export-excel`;
+
+      const res = await axios.get(exportUrl, {
+        params: {
+          month: monthFilter,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      });
+
+      const fileName = `Epass-thang_${monthFilter}.xlsx`;
+
+      // =========================
+      // TẠO FILE DOWNLOAD
+      // =========================
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Lỗi xuất Excel:", err);
+
+      // =========================
+      // BACKEND TRẢ LỖI DẠNG BLOB
+      // =========================
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const errorData = JSON.parse(text);
+
+          alert(errorData?.message || "Xuất Excel thất bại");
+
+          return;
+        } catch (e) {
+          console.error("Không đọc được lỗi từ backend:", e);
+        }
+      }
+
+      alert(err.response?.data?.message || "Xuất Excel thất bại");
+    }
+  };
+
   const handleDeleteByMonth = async () => {
     if (!monthFilter) {
       return alert("Vui lòng chọn tháng");
@@ -258,7 +323,7 @@ export default function EpassMonthPage() {
 
     if (
       !window.confirm(
-        `Bạn có chắc muốn xoá toàn bộ Epass có ngày mua trong tháng ${month}/${year}?`,
+        `Bạn có chắc muốn xoá toàn bộ Epass có ngày mua trong tháng ${month}/${year}?`
       )
     ) {
       return;
@@ -281,7 +346,7 @@ export default function EpassMonthPage() {
     } catch (err) {
       console.error(err);
       alert(
-        err.response?.data?.message || err.message || "Xoá dữ liệu thất bại",
+        err.response?.data?.message || err.message || "Xoá dữ liệu thất bại"
       );
     }
   };
@@ -301,7 +366,7 @@ export default function EpassMonthPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       alert(res.data.message || "Cập nhật thành công");
@@ -310,13 +375,13 @@ export default function EpassMonthPage() {
     } catch (err) {
       console.error(
         "UPDATE EPASS VEHICLE PROFIT ERROR:",
-        err.response?.data || err,
+        err.response?.data || err
       );
 
       alert(
         err.response?.data?.message ||
           err.response?.data?.error ||
-          "Cập nhật chi phí Epass thất bại",
+          "Cập nhật chi phí Epass thất bại"
       );
     }
   };
@@ -349,7 +414,7 @@ export default function EpassMonthPage() {
 
   const totalMoney = data.reduce(
     (sum, r) => sum + Number(r.moneyAmount || 0),
-    0,
+    0
   );
 
   /* =====================================================
@@ -467,6 +532,15 @@ export default function EpassMonthPage() {
       >
         Xem chi phí
       </button>
+
+      {/* XUẤT EXCEL */}
+      <button
+        onClick={handleExportExcel}
+        disabled={!monthFilter}
+        className="bg-green-700 text-white px-3 py-1 disabled:opacity-50"
+      >
+        Xuất Excel
+      </button>
     </div>
   );
 
@@ -574,7 +648,7 @@ export default function EpassMonthPage() {
                               }
                               onChange={(e) => {
                                 setBsxFilter(
-                                  e.target.checked ? [...bsxOptions] : [],
+                                  e.target.checked ? [...bsxOptions] : []
                                 );
                               }}
                             />
@@ -589,7 +663,7 @@ export default function EpassMonthPage() {
                               .filter((v) =>
                                 String(v)
                                   .toLowerCase()
-                                  .includes(bsxSearch.toLowerCase()),
+                                  .includes(bsxSearch.toLowerCase())
                               )
                               .map((v) => (
                                 <label
@@ -603,7 +677,7 @@ export default function EpassMonthPage() {
                                       setBsxFilter((prev) =>
                                         e.target.checked
                                           ? [...prev, v]
-                                          : prev.filter((x) => x !== v),
+                                          : prev.filter((x) => x !== v)
                                       );
                                     }}
                                   />

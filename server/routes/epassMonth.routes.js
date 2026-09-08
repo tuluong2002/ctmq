@@ -12,6 +12,8 @@ router.get("/", ctrl.getAll);
 
 router.get("/unique-bsx", ctrl.getUniqueBSX);
 
+router.get("/export-excel", ctrl.exportExcel);
+
 router.delete("/by-month-year", ctrl.removeByMonthYear);
 
 router.post("/import-excel", upload.single("file"), ctrl.importExcel);

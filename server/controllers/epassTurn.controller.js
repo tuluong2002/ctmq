@@ -1,4 +1,5 @@
 const ExcelJS = require("exceljs");
+const path = require("path");
 const EpassTurn = require("../models/EpassTurn");
 const VehicleProfit = require("../models/VehicleProfit");
 
@@ -163,7 +164,7 @@ const parseExcelDate = (value) => {
      DD/MM/YYYY
   */
   let match = str.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
   );
 
   if (match) {
@@ -193,7 +194,7 @@ const parseExcelDate = (value) => {
      DD-MM-YYYY
   */
   match = str.match(
-    /^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+    /^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
   );
 
   if (match) {
@@ -223,7 +224,7 @@ const parseExcelDate = (value) => {
      YYYY-MM-DD
   */
   match = str.match(
-    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
   );
 
   if (match) {
@@ -445,7 +446,7 @@ exports.removeByMonthYear = async (req, res) => {
       month: m,
       year: y,
       message: `Đã xoá ${result.deletedCount} giao dịch Epass tháng ${String(
-        m,
+        m
       ).padStart(2, "0")}/${y}`,
     });
   } catch (err) {
@@ -469,8 +470,8 @@ exports.getUniqueBsx = async (req, res) => {
       bsx.filter(Boolean).sort((a, b) =>
         String(a).localeCompare(String(b), undefined, {
           sensitivity: "base",
-        }),
-      ),
+        })
+      )
     );
   } catch (err) {
     console.error("GET UNIQUE EPASS TURN BSX ERROR:", err);
@@ -1118,7 +1119,7 @@ exports.getVehicleProfitEpassTurn = async (req, res) => {
         bsx: 1,
         company: 1,
         cpEpassTurn: 1,
-      },
+      }
     )
       .sort({
         bsx: 1,
@@ -1133,6 +1134,244 @@ exports.getVehicleProfitEpassTurn = async (req, res) => {
       message: "Lỗi lấy danh sách chi phí Epass lượt theo tháng",
 
       error: error.message,
+    });
+  }
+};
+
+/* =========================================================
+   XUẤT EXCEL EPASS LƯỢT
+
+   FE gửi:
+   GET /api/epass-turn/export-excel?month=2026-09
+========================================================= */
+
+exports.exportExcel = async (req, res) => {
+  try {
+    const { month } = req.query;
+
+    // =========================
+    // KIỂM TRA THÁNG
+    // =========================
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ. Ví dụ: 2026-09",
+      });
+    }
+
+    const [year, mon] = month.split("-");
+
+    const y = Number(year);
+    const m = Number(mon);
+
+    if (m < 1 || m > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ",
+      });
+    }
+
+    // =========================
+    // KHOẢNG THỜI GIAN
+    // =========================
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+
+    // =========================
+    // LẤY DỮ LIỆU THEO THÁNG
+    // Lọc theo TimeActions
+    // =========================
+    const data = await EpassTurn.find({
+      TimeActions: {
+        $gte: startDate,
+        $lt: endDate,
+      },
+    }).sort({
+      TimeActions: 1,
+    });
+
+    // =========================
+    // FILE EXCEL MẪU
+    // =========================
+    const templatePath = path.join(
+      __dirname,
+      "../templates/EpassTurnTemplate.xlsx"
+    );
+
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(templatePath);
+
+    const sheet = workbook.worksheets[0];
+
+    if (!sheet) {
+      return res.status(500).json({
+        success: false,
+        message: "File Excel mẫu không có sheet",
+      });
+    }
+
+    // =====================================================
+    // XÓA DỮ LIỆU CŨ TRONG VÙNG A:K
+    // GIỮ NGUYÊN FORM / ĐỊNH DẠNG
+    // =====================================================
+    for (let rowIndex = 2; rowIndex <= sheet.rowCount; rowIndex++) {
+      for (let colIndex = 1; colIndex <= 11; colIndex++) {
+        sheet.getCell(rowIndex, colIndex).value = null;
+      }
+    }
+
+    // =====================================================
+    // HÀM CHUYỂN NUMBER
+    // =====================================================
+    const toNumber = (value) => {
+      if (value === null || value === undefined || value === "") {
+        return 0;
+      }
+
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? value : 0;
+      }
+
+      const number = Number(
+        String(value)
+          .replace(/[₫đ]/gi, "")
+          .replace(/\s/g, "")
+          .replace(/\./g, "")
+          .replace(/,/g, "")
+      );
+
+      return Number.isFinite(number) ? number : 0;
+    };
+
+    // =====================================================
+    // HÀM XỬ LÝ NGÀY
+    // DATABASE ĐANG LƯU LỆCH UTC -> CỘNG 7 TIẾNG
+    // =====================================================
+    const setExcelDate = (cell, value) => {
+      if (value) {
+        const date = new Date(value);
+
+        if (!isNaN(date.getTime())) {
+          date.setHours(date.getHours() + 7);
+          cell.value = date;
+        } else {
+          cell.value = null;
+        }
+      } else {
+        cell.value = null;
+      }
+
+      cell.numFmt = "dd/mm/yyyy hh:mm:ss";
+    };
+
+    // =====================================================
+    // GHI DỮ LIỆU
+    //
+    // THỨ TỰ:
+    //
+    // A  - STT
+    // B  - maGD
+    // C  - TramVao
+    // D  - TimeIn
+    // E  - TramRa
+    // F  - TimeOut
+    // G  - TimeActions
+    // H  - bienSoXe
+    // I  - htThuPhi
+    // J  - loaiVe
+    // K  - price
+    //
+    // isDontMatchCP KHÔNG XUẤT RA EXCEL
+    // Nếu isDontMatchCP = true -> chữ cả dòng màu đỏ
+    // =====================================================
+
+    data.forEach((item, index) => {
+      const rowIndex = index + 2;
+      const row = sheet.getRow(rowIndex);
+
+      // =========================
+      // A - STT
+      // =========================
+      row.getCell(1).value = index + 1;
+
+      // =========================
+      // B - MÃ GIAO DỊCH
+      // =========================
+      row.getCell(2).value = item.maGD ?? "";
+
+      // =========================
+      // C - TRẠM VÀO
+      // =========================
+      row.getCell(3).value = item.TramVao ?? "";
+
+      // =========================
+      // D - THỜI GIAN TRẠM VÀO
+      // =========================
+      setExcelDate(row.getCell(4), item.TimeIn);
+
+      // =========================
+      // E - TRẠM RA
+      // =========================
+      row.getCell(5).value = item.TramRa ?? "";
+
+      // =========================
+      // F - THỜI GIAN TRẠM RA
+      // =========================
+      setExcelDate(row.getCell(6), item.TimeOut);
+
+      // =========================
+      // G - THỜI GIAN THỰC HIỆN GIAO DỊCH
+      // =========================
+      setExcelDate(row.getCell(7), item.TimeActions);
+
+      // =========================
+      // H - BIỂN SỐ XE
+      // =========================
+      row.getCell(8).value = item.bienSoXe ?? "";
+
+      // =========================
+      // I - HÌNH THỨC THU PHÍ
+      // =========================
+      row.getCell(9).value = item.htThuPhi ?? "";
+
+      // =========================
+      // J - LOẠI VÉ
+      // =========================
+      row.getCell(10).value = item.loaiVe ?? "";
+
+      // =========================
+      // K - GIÁ TIỀN
+      // =========================
+      row.getCell(11).value = toNumber(item.price);
+
+      row.commit();
+    });
+
+    // =====================================================
+    // TÊN FILE
+    // =====================================================
+    const fileName = `Epass_Luot_${month}.xlsx`;
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    res.send(buffer);
+  } catch (err) {
+    console.error("XUẤT EXCEL EPASS LƯỢT:", err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
     });
   }
 };

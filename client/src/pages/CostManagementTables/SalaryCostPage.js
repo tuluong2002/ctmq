@@ -184,6 +184,71 @@ export default function SalaryCostPage() {
     }
   };
 
+  /* ================= XUẤT EXCEL THEO THÁNG ================= */
+  const handleExportExcel = async () => {
+    if (!monthFilter) {
+      alert("Vui lòng chọn tháng cần xuất");
+      return;
+    }
+
+    try {
+      const exportUrl = `${API}/salary/export-excel`;
+
+      const res = await axios.get(exportUrl, {
+        params: {
+          month: monthFilter,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        responseType: "blob",
+      });
+
+      const fileName = `Bang-luong_${monthFilter}.xlsx`;
+
+      // =========================
+      // TẠO FILE DOWNLOAD
+      // =========================
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Lỗi xuất Excel:", err);
+
+      // =========================
+      // BACKEND TRẢ LỖI DẠNG BLOB
+      // =========================
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const errorData = JSON.parse(text);
+
+          alert(errorData?.message || "Xuất Excel thất bại");
+
+          return;
+        } catch (e) {
+          console.error("Không đọc được lỗi từ backend:", e);
+        }
+      }
+
+      alert(err.response?.data?.message || "Xuất Excel thất bại");
+    }
+  };
+
   /* ================= CẬP NHẬT CHI PHÍ LƯƠNG ================= */
   const handleUpdateVehicleProfitSalary = async () => {
     if (!monthFilter) {
@@ -196,7 +261,7 @@ export default function SalaryCostPage() {
     const maLoiNhuan = `LN.${Number(month)}.${year}`;
 
     const confirmUpdate = window.confirm(
-      `Bạn có chắc muốn cập nhật chi phí lương cho ${maLoiNhuan}?`,
+      `Bạn có chắc muốn cập nhật chi phí lương cho ${maLoiNhuan}?`
     );
 
     if (!confirmUpdate) return;
@@ -213,7 +278,7 @@ export default function SalaryCostPage() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       alert(res.data?.message || `Đã cập nhật chi phí lương ${maLoiNhuan}`);
@@ -284,7 +349,7 @@ export default function SalaryCostPage() {
     fetchData();
   };
   const [visibleCols, setVisibleCols] = useState(
-    SALARY_FIELDS.map((f) => f.key),
+    SALARY_FIELDS.map((f) => f.key)
   );
   const [showColFilter, setShowColFilter] = useState(false);
 
@@ -355,6 +420,15 @@ export default function SalaryCostPage() {
         className="bg-purple-600 text-white px-3 py-1 disabled:opacity-50"
       >
         Xem chi phí
+      </button>
+
+      {/* XUẤT EXCEL */}
+      <button
+        onClick={handleExportExcel}
+        disabled={!monthFilter}
+        className="bg-green-700 text-white px-3 py-1 disabled:opacity-50"
+      >
+        Xuất Excel
       </button>
     </div>
   );
@@ -428,7 +502,7 @@ export default function SalaryCostPage() {
                               }
                               onChange={(e) =>
                                 setDriverFilter(
-                                  e.target.checked ? [...driverOptions] : [],
+                                  e.target.checked ? [...driverOptions] : []
                                 )
                               }
                             />
@@ -440,7 +514,7 @@ export default function SalaryCostPage() {
                               .filter((d) =>
                                 d
                                   .toLowerCase()
-                                  .includes(driverFilterSearch.toLowerCase()),
+                                  .includes(driverFilterSearch.toLowerCase())
                               )
                               .map((d) => (
                                 <label
@@ -454,7 +528,7 @@ export default function SalaryCostPage() {
                                       setDriverFilter((p) =>
                                         e.target.checked
                                           ? [...p, d]
-                                          : p.filter((x) => x !== d),
+                                          : p.filter((x) => x !== d)
                                       )
                                     }
                                   />
@@ -476,7 +550,7 @@ export default function SalaryCostPage() {
                     f.label
                   )}
                 </th>
-              ),
+              )
             )}
             <th className="sticky top-0 z-40 bg-blue-600 border px-2">
               Hành động
@@ -497,13 +571,13 @@ export default function SalaryCostPage() {
                       value={
                         f.type === "date" && form[f.key]
                           ? form[f.key].slice(0, 10)
-                          : (form[f.key] ?? "")
+                          : form[f.key] ?? ""
                       }
                       onChange={handleChange}
                       className="w-full border px-1 text-right"
                     />
                   </td>
-                ),
+                )
               )}
               <td className="border px-2 text-center whitespace-nowrap">
                 <button
@@ -549,14 +623,14 @@ export default function SalaryCostPage() {
 
                           return `${String(d.getMonth() + 1).padStart(
                             2,
-                            "0",
+                            "0"
                           )}/${d.getFullYear()}`;
                         })()
                       : typeof r[f.key] === "number"
-                        ? r[f.key].toLocaleString()
-                        : r[f.key]}
+                      ? r[f.key].toLocaleString()
+                      : r[f.key]}
                   </td>
-                ),
+                )
               )}
 
               <td className="border px-2 text-center whitespace-nowrap">
@@ -605,7 +679,7 @@ export default function SalaryCostPage() {
             <input
               type="checkbox"
               checked={SALARY_FIELDS.every(
-                (f) => visibleCols.includes(f.key) || STICKY_COLS[f.key],
+                (f) => visibleCols.includes(f.key) || STICKY_COLS[f.key]
               )}
               onChange={(e) => {
                 if (e.target.checked) {
@@ -633,7 +707,7 @@ export default function SalaryCostPage() {
                       setVisibleCols((p) =>
                         e.target.checked
                           ? [...p, f.key]
-                          : p.filter((x) => x !== f.key),
+                          : p.filter((x) => x !== f.key)
                       )
                     }
                   />

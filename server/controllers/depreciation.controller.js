@@ -1,4 +1,5 @@
 const ExcelJS = require("exceljs");
+const path = require("path");
 const Depreciation = require("../models/Depreciation");
 const VehicleProfit = require("../models/VehicleProfit");
 
@@ -587,6 +588,185 @@ exports.updateVehicleProfitKhauHao = async (req, res) => {
       success: false,
       message: "Lỗi cập nhật chi phí khấu hao vào VehicleProfit",
       error: error.message,
+    });
+  }
+};
+
+/* =========================================================
+   XUẤT EXCEL KHẤU HAO
+
+   FE gọi:
+   GET /api/depreciation/export-excel
+
+   Xuất TOÀN BỘ dữ liệu, không lọc theo tháng
+========================================================= */
+
+exports.exportExcel = async (req, res) => {
+  try {
+    // =========================
+    // LẤY TOÀN BỘ DỮ LIỆU
+    // =========================
+    const data = await Depreciation.find({}).sort({
+      maTSCD: 1,
+    });
+
+    // =========================
+    // FILE EXCEL MẪU
+    // =========================
+    const templatePath = path.join(
+      __dirname,
+      "../templates/DepreciationTemplate.xlsx"
+    );
+
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(templatePath);
+
+    const sheet = workbook.worksheets[0];
+
+    if (!sheet) {
+      return res.status(500).json({
+        success: false,
+        message: "File Excel mẫu không có sheet",
+      });
+    }
+
+    // =====================================================
+    // XÓA DỮ LIỆU CŨ TRONG VÙNG A:I
+    // GIỮ NGUYÊN FORM / ĐỊNH DẠNG
+    // =====================================================
+    for (let rowIndex = 2; rowIndex <= sheet.rowCount; rowIndex++) {
+      for (let colIndex = 1; colIndex <= 9; colIndex++) {
+        sheet.getCell(rowIndex, colIndex).value = null;
+      }
+    }
+
+    // =====================================================
+    // HÀM CHUYỂN NUMBER
+    // =====================================================
+    const toNumber = (value) => {
+      if (value === null || value === undefined || value === "") {
+        return 0;
+      }
+
+      if (typeof value === "number") {
+        return Number.isFinite(value) ? value : 0;
+      }
+
+      const number = Number(
+        String(value)
+          .replace(/[₫đ]/gi, "")
+          .replace(/\s/g, "")
+          .replace(/\./g, "")
+          .replace(/,/g, "")
+      );
+
+      return Number.isFinite(number) ? number : 0;
+    };
+
+    // =====================================================
+    // GHI DỮ LIỆU
+    // THỨ TỰ ĐÚNG 100% THEO DepreciationSchema
+    // =====================================================
+
+    data.forEach((item, index) => {
+      const rowIndex = index + 2;
+      const row = sheet.getRow(rowIndex);
+
+      // =========================
+      // A - MÃ TSCD
+      // =========================
+      row.getCell(1).value = item.maTSCD ?? "";
+
+      // =========================
+      // B - TÊN TSCD
+      // =========================
+      row.getCell(2).value = item.tenTSCD ?? "";
+
+      // =========================
+      // C - NGÀY GHI TĂNG
+      // =========================
+      if (item.ngayGhiTang) {
+        const ngayGhiTang = new Date(item.ngayGhiTang);
+
+        // Database đang lưu lệch UTC nên cộng 7 tiếng
+        ngayGhiTang.setHours(ngayGhiTang.getHours() + 7);
+
+        row.getCell(3).value = ngayGhiTang;
+      } else {
+        row.getCell(3).value = null;
+      }
+
+      row.getCell(3).numFmt = "dd/mm/yyyy";
+
+      // =========================
+      // D - SỐ CT
+      // =========================
+      row.getCell(4).value = item.soCT ?? "";
+
+      // =========================
+      // E - NGÀY BẮT ĐẦU TÍNH KH
+      // =========================
+      if (item.ngayStart) {
+        const ngayStart = new Date(item.ngayStart);
+
+        // Database đang lưu lệch UTC nên cộng 7 tiếng
+        ngayStart.setHours(ngayStart.getHours() + 7);
+
+        row.getCell(5).value = ngayStart;
+      } else {
+        row.getCell(5).value = null;
+      }
+
+      row.getCell(5).numFmt = "dd/mm/yyyy";
+
+      // =========================
+      // F - THỜI GIAN SD (THÁNG)
+      // =========================
+      row.getCell(6).value = toNumber(item.timeSD);
+
+      // =========================
+      // G - THỜI GIAN SD CÒN LẠI (THÁNG)
+      // =========================
+      row.getCell(7).value = toNumber(item.timeSDremaining);
+
+      // =========================
+      // H - NGUYÊN GIÁ
+      // =========================
+      row.getCell(8).value = toNumber(item.price);
+
+      // =========================
+      // I - GIÁ TRỊ KH THÁNG
+      // =========================
+      row.getCell(9).value = toNumber(item.valueKH);
+
+      row.commit();
+    });
+
+    // =====================================================
+    // TÊN FILE
+    // =====================================================
+    const fileName = "Khau_Hao.xlsx";
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    res.send(buffer);
+  } catch (err) {
+    console.error("XUẤT EXCEL KHẤU HAO:", err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
     });
   }
 };

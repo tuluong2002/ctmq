@@ -10,6 +10,8 @@ const upload = multer({ storage: multer.memoryStorage() }); // dùng memory stor
 ======================= */
 router.get("/", repairController.getAll);
 
+router.get("/export-excel", repairController.exportExcel);
+
 /* =======================
    LẤY DANH SÁCH vehiclePlate DUY NHẤT
 ======================= */

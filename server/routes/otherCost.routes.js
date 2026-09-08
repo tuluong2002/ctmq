@@ -19,6 +19,8 @@ router.get("/", otherCostController.getAll);
 // =====================================================
 router.get("/unique-suppliers", otherCostController.getUniqueSuppliers);
 
+router.get("/export-excel", otherCostController.exportExcel);
+
 // =====================================================
 // XOÁ TẤT CẢ CHI PHÍ KHÁC THEO THÁNG
 // =====================================================

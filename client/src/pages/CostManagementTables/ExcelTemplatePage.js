@@ -29,6 +29,13 @@ export default function ExcelTemplatePage() {
       description: "File Excel mẫu để nhập chi phí lương.",
       file: "/excel-templates/luong.xlsx",
     },
+
+    {
+      name: "Mẫu nhập khấu hao xe",
+      description: "File Excel mẫu để nhập khấu hao xe.",
+      file: "/excel-templates/khau-hao-xe.xlsx",
+    },
+
     {
       name: "Mẫu nhập Epass tháng",
       description: "File Excel mẫu để nhập chi phí Epass theo tháng.",

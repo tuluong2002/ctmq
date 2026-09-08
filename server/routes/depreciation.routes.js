@@ -14,6 +14,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Lấy tất cả (có filter theo mảng mã TSCĐ)
 router.get("/", depreciationController.getAll);
 
+router.get("/export-excel", depreciationController.exportExcel);
+
 // Lấy danh sách mã TSCĐ duy nhất
 router.get("/unique-matscd", depreciationController.getUniqueMaTSCD);
 
