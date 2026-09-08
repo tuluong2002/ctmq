@@ -22,7 +22,7 @@ export default function CostManagementPage({user}) {
           <Menu to="depreciation" label="Khấu hao xe" />
           <Menu to="epass-month" label="Epass (tháng)" />
           <Menu to="epass-turn" label="Epass (lượt)" />
-          <Menu to="etc" label="ETC" />
+          <Menu to="etc" label="TCT" />
           <Menu to="vehicle-legal" label="ĐK - ĐK - BH xe" />
           <Menu to="trip-payment" label="Thanh toán lịch trình" highlight />
           <Menu to="ncc" label="Nhà cung cấp" highlight/>

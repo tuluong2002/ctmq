@@ -335,7 +335,7 @@ export default function DeNghiThanhToanPrintPage() {
 
               <tr>
                 <td className="label" style={{ width: "18%" }}>
-                  Người đề nghị:
+                  Người phụ trách:
                 </td>
 
                 <td className="value" style={{ width: "42%" }}>

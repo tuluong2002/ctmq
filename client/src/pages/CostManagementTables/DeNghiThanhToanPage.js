@@ -319,7 +319,7 @@ export default function DeNghiThanhToanPage({}) {
 
               <th className="border px-2 py-2">Ngày đề nghị</th>
 
-              <th className="border px-2 py-2">Người đề nghị</th>
+              <th className="border px-2 py-2">Người phụ trách</th>
 
               <th className="border px-2 py-2">Mã số thuế</th>
 
