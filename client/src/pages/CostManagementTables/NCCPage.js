@@ -9,6 +9,37 @@ export default function NCCPage() {
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
 
+  // =========================
+  // BỘ LỌC TÊN NGƯỜI BÁN
+  // =========================
+  const [searchTenNguoiBan, setSearchTenNguoiBan] = useState("");
+
+  // =========================
+  // HÀM BỎ DẤU TIẾNG VIỆT
+  // =========================
+  const removeVietnameseTones = (str = "") => {
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
+      .toLowerCase()
+      .trim();
+  };
+
+  // =========================
+  // DATA SAU KHI LỌC
+  // =========================
+  const filteredData = data.filter((item) => {
+    const keyword = removeVietnameseTones(searchTenNguoiBan);
+
+    if (!keyword) return true;
+
+    const tenNguoiBan = removeVietnameseTones(item.tenNguoiBan || "");
+
+    return tenNguoiBan.includes(keyword);
+  });
+
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("add");
   const [selectedNCC, setSelectedNCC] = useState(null);
@@ -30,7 +61,7 @@ export default function NCCPage() {
       console.error("fetchUsers error:", error);
 
       alert(
-        error.response?.data?.message || "Không thể tải danh sách người dùng",
+        error.response?.data?.message || "Không thể tải danh sách người dùng"
       );
     }
   };
@@ -109,7 +140,7 @@ export default function NCCPage() {
     const confirmDelete = window.confirm(
       `Bạn có chắc muốn xoá NCC "${item.tenNguoiBan || item.stt}"?\n\n` +
         `STT: ${item.stt}\n\n` +
-        `Thao tác này không thể hoàn tác.`,
+        `Thao tác này không thể hoàn tác.`
     );
 
     if (!confirmDelete) return;
@@ -118,7 +149,7 @@ export default function NCCPage() {
       setLoading(true);
 
       const res = await axios.delete(
-        `${API}/ncc/${encodeURIComponent(item.stt)}`,
+        `${API}/ncc/${encodeURIComponent(item.stt)}`
       );
 
       alert(res.data?.message || "Đã xoá NCC");
@@ -154,7 +185,7 @@ export default function NCCPage() {
 
     const confirmImport = window.confirm(
       `Bạn có chắc muốn import file:\n\n${file.name}\n\n` +
-        `Các NCC có cùng STT sẽ bị ghi đè dữ liệu.`,
+        `Các NCC có cùng STT sẽ bị ghi đè dữ liệu.`
     );
 
     if (!confirmImport) {
@@ -207,7 +238,7 @@ export default function NCCPage() {
 
     const confirmDelete = window.confirm(
       `Bạn có chắc muốn XOÁ TẤT CẢ ${data.length} NCC?\n\n` +
-        `Thao tác này không thể hoàn tác.`,
+        `Thao tác này không thể hoàn tác.`
     );
 
     if (!confirmDelete) return;
@@ -241,12 +272,36 @@ export default function NCCPage() {
 
             <div className="mt-1 text-gray-500">
               Tổng số:{" "}
-              <span className="font-semibold text-black">{data.length}</span>{" "}
-              NCC
+              <span className="font-semibold text-black">
+                {filteredData.length}
+              </span>{" "}
+              / {data.length} NCC
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* LỌC TÊN NGƯỜI BÁN */}
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTenNguoiBan}
+                onChange={(e) => setSearchTenNguoiBan(e.target.value)}
+                placeholder="Tìm tên nhà cung cấp..."
+                className="w-64 rounded border px-3 py-2 pr-9 outline-none focus:border-blue-500"
+              />
+
+              {searchTenNguoiBan && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTenNguoiBan("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                  title="Xóa bộ lọc"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
             {/* THÊM NCC */}
             <button
               type="button"
@@ -347,7 +402,7 @@ export default function NCCPage() {
                   </td>
                 </tr>
               ) : (
-                data.map((item, index) => (
+                filteredData.map((item, index) => (
                   <tr
                     key={item._id || item.stt || index}
                     className="hover:bg-gray-50"
@@ -434,7 +489,7 @@ export default function NCCPage() {
         open={modalOpen}
         mode={modalMode}
         data={selectedNCC}
-        userList = {userList}
+        userList={userList}
         onClose={handleCloseModal}
         onSuccess={handleModalSuccess}
       />
