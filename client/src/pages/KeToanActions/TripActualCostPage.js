@@ -88,14 +88,15 @@ const TripActualCostPage = ({ user }) => {
   const [updatingId, setUpdatingId] = useState(null);
 
   const [searchMaChuyen, setSearchMaChuyen] = useState("");
+  const [searchTenLaiXe, setSearchTenLaiXe] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
   const [fromDate, setFromDate] = useState(
-    () => localStorage.getItem("tripActualCost_fromDate") || ""
+    () => localStorage.getItem("tripActualCost_fromDate") || "",
   );
 
   const [toDate, setToDate] = useState(
-    () => localStorage.getItem("tripActualCost_toDate") || ""
+    () => localStorage.getItem("tripActualCost_toDate") || "",
   );
 
   const [maChuyenInput, setMaChuyenInput] = useState("");
@@ -222,7 +223,7 @@ const TripActualCostPage = ({ user }) => {
       console.error("fetchUsers error:", error);
 
       alert(
-        error.response?.data?.message || "Không thể tải danh sách người dùng"
+        error.response?.data?.message || "Không thể tải danh sách người dùng",
       );
     }
   };
@@ -233,7 +234,7 @@ const TripActualCostPage = ({ user }) => {
     }
 
     const user = userList.find(
-      (item) => String(item.username).trim() === String(username).trim()
+      (item) => String(item.username).trim() === String(username).trim(),
     );
 
     return user?.fullname?.trim() || username;
@@ -321,7 +322,7 @@ const TripActualCostPage = ({ user }) => {
         },
         {
           responseType: "blob",
-        }
+        },
       );
 
       const blob = new Blob([response.data], {
@@ -368,14 +369,24 @@ const TripActualCostPage = ({ user }) => {
   // LOCAL FILTER
   // =====================================================
 
+  const removeVietnameseTones = (str = "") => {
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
+      .toLowerCase()
+      .trim();
+  };
+
   const filteredData = useMemo(() => {
     const keyword = searchMaChuyen.trim().toLowerCase();
+    const keywordTenLaiXe = removeVietnameseTones(searchTenLaiXe);
 
     return data.filter((item) => {
       // =========================
       // LỌC MÃ CHUYẾN
       // =========================
-
       if (
         keyword &&
         !String(item.maChuyen || "")
@@ -388,7 +399,6 @@ const TripActualCostPage = ({ user }) => {
       // =========================
       // LỌC NGƯỜI DÙNG
       // =========================
-
       if (
         userFilter &&
         String(item.accountUsername || "") !== String(userFilter)
@@ -396,9 +406,20 @@ const TripActualCostPage = ({ user }) => {
         return false;
       }
 
+      // =========================
+      // LỌC TÊN LÁI XE
+      // KHÔNG DẤU + KHÔNG PHÂN BIỆT HOA THƯỜNG
+      // =========================
+      if (
+        keywordTenLaiXe &&
+        !removeVietnameseTones(item.tenLaiXe || "").includes(keywordTenLaiXe)
+      ) {
+        return false;
+      }
+
       return true;
     });
-  }, [data, searchMaChuyen, userFilter]);
+  }, [data, searchMaChuyen, userFilter, searchTenLaiXe]);
 
   // =====================================================
   // THÊM MÃ CHUYẾN
@@ -458,8 +479,80 @@ const TripActualCostPage = ({ user }) => {
           ...item,
           [field]: value,
         };
-      })
+      }),
     );
+  };
+
+  // =====================================================
+  // TOGGLE ĐÃ XỬ LÝ
+  // FE đổi ngay lập tức
+  // BE xử lý ngầm
+  // =====================================================
+
+  const handleToggleProcessed = async (item) => {
+    const oldValue = !!item.isProcessed;
+    const newValue = !oldValue;
+
+    // ==========================================
+    // ĐỔI NGAY TRÊN FE
+    // KHÔNG FETCH LẠI DATA
+    // ==========================================
+
+    setData((prev) =>
+      prev.map((row) =>
+        row._id === item._id
+          ? {
+              ...row,
+              isProcessed: newValue,
+            }
+          : row,
+      ),
+    );
+
+    // ==========================================
+    // GỌI BE CHẠY NGẦM
+    // ==========================================
+
+    try {
+      const response = await axios.patch(
+        `${BASE_URL}/${item._id}/toggle-processed`,
+      );
+
+      // ==========================================
+      // LẤY GIÁ TRỊ THỰC TẾ TỪ BE
+      // KHÔNG FETCH LẠI DANH SÁCH
+      // ==========================================
+
+      const processed = response.data?.data?.isProcessed ?? newValue;
+
+      setData((prev) =>
+        prev.map((row) =>
+          row._id === item._id
+            ? {
+                ...row,
+                isProcessed: processed,
+              }
+            : row,
+        ),
+      );
+    } catch (error) {
+      console.error("handleToggleProcessed error:", error);
+
+      // ==========================================
+      // BE LỖI -> HOÀN TÁC LẠI FE
+      // ==========================================
+
+      setData((prev) =>
+        prev.map((row) =>
+          row._id === item._id
+            ? {
+                ...row,
+                isProcessed: oldValue,
+              }
+            : row,
+        ),
+      );
+    }
   };
 
   // =====================================================
@@ -488,7 +581,7 @@ const TripActualCostPage = ({ user }) => {
       const updated = response.data?.data;
 
       setData((prev) =>
-        prev.map((row) => (row._id === item._id ? updated : row))
+        prev.map((row) => (row._id === item._id ? updated : row)),
       );
     } catch (error) {
       console.error("handleSaveActual error:", error);
@@ -509,7 +602,7 @@ const TripActualCostPage = ({ user }) => {
     }
 
     const confirmed = window.confirm(
-      `Bạn có chắc muốn cập nhật dữ liệu thực tế về chuyến ${item.maChuyen}?\n\nSau khi cập nhật, dữ liệu này sẽ bị khóa và không thể sửa lại.`
+      `Bạn có chắc muốn cập nhật dữ liệu thực tế về chuyến ${item.maChuyen}?\n\nSau khi cập nhật, dữ liệu này sẽ bị khóa và không thể sửa lại.`,
     );
 
     if (!confirmed) {
@@ -530,13 +623,13 @@ const TripActualCostPage = ({ user }) => {
       const savedItem = saveResponse.data?.data;
 
       const response = await axios.put(
-        `${BASE_URL}/${item._id}/update-original`
+        `${BASE_URL}/${item._id}/update-original`,
       );
 
       const updated = response.data?.data?.record || savedItem;
 
       setData((prev) =>
-        prev.map((row) => (row._id === item._id ? updated : row))
+        prev.map((row) => (row._id === item._id ? updated : row)),
       );
 
       alert(response.data?.message || "Đã cập nhật về chuyến gốc");
@@ -544,7 +637,7 @@ const TripActualCostPage = ({ user }) => {
       console.error("handleUpdateOriginal error:", error);
 
       alert(
-        error.response?.data?.message || "Không thể cập nhật về chuyến gốc"
+        error.response?.data?.message || "Không thể cập nhật về chuyến gốc",
       );
     } finally {
       setUpdatingId(null);
@@ -566,7 +659,7 @@ const TripActualCostPage = ({ user }) => {
     }
 
     const confirmed = window.confirm(
-      `Bạn có chắc muốn xóa dữ liệu thực tế của chuyến ${item.maChuyen}?\n\nDữ liệu sau khi xóa sẽ không thể khôi phục.`
+      `Bạn có chắc muốn xóa dữ liệu thực tế của chuyến ${item.maChuyen}?\n\nDữ liệu sau khi xóa sẽ không thể khôi phục.`,
     );
 
     if (!confirmed) {
@@ -641,8 +734,8 @@ const TripActualCostPage = ({ user }) => {
           number > 0
             ? "text-green-600"
             : number < 0
-            ? "text-red-600"
-            : "text-gray-500"
+              ? "text-red-600"
+              : "text-gray-500"
         } font-semibold`}
       >
         {number > 0 ? "+" : ""}
@@ -904,6 +997,34 @@ const TripActualCostPage = ({ user }) => {
             </div>
           </div>
 
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tìm tên lái xe
+            </label>
+
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+
+              <input
+                type="text"
+                value={searchTenLaiXe}
+                onChange={(e) => setSearchTenLaiXe(e.target.value)}
+                placeholder="Tìm tên lái xe..."
+                className="w-full border border-gray-300 rounded-lg pl-10 pr-10 py-2 outline-none focus:ring-2 focus:ring-blue-200"
+              />
+
+              {searchTenLaiXe && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTenLaiXe("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                >
+                  <FiX />
+                </button>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Từ ngày
@@ -1002,6 +1123,13 @@ const TripActualCostPage = ({ user }) => {
                   className="sticky left-[47px] z-30 bg-gray-100 border border-gray-300 px-3 py-3 text-center min-w-[100px]"
                 >
                   MÃ CHUYẾN
+                </th>
+
+                <th
+                  rowSpan={2}
+                  className="border border-gray-300 px-3 py-3 text-center min-w-[40px]"
+                >
+                  ĐÃ XỬ LÝ
                 </th>
 
                 <th
@@ -1150,7 +1278,7 @@ const TripActualCostPage = ({ user }) => {
               {loading && (
                 <tr>
                   <td
-                    colSpan={21}
+                    colSpan={23}
                     className="border border-gray-300 px-4 py-10 text-center text-gray-500"
                   >
                     <div className="flex items-center justify-center gap-2">
@@ -1164,7 +1292,7 @@ const TripActualCostPage = ({ user }) => {
               {!loading && filteredData.length === 0 && (
                 <tr>
                   <td
-                    colSpan={21}
+                    colSpan={23}
                     className="border border-gray-300 px-4 py-12 text-center text-gray-500"
                   >
                     Không có dữ liệu
@@ -1187,6 +1315,19 @@ const TripActualCostPage = ({ user }) => {
                         {item.maChuyen}
                       </td>
 
+                      {/* ĐÃ XỬ LÝ */}
+                      <td className="border border-gray-300 px-3 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={!!item.isProcessed}
+                          onChange={() => handleToggleProcessed(item)}
+                          className="w-4 h-4 cursor-pointer accent-green-600"
+                          title={
+                            item.isProcessed ? "Bỏ xử lý" : "Đánh dấu đã xử lý"
+                          }
+                        />
+                      </td>
+
                       <td className="border border-gray-300 px-3 py-2">
                         {getUserFullname(item.accountUsername)}
                       </td>
@@ -1206,7 +1347,7 @@ const TripActualCostPage = ({ user }) => {
                       <td className="border border-gray-300 px-3 py-2 text-center">
                         {item.ngayGiaoHang
                           ? new Date(item.ngayGiaoHang).toLocaleDateString(
-                              "vi-VN"
+                              "vi-VN",
                             )
                           : "-"}
                       </td>
@@ -1298,7 +1439,7 @@ const TripActualCostPage = ({ user }) => {
                               handleActualChange(
                                 item._id,
                                 "note",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             className={`w-full border rounded-md px-2 py-1.5 outline-none transition ${

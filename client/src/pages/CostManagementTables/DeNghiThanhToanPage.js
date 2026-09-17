@@ -24,7 +24,7 @@ export default function DeNghiThanhToanPage({}) {
   const now = new Date();
 
   const [month, setMonth] = useState(
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`,
   );
 
   // =========================================================
@@ -98,7 +98,7 @@ export default function DeNghiThanhToanPage({}) {
       console.error("fetchNccList:", error);
 
       alert(
-        error.response?.data?.message || "Không thể lấy danh sách nhà cung cấp"
+        error.response?.data?.message || "Không thể lấy danh sách nhà cung cấp",
       );
     } finally {
       setLoadingNcc(false);
@@ -214,7 +214,7 @@ export default function DeNghiThanhToanPage({}) {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       await fetchData();
@@ -240,7 +240,7 @@ export default function DeNghiThanhToanPage({}) {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       await fetchData();
@@ -310,12 +310,32 @@ export default function DeNghiThanhToanPage({}) {
       ===================================================== */}
 
       <div className="bg-white border rounded overflow-auto">
-        <table className="min-w-[1800px] w-full border-collapse">
-          <thead className="sticky top-0 bg-blue-600 text-white z-10">
+        <table className="min-w-[2600px] w-full border-separate border-spacing-0">
+          <thead className="sticky top-0 bg-blue-600 text-white z-20">
             <tr>
-              <th className="border px-2 py-2">STT</th>
+              {/* STT - CỐ ĐỊNH */}
+              <th
+                className="
+        sticky left-0 z-30
+        border px-2 py-2
+        w-[40px] min-w-[40px]
+        bg-blue-600
+      "
+              >
+                STT
+              </th>
 
-              <th className="border px-2 py-2">Mã số phiếu</th>
+              {/* MÃ PHIẾU - CỐ ĐỊNH */}
+              <th
+                className="
+        sticky left-[40px] z-30
+        border px-2 py-2
+        w-[150px] min-w-[150px]
+        bg-blue-600
+      "
+              >
+                Mã số phiếu
+              </th>
 
               <th className="border px-2 py-2">Ngày đề nghị</th>
 
@@ -343,7 +363,7 @@ export default function DeNghiThanhToanPage({}) {
 
               <th className="border px-2 py-2">Lịch sử in</th>
 
-              <th className="border px-2 py-2 min-w-[140px]">Thao tác</th>
+              <th className="border px-2 py-2 min-w-[156px]">Thao tác</th>
             </tr>
           </thead>
 
@@ -375,18 +395,33 @@ export default function DeNghiThanhToanPage({}) {
 
               data.map((item, index) => (
                 <tr key={item._id} className="hover:bg-gray-50">
-                  {/* STT */}
+                  {/* STT - CỐ ĐỊNH */}
+                  <td
+                    className="
+      sticky left-0 z-10
+      border px-2 py-2
+      text-center
+      w-[40px] min-w-[40px]
+      bg-white
+    "
+                  >
+                    {index + 1}
+                  </td>
 
-                  <td className="border px-2 py-2 text-center">{index + 1}</td>
-
-                  {/* MÃ PHIẾU */}
-
-                  <td className="border px-2 py-2 font-semibold text-blue-600">
+                  {/* MÃ PHIẾU - CỐ ĐỊNH */}
+                  <td
+                    className="
+      sticky left-[40px] z-10
+      border px-2 py-2
+      font-semibold text-blue-600
+      w-[150px] min-w-[150px]
+      bg-white
+    "
+                  >
                     {item.maPhieu}
                   </td>
 
                   {/* NGÀY */}
-
                   <td className="border px-2 py-2 text-center">
                     {item.ngayDeNghi
                       ? new Date(item.ngayDeNghi).toLocaleDateString("vi-VN")

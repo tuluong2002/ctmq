@@ -132,7 +132,7 @@ const tripActualCostSchema = new mongoose.Schema(
       default: 0,
     },
 
-    note: { type: String, default: ""},
+    note: { type: String, default: "" },
 
     // =====================================================
     // TRẠNG THÁI
@@ -150,6 +150,11 @@ const tripActualCostSchema = new mongoose.Schema(
     updatedToScheduleAt: {
       type: Date,
       default: null,
+    },
+
+    isProcessed: {
+      type: Boolean,
+      default: false,
     },
   },
   {

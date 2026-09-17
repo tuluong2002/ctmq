@@ -601,7 +601,7 @@ exports.updateToOriginalTrip = async (req, res) => {
 
     trip.luatChiPhiKhac = updateOriginalValue(
       record.luatChiPhiKhac,
-      record.luatChiPhiKhacThucTe
+      record.luatChiPhiKhacThucTe,
     );
 
     // =========================
@@ -684,7 +684,7 @@ exports.getUserList = async (req, res) => {
       {
         username: 1,
         fullname: 1,
-      }
+      },
     )
       .sort({ fullname: 1, username: 1 })
       .lean();
@@ -778,7 +778,7 @@ const exportCostValue = (value) => {
   }
 
   const number = Number(
-    String(value).replace(/,/g, "").replace(/\./g, "").trim()
+    String(value).replace(/,/g, "").replace(/\./g, "").trim(),
   );
 
   return Number.isFinite(number) ? number : 0;
@@ -858,7 +858,7 @@ exports.exportExcel = async (req, res) => {
     const workbook = new ExcelJS.Workbook();
 
     await workbook.xlsx.readFile(
-      path.join(__dirname, "../templates/SUA_CP_LX.xlsx")
+      path.join(__dirname, "../templates/SUA_CP_LX.xlsx"),
     );
 
     // ⚠️ Đổi thành đúng tên sheet trong file mẫu
@@ -964,12 +964,12 @@ exports.exportExcel = async (req, res) => {
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=CHI_PHI_THUC_TE_${from}_den_${to}.xlsx`
+      `attachment; filename=CHI_PHI_THUC_TE_${from}_den_${to}.xlsx`,
     );
 
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     await workbook.xlsx.write(res);
@@ -984,5 +984,62 @@ exports.exportExcel = async (req, res) => {
         error: error.message,
       });
     }
+  }
+};
+
+// =====================================================
+// TOGGLE IS PROCESSED
+// false <-> true
+// =====================================================
+
+exports.toggleProcessed = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // =========================
+    // VALIDATE ID
+    // =========================
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "ID không hợp lệ",
+      });
+    }
+
+    // =========================
+    // TÌM DATA
+    // =========================
+
+    const record = await TripActualCost.findById(id);
+
+    if (!record) {
+      return res.status(404).json({
+        message: "Không tìm thấy dữ liệu thực tế",
+      });
+    }
+
+    // =========================
+    // ĐẢO TRẠNG THÁI
+    // false -> true
+    // true -> false
+    // =========================
+
+    record.isProcessed = !record.isProcessed;
+
+    await record.save();
+
+    return res.json({
+      message: record.isProcessed
+        ? "Đã đánh dấu đã xử lý"
+        : "Đã bỏ đánh dấu xử lý",
+      data: record,
+    });
+  } catch (error) {
+    console.error("toggleProcessed error:", error);
+
+    return res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };

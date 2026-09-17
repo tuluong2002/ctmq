@@ -19,6 +19,13 @@ router.get("/", controller.getAll);
 router.get("/users", controller.getUserList);
 
 // =====================================================
+// ĐỔI TRẠNG THÁI IS PROCESSED
+// false <-> true
+// =====================================================
+
+router.patch("/:id/toggle-processed", controller.toggleProcessed);
+
+// =====================================================
 // LẤY CHI TIẾT
 // =====================================================
 router.get("/:id", controller.getById);
