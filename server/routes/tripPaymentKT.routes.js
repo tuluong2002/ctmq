@@ -24,6 +24,7 @@ const {
   deleteByMonth,
   importTripPaymentKTExcel,
   updateTripPaymentKT,
+  exportExcel,
 
   // =========================
   // VEHICLE PROFIT
@@ -46,6 +47,8 @@ router.delete("/delete-by-date", deleteByMonth);
 // Lấy tất cả
 // filter: from, to, tenLaiXe[], bienSoXe[]
 router.get("/", getAllTripPaymentKT);
+
+router.get("/export-excel", exportExcel);
 
 // Danh sách tên lái xe
 router.get("/drivers", getUniqueDriverNames);

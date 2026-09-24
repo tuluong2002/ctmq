@@ -497,7 +497,7 @@ const KeToanPage = () => {
           Khách lẻ quá hạn
         </button>
 
-                <button
+        <button
           onClick={handleGoToVehicleProfit}
           className="bg-yellow-600 text-white px-3 py-1 rounded"
         >
@@ -580,12 +580,14 @@ const KeToanPage = () => {
           >
             Lọc theo ngày
           </button>
-          <button
-            onClick={handleDeleteByDate}
-            className="bg-red-600 text-white px-4 py-2 rounded"
-          >
-            Xóa theo ngày
-          </button>
+          {user?.username === "doanthuy" && (
+            <button
+              onClick={handleDeleteByDate}
+              className="bg-red-600 text-white px-4 py-2 rounded"
+            >
+              Xóa theo ngày
+            </button>
+          )}
           <button
             onClick={handleExport}
             className="bg-green-600 text-white px-4 py-2 rounded"
@@ -623,12 +625,14 @@ const KeToanPage = () => {
           >
             Lọc khoảng ngày
           </button>
-          <button
-            onClick={handleDeleteByRange}
-            className="bg-red-600 text-white px-4 py-2 rounded"
-          >
-            Xóa khoảng ngày
-          </button>
+          {user?.username === "doanthuy" && (
+            <button
+              onClick={handleDeleteByRange}
+              className="bg-red-600 text-white px-4 py-2 rounded"
+            >
+              Xóa khoảng ngày
+            </button>
+          )}
           <button
             onClick={handleExportByRange}
             className="bg-green-600 text-white px-4 py-2 rounded"

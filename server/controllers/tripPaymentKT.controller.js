@@ -1,6 +1,7 @@
 const TripPaymentKT = require("../models/TripPaymentKT");
 const VehicleProfit = require("../models/VehicleProfit");
 const ExcelJS = require("exceljs");
+const path = require("path");
 
 /**
  * =========================================================
@@ -920,12 +921,6 @@ exports.updateVehicleProfitThanhToanLichTrinh = async (req, res) => {
         $gte: fromDate,
         $lt: toDate,
       },
-
-      bienSoXe: {
-        $exists: true,
-        $nin: [null, ""],
-      },
-
       totalMoney: {
         $ne: null,
       },
@@ -1342,6 +1337,178 @@ exports.getVehicleProfitThanhToanLichTrinh = async (req, res) => {
       message: "Lỗi lấy danh sách chi phí thanh toán lịch trình theo tháng",
 
       error: error.message,
+    });
+  }
+};
+
+/* =========================================================
+   XUẤT EXCEL THEO THÁNG
+
+   FE gửi:
+   GET /api/trip-payment-kt/export-excel?month=2026-09
+========================================================= */
+
+exports.exportExcel = async (req, res) => {
+  try {
+    const { month } = req.query;
+
+    // =========================
+    // KIỂM TRA THÁNG
+    // =========================
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ. Ví dụ: 2026-09",
+      });
+    }
+
+    const [year, mon] = month.split("-");
+
+    const y = Number(year);
+    const m = Number(mon);
+
+    if (m < 1 || m > 12) {
+      return res.status(400).json({
+        success: false,
+        message: "Tháng không hợp lệ",
+      });
+    }
+
+    // =========================
+    // KHOẢNG THỜI GIAN
+    // =========================
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+
+    // =========================
+    // LẤY DỮ LIỆU THEO THÁNG
+    // =========================
+    const data = await TripPaymentKT.find({
+      ngayThang: {
+        $gte: startDate,
+        $lt: endDate,
+      },
+    }).sort({
+      ngayThang: 1,
+    });
+
+    // =========================
+    // FILE EXCEL MẪU
+    // =========================
+    const templatePath = path.join(__dirname, "../templates/TTLTTemplate.xlsx");
+
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.readFile(templatePath);
+
+    const sheet = workbook.worksheets[0];
+
+    if (!sheet) {
+      return res.status(500).json({
+        success: false,
+        message: "File Excel mẫu không có sheet",
+      });
+    }
+
+    // =====================================================
+    // XÓA DỮ LIỆU CŨ
+    // 7 CỘT: A:G
+    // GIỮ NGUYÊN FORM / ĐỊNH DẠNG
+    // =====================================================
+    for (let rowIndex = 2; rowIndex <= sheet.rowCount; rowIndex++) {
+      for (let colIndex = 1; colIndex <= 7; colIndex++) {
+        sheet.getCell(rowIndex, colIndex).value = null;
+      }
+    }
+
+    // =====================================================
+    // GHI DỮ LIỆU
+    //
+    // THỨ TỰ Y HỆT MODEL
+    //
+    // A - ngayThang
+    // B - maXe
+    // C - totalMoney
+    // D - bienSoXe
+    // E - tenLaiXe
+    // F - ghiChu
+    // G - isDontMatchCP
+    // =====================================================
+
+    data.forEach((item, index) => {
+      const rowIndex = index + 2;
+      const row = sheet.getRow(rowIndex);
+
+      // =========================
+      // A - NGÀY THÁNG
+      // =========================
+      if (item.ngayThang) {
+        const d = new Date(item.ngayThang);
+
+        // Database đang lưu lệch UTC nên cộng 7 tiếng
+        d.setHours(d.getHours() + 7);
+
+        row.getCell(1).value = d;
+      } else {
+        row.getCell(1).value = null;
+      }
+
+      row.getCell(1).numFmt = "dd/mm/yyyy";
+
+      // =========================
+      // B - MÃ XE
+      // =========================
+      row.getCell(2).value = item.maXe ?? "";
+
+      // =========================
+      // C - SỐ TIỀN
+      // =========================
+      row.getCell(3).value = item.totalMoney ?? 0;
+
+      // =========================
+      // D - BIỂN SỐ XE
+      // =========================
+      row.getCell(4).value = item.bienSoXe ?? "";
+
+      // =========================
+      // E - TÊN LÁI XE
+      // =========================
+      row.getCell(5).value = item.tenLaiXe ?? "";
+
+      // =========================
+      // F - GHI CHÚ
+      // =========================
+      row.getCell(6).value = item.ghiChu ?? "";
+
+      row.commit();
+    });
+
+    // =====================================================
+    // TÊN FILE
+    // =====================================================
+
+    const fileName = `Thanh_Toan_Lich_Trinh_${month}.xlsx`;
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+
+    res.send(buffer);
+  } catch (err) {
+    console.error("XUẤT EXCEL THANH TOÁN KẾ TOÁN:", err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
     });
   }
 };
