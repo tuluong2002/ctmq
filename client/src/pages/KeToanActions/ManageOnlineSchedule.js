@@ -67,6 +67,13 @@ const AutoCompleteInline = ({
   );
 };
 
+const formatDateTimeForBackend = (date) => {
+  if (!date) return "";
+
+  // Gửi định dạng YYYY-MM-DDTHH:mm
+  return `${date}T07:10`;
+};
+
 const ManageOnlineSchedule = () => {
   const [filterType, setFilterType] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
@@ -278,14 +285,29 @@ const ManageOnlineSchedule = () => {
       return;
     }
 
-    const requiredIndexes = [0, 1, 2, 3, 4, 5, 6, 7];
+    const requiredFields = [
+      { index: 0, name: "Biển số" },
+      { index: 1, name: "Khách hàng" },
+      { index: 2, name: "Giấy tờ" },
+      { index: 3, name: "Nơi đi" },
+      { index: 4, name: "Nơi đến" },
+      { index: 5, name: "Trọng lượng" },
+      { index: 6, name: "Số điểm" },
+      { index: 7, name: "2 chiều + lưu ca" },
+    ];
 
-    const hasEmptyRequired = inlineRows.some((row) =>
-      requiredIndexes.some((index) => !String(row.values[index] || "").trim()),
-    );
+    const missingFields = [];
 
-    if (hasEmptyRequired) {
-      alert("Vui lòng nhập đầy đủ các trường bắt buộc của chuyến.");
+    inlineRows.forEach((row, rowIndex) => {
+      requiredFields.forEach(({ index, name }) => {
+        if (!String(row.values[index] ?? "").trim()) {
+          missingFields.push(`Chuyến ${rowIndex + 1}: ${name}`);
+        }
+      });
+    });
+
+    if (missingFields.length > 0) {
+      alert("Vui lòng kiểm tra các trường sau:\n" + missingFields.join("\n"));
       return;
     }
 
@@ -297,9 +319,9 @@ const ManageOnlineSchedule = () => {
 
         tenLaiXe: String(inlineDriver || ""),
 
-        ngayDi: inlineNgayDi,
+        ngayDi: formatDateTimeForBackend(inlineNgayDi),
 
-        ngayVe: inlineNgayVe,
+        ngayVe: formatDateTimeForBackend(inlineNgayVe),
 
         tongTienLichTrinh: String(inlineTongTien || ""),
 
@@ -845,65 +867,27 @@ const ManageOnlineSchedule = () => {
           <thead className="bg-gray-200 sticky top-[-1px] p-1 z-30">
             <tr>
               <th className="border p-1 bg-gray-200">STT</th>
-              <th className="border p-1 bg-gray-200">
-                Tên lái xe
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Ngày đi
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Ngày về
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Biển số
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Khách hàng
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Giấy tờ
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Nơi đi
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Nơi đến
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Trọng lượng
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Số điểm
-              </th>
-              <th className="border p-1 bg-gray-200">
-                2 chiều + lưu ca
-              </th>
+              <th className="border p-1 bg-gray-200">Tên lái xe</th>
+              <th className="border p-1 bg-gray-200">Ngày đi</th>
+              <th className="border p-1 bg-gray-200">Ngày về</th>
+              <th className="border p-1 bg-gray-200">Biển số</th>
+              <th className="border p-1 bg-gray-200">Khách hàng</th>
+              <th className="border p-1 bg-gray-200">Giấy tờ</th>
+              <th className="border p-1 bg-gray-200">Nơi đi</th>
+              <th className="border p-1 bg-gray-200">Nơi đến</th>
+              <th className="border p-1 bg-gray-200">Trọng lượng</th>
+              <th className="border p-1 bg-gray-200">Số điểm</th>
+              <th className="border p-1 bg-gray-200">2 chiều + lưu ca</th>
               <th className="border p-1 bg-gray-200">Ăn</th>
-              <th className="border p-1 bg-gray-200">
-                Tăng ca
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Bốc xếp
-              </th>
+              <th className="border p-1 bg-gray-200">Tăng ca</th>
+              <th className="border p-1 bg-gray-200">Bốc xếp</th>
               <th className="border p-1 bg-gray-200">Vé</th>
-              <th className="border p-1 bg-gray-200">
-                Tiền chuyến
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Chi phí khác
-              </th>
-              <th className="border p-1 bg-gray-200">
-                LX thu KH
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Phương án
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Tổng tiền LT
-              </th>
-              <th className="border p-1 bg-gray-200">
-                Mã LT
-              </th>
+              <th className="border p-1 bg-gray-200">Tiền chuyến</th>
+              <th className="border p-1 bg-gray-200">Chi phí khác</th>
+              <th className="border p-1 bg-gray-200">LX thu KH</th>
+              <th className="border p-1 bg-gray-200">Phương án</th>
+              <th className="border p-1 bg-gray-200">Tổng tiền LT</th>
+              <th className="border p-1 bg-gray-200">Mã LT</th>
             </tr>
           </thead>
 
